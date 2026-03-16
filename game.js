@@ -296,9 +296,10 @@ let globalProgression = {
     usableItems: {},
     equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null },
     newItems: {}, shopGear: [], shopLastRefresh: 0,
-    attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1 },
+    attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, devotion: 0 },
     storyModeProgress: { hunting: 0, pillage: 0, workshop: 0, island_defense: 0 },
     settings: { sound: true, music: true },
+    gender: 'male',
     discoveredEnemies: {}, claimedCodexRewards: {}, killedBosses: {}, discoveredMythicBosses: [],
     skillTreeEnhancements: [],
     burglarDailyPurchases: 0, burglarLastPurchaseDate: '',
@@ -614,6 +615,9 @@ function loadGameAndContinue() {
     }
     } catch (err) {
         console.error('loadGameAndContinue: failed to load game:', err);
+        alert('Failed to load saved game. Your save may be corrupted. Error: ' + err.message);
+        // Try showing the menu so they can start fresh
+        try { switchScreen('screen-menu'); } catch(e) { console.error('loadGameAndContinue: switchScreen fallback failed:', e); }
     }
 }
 window.onload = () => { if(localStorage.getItem('EternalAscensionSaveDataV1') || localStorage.getItem('fogFighterSaveDataV22') || localStorage.getItem('fogFighterSaveDataV21') || localStorage.getItem('fogFighterSaveDataV20')) document.getElementById('btn-continue-save').classList.remove('hidden'); updateEnergy(); updateHp(); };
@@ -671,21 +675,25 @@ function getEquipStats() {
 function calculateMaxHp() {
     let equipStats = getEquipStats();
     let a = globalProgression.attributes;
-    let base = player.data.baseHp + ((player.lvl - 1) * 15) + (a.hp * 20) + (a.tenacity * 5) + (a.agility * 1) + (a.resistance * 5) + ((a.happiness || 0) * 5) + player.treeBonusHp + equipStats.hp + getEquipBonusStat('bonusHp');
+    let bonusHp = (typeof getEquipBonusStat === 'function') ? getEquipBonusStat('bonusHp') : 0;
+    let base = player.data.baseHp + ((player.lvl - 1) * 15) + (a.hp * 20) + (a.tenacity * 5) + (a.agility * 1) + (a.resistance * 5) + ((a.happiness || 0) * 5) + player.treeBonusHp + equipStats.hp + bonusHp;
     // Apply HP Boost enhancements
     let hpBoostMult = 1;
-    (globalProgression.skillTreeEnhancements || []).forEach(enh => {
-        if(enh.type === 'hpBoost') {
-            hpBoostMult += ENHANCEMENT_DEFS.hpBoost.vals[enh.rarity];
-        }
-    });
+    if (typeof ENHANCEMENT_DEFS !== 'undefined' && ENHANCEMENT_DEFS.hpBoost) {
+        (globalProgression.skillTreeEnhancements || []).forEach(enh => {
+            if(enh.type === 'hpBoost') {
+                hpBoostMult += ENHANCEMENT_DEFS.hpBoost.vals[enh.rarity];
+            }
+        });
+    }
     return Math.floor(base * hpBoostMult);
 }
 
 function getBaseDamage() {
     let equipStats = getEquipStats();
     let a = globalProgression.attributes;
-    let baseDmg = player.data.baseDmg + (a.willpower * 4) + (a.agility * 2) + (a.reflexes * 1) + player.treeBonusDmg + equipStats.dmg + getEquipBonusStat('bonusAtk');
+    let bonusAtk = (typeof getEquipBonusStat === 'function') ? getEquipBonusStat('bonusAtk') : 0;
+    let baseDmg = player.data.baseDmg + (a.willpower * 4) + (a.agility * 2) + (a.reflexes * 1) + player.treeBonusDmg + equipStats.dmg + bonusAtk;
     // Apply weapon enhance max bonus (+5% at level 100)
     let weapon = globalProgression.equipped ? globalProgression.equipped['weapon'] : null;
     if(weapon && weapon.weaponEnhanceMaxBonus) baseDmg = Math.floor(baseDmg * 1.05);
@@ -852,6 +860,16 @@ function selectGenderAndStart(gender) {
         showHub();
     } catch (err) {
         console.error('selectGenderAndStart: failed to start game:', err);
+        // RECOVERY: Try to at least get to the hub
+        try {
+            if (typeof globalProgression !== 'undefined') {
+                globalProgression.gender = gender || 'male';
+            }
+            showHub();
+        } catch (e2) {
+            console.error('selectGenderAndStart: recovery also failed:', e2);
+            alert('Failed to start game. Please try clearing your browser data and refreshing. Error: ' + err.message);
+        }
     }
 }
 
@@ -867,63 +885,71 @@ function toggleGender() {
 
 function showHub() {
     stopMusic();
-    player.maxHp = calculateMaxHp(); if(player.currentHp > player.maxHp) player.currentHp = player.maxHp;
+    try { player.maxHp = calculateMaxHp(); if(player.currentHp > player.maxHp) player.currentHp = player.maxHp; } catch(e) { console.error('showHub: calculateMaxHp failed:', e); }
     player.regenBuffs = []; player.activeBuffs = []; player.skillCooldowns = {};
     player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;
     player.reAliveArmed = false; player.reAliveUsed = false;
     let heroMenu = document.getElementById('hub-hero-menu');
     if(heroMenu) heroMenu.classList.add('hidden');
 
-    document.getElementById('hub-gold').innerText = globalProgression.gold;
-    document.getElementById('hub-tickets').innerText = globalProgression.tickets || 0;
-    document.getElementById('hub-lvl').innerText = player.lvl;
-    document.getElementById('hub-class').innerText = player.data.name;
-    setAvatarDisplay('hub-avatar', player.data.avatar);
-    document.getElementById('hub-level-up-noti').classList.toggle('hidden', player.statPoints <= 0);
+    try {
+        document.getElementById('hub-gold').innerText = globalProgression.gold;
+        document.getElementById('hub-tickets').innerText = globalProgression.tickets || 0;
+        document.getElementById('hub-lvl').innerText = player.lvl;
+        document.getElementById('hub-class').innerText = player.data.name;
+        setAvatarDisplay('hub-avatar', player.data.avatar);
+        document.getElementById('hub-level-up-noti').classList.toggle('hidden', player.statPoints <= 0);
+    } catch(e) { console.error('showHub: basic DOM updates failed:', e); }
 
     // Sync hero bar notification badges
-    if(document.getElementById('hub-attr-noti-hero')) document.getElementById('hub-attr-noti-hero').classList.toggle('hidden', player.statPoints <= 0);
-    if(document.getElementById('hub-skill-noti-hero')) document.getElementById('hub-skill-noti-hero').classList.toggle('hidden', player.skillPoints <= 0);
-    
-    let hasUnequippedBetter = EQUIP_SLOTS.some(slot => hasBetterGear(slot));
-    if(document.getElementById('hub-char-noti-hero')) document.getElementById('hub-char-noti-hero').classList.toggle('hidden', !hasUnequippedBetter);
+    try {
+        if(document.getElementById('hub-attr-noti-hero')) document.getElementById('hub-attr-noti-hero').classList.toggle('hidden', player.statPoints <= 0);
+        if(document.getElementById('hub-skill-noti-hero')) document.getElementById('hub-skill-noti-hero').classList.toggle('hidden', player.skillPoints <= 0);
+        
+        let hasUnequippedBetter = EQUIP_SLOTS.some(slot => hasBetterGear(slot));
+        if(document.getElementById('hub-char-noti-hero')) document.getElementById('hub-char-noti-hero').classList.toggle('hidden', !hasUnequippedBetter);
+    } catch(e) { console.error('showHub: hero bar badges failed:', e); }
 
     // Sync codex checks to base names
-    let allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
-    let hasUnclaimedCodex = false;
-    for(let e of allM) {
-        if(globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[e.name]) {
-            if(!globalProgression.claimedCodexRewards || !globalProgression.claimedCodexRewards[e.name]) {
-                hasUnclaimedCodex = true; break;
+    try {
+        let allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
+        let hasUnclaimedCodex = false;
+        for(let e of allM) {
+            if(globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[e.name]) {
+                if(!globalProgression.claimedCodexRewards || !globalProgression.claimedCodexRewards[e.name]) {
+                    hasUnclaimedCodex = true; break;
+                }
             }
         }
-    }
-    // Also check mythic bosses for unclaimed codex rewards
-    if(!hasUnclaimedCodex && globalProgression.discoveredMythicBosses) {
-        for(let bossName of globalProgression.discoveredMythicBosses) {
-            if(!globalProgression.claimedCodexRewards || !globalProgression.claimedCodexRewards[bossName]) {
-                hasUnclaimedCodex = true; break;
+        // Also check mythic bosses for unclaimed codex rewards
+        if(!hasUnclaimedCodex && globalProgression.discoveredMythicBosses) {
+            for(let bossName of globalProgression.discoveredMythicBosses) {
+                if(!globalProgression.claimedCodexRewards || !globalProgression.claimedCodexRewards[bossName]) {
+                    hasUnclaimedCodex = true; break;
+                }
             }
         }
-    }
-    
-    const codexNoti = document.getElementById('hub-codex-noti');
-    if (codexNoti) codexNoti.classList.toggle('hidden', !hasUnclaimedCodex);
+        
+        const codexNoti = document.getElementById('hub-codex-noti');
+        if (codexNoti) codexNoti.classList.toggle('hidden', !hasUnclaimedCodex);
+    } catch(e) { console.error('showHub: codex notification failed:', e); }
 
     // Pet codex notification: show if any discovered pet has an unclaimed reward
-    const petNoti = document.getElementById('hub-pet-noti');
-    if(petNoti) {
-        let hasUnclaimedPet = false;
-        if(typeof PET_DATA !== 'undefined') {
-            for(let pet of PET_DATA) {
-                let isClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[pet.name];
-                if(isPetDiscovered(pet) && !isClaimed) { hasUnclaimedPet = true; break; }
+    try {
+        const petNoti = document.getElementById('hub-pet-noti');
+        if(petNoti) {
+            let hasUnclaimedPet = false;
+            if(typeof PET_DATA !== 'undefined') {
+                for(let pet of PET_DATA) {
+                    let isClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[pet.name];
+                    if(isPetDiscovered(pet) && !isClaimed) { hasUnclaimedPet = true; break; }
+                }
             }
+            petNoti.classList.toggle('hidden', !hasUnclaimedPet);
         }
-        petNoti.classList.toggle('hidden', !hasUnclaimedPet);
-    }
+    } catch(e) { console.error('showHub: pet notification failed:', e); }
 
-    updateQuestNotifyBadge();
+    try { updateQuestNotifyBadge(); } catch(e) { console.error('showHub: updateQuestNotifyBadge failed:', e); }
     saveGame(); updateEnergy(); updateHp(); switchScreen('screen-hub');
 }
 
