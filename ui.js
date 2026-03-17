@@ -799,6 +799,13 @@ function unlockNextNode(path, index=0) {
         player.nodeEnhancements[p][idx] = enh;
         showEnhancementPopup(enh);
     }
+    function unlockSkill(skillIdx) {
+        if(!player.unlockedSkills.includes(skillIdx)) {
+            player.unlockedSkills.push(skillIdx);
+            showFloatText('hub-avatar', `🎯 NEW SKILL!`, 'text-yellow-400');
+            showSkillUnlockPopup(skillIdx);
+        }
+    }
     
     if (path === 'offense' || path === 'defense') {
         player.skillPoints--;
@@ -807,9 +814,9 @@ function unlockNextNode(path, index=0) {
         
         if(path === 'offense') {
             player.treeProgressOffense = (player.treeProgressOffense||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(3)) player.unlockedSkills.push(3); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(4)) player.unlockedSkills.push(4); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(5)) player.unlockedSkills.push(5); }
+            if(index === 4) { unlockSkill(3); }
+            else if(index === 9) { unlockSkill(4); }
+            else if(index === 14) { unlockSkill(5); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-red-400');
@@ -817,9 +824,9 @@ function unlockNextNode(path, index=0) {
             }
         } else {
             player.treeProgressDefense = (player.treeProgressDefense||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(6)) player.unlockedSkills.push(6); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(7)) player.unlockedSkills.push(7); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(8)) player.unlockedSkills.push(8); }
+            if(index === 4) { unlockSkill(6); }
+            else if(index === 9) { unlockSkill(7); }
+            else if(index === 14) { unlockSkill(8); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-blue-400');
@@ -834,9 +841,9 @@ function unlockNextNode(path, index=0) {
         
         if(path === 'fire') {
             player.treeProgressFire = (player.treeProgressFire||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(3)) player.unlockedSkills.push(3); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(4)) player.unlockedSkills.push(4); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(5)) player.unlockedSkills.push(5); }
+            if(index === 4) { unlockSkill(3); }
+            else if(index === 9) { unlockSkill(4); }
+            else if(index === 14) { unlockSkill(5); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-orange-400');
@@ -844,9 +851,9 @@ function unlockNextNode(path, index=0) {
             }
         } else {
             player.treeProgressIce = (player.treeProgressIce||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(6)) player.unlockedSkills.push(6); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(7)) player.unlockedSkills.push(7); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(8)) player.unlockedSkills.push(8); }
+            if(index === 4) { unlockSkill(6); }
+            else if(index === 9) { unlockSkill(7); }
+            else if(index === 14) { unlockSkill(8); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-cyan-400');
@@ -860,9 +867,9 @@ function unlockNextNode(path, index=0) {
         let picked = attrs[Math.floor(Math.random() * attrs.length)];
         if(path === 'holy') {
             player.treeProgressHoly = (player.treeProgressHoly||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(3)) player.unlockedSkills.push(3); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(4)) player.unlockedSkills.push(4); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(5)) player.unlockedSkills.push(5); }
+            if(index === 4) { unlockSkill(3); }
+            else if(index === 9) { unlockSkill(4); }
+            else if(index === 14) { unlockSkill(5); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-yellow-400');
@@ -870,9 +877,9 @@ function unlockNextNode(path, index=0) {
             }
         } else {
             player.treeProgressGuardian = (player.treeProgressGuardian||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(6)) player.unlockedSkills.push(6); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(7)) player.unlockedSkills.push(7); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(8)) player.unlockedSkills.push(8); }
+            if(index === 4) { unlockSkill(6); }
+            else if(index === 9) { unlockSkill(7); }
+            else if(index === 14) { unlockSkill(8); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-emerald-400');
@@ -886,9 +893,9 @@ function unlockNextNode(path, index=0) {
         let picked = attrs[Math.floor(Math.random() * attrs.length)];
         if(path === 'shadow') {
             player.treeProgressShadow = (player.treeProgressShadow||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(3)) player.unlockedSkills.push(3); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(4)) player.unlockedSkills.push(4); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(5)) player.unlockedSkills.push(5); }
+            if(index === 4) { unlockSkill(3); }
+            else if(index === 9) { unlockSkill(4); }
+            else if(index === 14) { unlockSkill(5); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-violet-400');
@@ -896,11 +903,11 @@ function unlockNextNode(path, index=0) {
             }
         } else {
             player.treeProgressVenom = (player.treeProgressVenom||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(6)) player.unlockedSkills.push(6); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(7)) player.unlockedSkills.push(7); }
+            if(index === 4) { unlockSkill(6); }
+            else if(index === 9) { unlockSkill(7); }
             else if(index === 14) {
                 if(player.data.skills[8] && !player.unlockedSkills.includes(8)) {
-                    player.unlockedSkills.push(8);
+                    unlockSkill(8);
                 } else {
                     globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                     showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-lime-400');
@@ -919,9 +926,9 @@ function unlockNextNode(path, index=0) {
         let picked = attrs[Math.floor(Math.random() * attrs.length)];
         if(path === 'divine') {
             player.treeProgressDivine = (player.treeProgressDivine||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(3)) player.unlockedSkills.push(3); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(4)) player.unlockedSkills.push(4); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(5)) player.unlockedSkills.push(5); }
+            if(index === 4) { unlockSkill(3); }
+            else if(index === 9) { unlockSkill(4); }
+            else if(index === 14) { unlockSkill(5); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-pink-400');
@@ -929,9 +936,9 @@ function unlockNextNode(path, index=0) {
             }
         } else {
             player.treeProgressPlague = (player.treeProgressPlague||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(6)) player.unlockedSkills.push(6); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(7)) player.unlockedSkills.push(7); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(8)) player.unlockedSkills.push(8); }
+            if(index === 4) { unlockSkill(6); }
+            else if(index === 9) { unlockSkill(7); }
+            else if(index === 14) { unlockSkill(8); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-green-600');
@@ -945,9 +952,9 @@ function unlockNextNode(path, index=0) {
         let picked = stats[Math.floor(Math.random() * stats.length)];
         if(path === 'precision') {
             player.treeProgressPrecision = (player.treeProgressPrecision||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(3)) player.unlockedSkills.push(3); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(4)) player.unlockedSkills.push(4); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(5)) player.unlockedSkills.push(5); }
+            if(index === 4) { unlockSkill(3); }
+            else if(index === 9) { unlockSkill(4); }
+            else if(index === 14) { unlockSkill(5); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-sky-400');
@@ -955,9 +962,9 @@ function unlockNextNode(path, index=0) {
             }
         } else {
             player.treeProgressSurvival = (player.treeProgressSurvival||0) + 1;
-            if(index === 4) { if(!player.unlockedSkills.includes(6)) player.unlockedSkills.push(6); }
-            else if(index === 9) { if(!player.unlockedSkills.includes(7)) player.unlockedSkills.push(7); }
-            else if(index === 14) { if(!player.unlockedSkills.includes(8)) player.unlockedSkills.push(8); }
+            if(index === 4) { unlockSkill(6); }
+            else if(index === 9) { unlockSkill(7); }
+            else if(index === 14) { unlockSkill(8); }
             else {
                 globalProgression.attributes[picked] = (globalProgression.attributes[picked] || 0) + 1;
                 showFloatText('hub-avatar', `+1 ${picked.toUpperCase()}`, 'text-amber-400');
@@ -1063,6 +1070,28 @@ function showEnhancementPopup(enh) {
             <div class="text-sm font-bold ${rarityColor} uppercase tracking-widest mb-3">${enh.rarity}</div>
             <div class="text-sm text-gray-300 bg-gray-800 rounded-xl p-3 mb-4">${def.desc(enh.rarity)}</div>
             <button onclick="document.getElementById('enhancement-popup').remove()" class="w-full bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition active:scale-95">
+                Awesome!
+            </button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+}
+
+function showSkillUnlockPopup(skillIdx) {
+    let skill = player.data.skills[skillIdx];
+    if(!skill) return;
+    let existing = document.getElementById('skill-unlock-popup');
+    if(existing) existing.remove();
+    let popup = document.createElement('div');
+    popup.id = 'skill-unlock-popup';
+    popup.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    popup.innerHTML = `
+        <div class="bg-gray-900 border-2 border-yellow-400 rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+            <div class="text-5xl mb-3">🎯</div>
+            <div class="text-xs text-yellow-400 uppercase tracking-widest mb-1">New Skill Unlocked!</div>
+            <div class="text-2xl font-black ${skill.color || 'text-white'} mb-3">${skill.name}</div>
+            <div class="text-sm text-gray-300 bg-gray-800 rounded-xl p-3 mb-4">${skill.desc}</div>
+            <button onclick="document.getElementById('skill-unlock-popup').remove()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl transition active:scale-95">
                 Awesome!
             </button>
         </div>
