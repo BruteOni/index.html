@@ -191,7 +191,7 @@ const ENHANCEMENT_DEFS = {
     },
     wayOfHeavens: {
         name: 'Way of the Heavens', icon: '☀️', type: 'active', stackable: false,
-        desc: (r) => `Strike ALL enemies for 30% HP + Bleed, Burn (5% HP/t), Poison. 10-turn global cooldown.`,
+        desc: (r) => `Strike ALL enemies for Base Damage + 20% HP + Bleed, Burn (5% HP/t), Poison. 10-turn global cooldown.`,
         vals: { legendary: 0.30 }
     }
 };
@@ -614,7 +614,7 @@ function openSkillModal(slotIndex) {
         let wohBtn = document.createElement('button');
         wohBtn.className = `p-3 rounded-lg flex justify-between items-center text-left ${isEquipped ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-yellow-900 hover:bg-yellow-800 transition active:scale-95 border border-yellow-500'}`;
         wohBtn.disabled = isEquipped;
-        wohBtn.innerHTML = `<div><div class="font-bold text-yellow-400">☀️ Way of the Heavens</div><div class="text-xs text-gray-300">Strike ALL enemies for 30% HP + Bleed, Burn, Poison.</div><div class="text-[10px] text-yellow-400">CD: 10 turns | Legendary</div></div> <div class="text-2xl">${isEquipped?'✅':''}</div>`;
+        wohBtn.innerHTML = `<div><div class="font-bold text-yellow-400">☀️ Way of the Heavens</div><div class="text-xs text-gray-300">Strike ALL enemies for Base Damage + 20% HP + Bleed, Burn, Poison.</div><div class="text-[10px] text-yellow-400">CD: 10 turns | Legendary</div></div> <div class="text-2xl">${isEquipped?'✅':''}</div>`;
         if(!isEquipped) wohBtn.onclick = () => {
             player.equippedSkills[activeSkillSlot] = 'woh';
             playSound('click'); saveGame(); closeSkillModal();
@@ -1117,7 +1117,7 @@ function useWayOfHeavens() {
     }
     enemies.forEach((e, i) => {
         if(e.currentHp <= 0) return;
-        let dmg = Math.floor(e.maxHp * 0.30);
+        let dmg = getBaseDamage() + Math.floor(e.maxHp * 0.20);
         e.currentHp = Math.max(0, e.currentHp - dmg);
         e.bleedStacks = (e.bleedStacks || 0) + 1;
         e.bleedTurns = Math.max(e.bleedTurns || 0, 3);
@@ -1126,7 +1126,7 @@ function useWayOfHeavens() {
         showFloatText(`enemy-card-${i}`, `-${dmg}`, 'text-yellow-400');
     });
     player.wayOfHeavensCooldown = 10;
-    addLog('Way of the Heavens! Strike all enemies for 30% HP + Bleed, Burn, Poison!', 'text-yellow-400');
+    addLog('Way of the Heavens! Strike all enemies for Base Damage + 20% HP + Bleed, Burn, Poison!', 'text-yellow-400');
     playSound('win');
     isPlayerTurn = false;
     saveGame();
@@ -2822,17 +2822,19 @@ function getEnemySkillsText(e) {
 function startBattle(isNewEncounter = false) {
     combatActive = true; generateEnemies();
     if (isNewEncounter) { 
-        player.currentHp = player.maxHp; 
+        if(!(player.currentHp > 0)) player.currentHp = player.maxHp;
         player.regenBuffs = []; player.activeBuffs = []; 
         player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;
+        // Reset skill cooldowns at the start of each new battle (Way of Heavens is global and persists)
+        if(!player.skillCooldowns) player.skillCooldowns = {};
+        Object.keys(player.skillCooldowns).forEach(k => player.skillCooldowns[k] = 0);
     } 
     player.shield = 0;
     player.rageUsed = false; player.divineShieldUsed = false; player.reflectUsed = false; player.usedConsumableThisTurn = false;
     player.reAliveArmed = false; player.reAliveUsed = false;
     player.rageActive = player.rageActive || 0;
-    // Reset usable item cooldowns at battle start (but NOT skill cooldowns - those are global)
+    // Reset usable item cooldowns at battle start
     if(!player.usableCooldowns) player.usableCooldowns = {};
-    if(!player.skillCooldowns) player.skillCooldowns = {};
     Object.keys(player.usableCooldowns).forEach(k => player.usableCooldowns[k] = 0);
     // Clear any silenced slots at battle start
     player.silencedSlots = {};
@@ -3226,7 +3228,7 @@ function renderSkills() {
     const container = document.getElementById('skills-container');
     const descDisplay = document.getElementById('skill-description-display');
     const defaultDesc = 'Tap a skill to see what it does';
-    const wohDesc = 'Unleash the power of the heavens upon all enemies. Deals 30% of each enemy\'s max HP and inflicts Bleed, Burn, and Poison. 10-turn cooldown.';
+    const wohDesc = 'Unleash the power of the heavens upon all enemies. Deals Base Damage + 20% of each enemy\'s max HP and inflicts Bleed, Burn, and Poison. 10-turn global cooldown.';
     container.innerHTML = '';
 
     let wohSlotIndex = player.equippedSkills.indexOf('woh');
