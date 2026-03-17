@@ -3339,8 +3339,38 @@ function processAutoTurn() {
         if(!player.activeBuffs.some(b => b.type === 'def')) { if(inv.food_df3 > 0) return useConsumable('food_df3'); if(inv.food_df2 > 0) return useConsumable('food_df2'); if(inv.food_df1 > 0) return useConsumable('food_df1'); }
     }
 
-    if(enemies[activeTargetIndex].currentHp <= 0) activeTargetIndex = enemies.findIndex(e => e.currentHp > 0);
-    
+    // Auto-battle target priority
+    const RARITY_EASY = ['common', 'rare', 'epic', 'legendary', 'mythic', 'boss'];
+    const RARITY_HARD = ['mythic', 'boss', 'legendary', 'epic', 'rare', 'common'];
+    let priorityOrder = (globalProgression.settings.autoBattleTargetPriority === 'hard') ? RARITY_HARD : RARITY_EASY;
+    let bestTarget = -1;
+    let bestPriority = Infinity;
+    enemies.forEach((e, idx) => {
+        if(e.currentHp <= 0) return;
+        let r = e.isBoss ? 'boss' : (e.rarity || 'common');
+        let p = priorityOrder.indexOf(r);
+        if(p === -1) p = priorityOrder.length;
+        if(p < bestPriority) {
+            bestPriority = p;
+            bestTarget = idx;
+        }
+    });
+    if(bestTarget !== -1) activeTargetIndex = bestTarget;
+    else activeTargetIndex = enemies.findIndex(e => e.currentHp > 0);
+
+    // Auto-use usable items (after consumables, before skills)
+    let autoUsables = globalProgression.settings.autoBattleUsables || [];
+    if(autoUsables.length > 0) {
+        for(let uKey of autoUsables) {
+            let uAmt = (globalProgression.usableItems || {})[uKey] || 0;
+            let uCd = (player.usableCooldowns || {})[uKey] || 0;
+            if(uAmt > 0 && uCd <= 0) {
+                useUsableItem(uKey);
+                return;
+            }
+        }
+    }
+
     let available = [];
     for(let i=0; i<5; i++) {
         let sIdx = player.equippedSkills[i];

@@ -375,6 +375,14 @@
                 <button id="toggle-music-btn" onclick="toggleSetting('music')" class="px-6 py-2 rounded font-bold text-white transition active:scale-95">ON</button>
             </div>
 
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-4 shadow-lg flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-white text-lg">⚔️ Auto Battle Options</h3>
+                    <p class="text-xs text-gray-400">Configure target priority and usable items for auto-battle.</p>
+                </div>
+                <button onclick="openAutoBattleSettings()" class="px-6 py-2 rounded font-bold text-white transition active:scale-95 bg-indigo-600 hover:bg-indigo-500">Configure</button>
+            </div>
+
             <div class="grid grid-cols-2 gap-4 mt-4 border-t border-gray-700 pt-6">
                 <button onclick="showExport()" class="bg-blue-800 hover:bg-blue-700 text-blue-200 border border-blue-600 p-3 rounded-xl font-bold transition shadow-lg active:scale-95 flex flex-col items-center">
                     <span class="text-2xl mb-1">📤</span> Export Save
@@ -389,6 +397,43 @@
                     <span class="text-[10px] text-gray-400 mt-1">Return to Start New Game / Continue screen</span>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- AUTO BATTLE SETTINGS MODAL -->
+    <div id="modal-autobattle-settings" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-90 z-50 hidden flex-col items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-gray-800 border border-indigo-600 rounded-xl p-4 w-full max-w-md flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-600 pb-2">
+                <h3 class="text-xl font-bold text-white uppercase">⚔️ Auto Battle Options</h3>
+            </div>
+
+            <!-- Section A: Target Priority -->
+            <div class="mb-4">
+                <h4 class="text-sm font-bold text-gray-300 uppercase tracking-widest mb-2">🎯 Enemy Target Priority</h4>
+                <div class="flex gap-2 mb-2">
+                    <button id="abt-btn-easy" onclick="setAutoBattleTargetPriority('easy')" class="flex-1 py-2 rounded font-bold text-white transition active:scale-95 bg-green-600 hover:bg-green-500">Easy First</button>
+                    <button id="abt-btn-hard" onclick="setAutoBattleTargetPriority('hard')" class="flex-1 py-2 rounded font-bold text-white transition active:scale-95 bg-gray-700 hover:bg-gray-600">Hard First</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                    <div class="bg-gray-900 rounded p-2">
+                        <div class="font-bold text-green-400 mb-1">Easy First</div>
+                        Normal → Rare → Epic → Legend → Mythic
+                    </div>
+                    <div class="bg-gray-900 rounded p-2">
+                        <div class="font-bold text-red-400 mb-1">Hard First</div>
+                        Mythic → Legend → Epic → Rare → Normal
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section B: Auto-Use Usable Items -->
+            <div class="mb-4">
+                <h4 class="text-sm font-bold text-gray-300 uppercase tracking-widest mb-2">🎒 Auto-Use Items (Max 3)</h4>
+                <div id="autobattle-usable-warn" class="hidden text-xs text-red-400 font-bold mb-2 text-center">⚠️ Max 3 items selected!</div>
+                <div id="abt-usables-list" class="max-h-48 overflow-y-auto"></div>
+            </div>
+
+            <button onclick="closeAutoBattleSettings()" class="w-full mt-2 py-2 rounded font-bold text-white bg-gray-700 hover:bg-gray-600 transition active:scale-95">Close</button>
         </div>
     </div>
 

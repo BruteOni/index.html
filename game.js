@@ -299,7 +299,7 @@ let globalProgression = {
     newItems: {}, shopGear: [], shopLastRefresh: 0,
     attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 },
     storyModeProgress: { hunting: 0, pillage: 0, workshop: 0, island_defense: 0 },
-    settings: { sound: true, music: true },
+    settings: { sound: true, music: true, autoBattleTargetPriority: 'easy', autoBattleUsables: [] },
     discoveredEnemies: {}, claimedCodexRewards: {}, killedBosses: {}, discoveredMythicBosses: [],
     skillTreeEnhancements: [],
     burglarDailyPurchases: 0, burglarLastPurchaseDate: '',
@@ -493,7 +493,7 @@ function loadGameAndContinue() {
             newItems: {}, shopGear: [], shopLastRefresh: 0,
             attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 },
             storyModeProgress: { hunting: 0, pillage: 0, workshop: 0, island_defense: 0 },
-            settings: { sound: true, music: true },
+            settings: { sound: true, music: true, autoBattleTargetPriority: 'easy', autoBattleUsables: [] },
             gender: 'male',
             discoveredEnemies: {}, claimedCodexRewards: {}, killedBosses: {}, discoveredMythicBosses: [],
             skillTreeEnhancements: [],
@@ -532,6 +532,8 @@ function loadGameAndContinue() {
         if(globalProgression.attributes === undefined) globalProgression.attributes = { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0 };
         if(globalProgression.shopGear === undefined) { globalProgression.shopGear = []; globalProgression.shopLastRefresh = 0; }
         if(globalProgression.settings === undefined) globalProgression.settings = { sound: true, music: true };
+        if(globalProgression.settings.autoBattleTargetPriority === undefined) globalProgression.settings.autoBattleTargetPriority = 'easy';
+        if(globalProgression.settings.autoBattleUsables === undefined) globalProgression.settings.autoBattleUsables = [];
         if(globalProgression.discoveredEnemies === undefined) globalProgression.discoveredEnemies = {};
         if(globalProgression.claimedCodexRewards === undefined) globalProgression.claimedCodexRewards = {};
         if(globalProgression.killedBosses === undefined) globalProgression.killedBosses = {};
@@ -1002,7 +1004,7 @@ window.startGame = function(classId = 'warrior') {
         equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null }, newItems: {},
         attributes: getClassBaseAttributes(classId),
         storyModeProgress: { hunting: 0, pillage: 0, workshop: 0, island_defense: 0 },
-        settings: { sound: true, music: true },
+        settings: { sound: true, music: true, autoBattleTargetPriority: 'easy', autoBattleUsables: [] },
         gender: 'male',
         discoveredEnemies: {}, claimedCodexRewards: {}, killedBosses: {}, discoveredMythicBosses: [],
         skillTreeEnhancements: [],
@@ -1046,6 +1048,93 @@ function toggleSetting(type) {
     playSound('click');
     saveGame();
     showSettings();
+}
+
+function openAutoBattleSettings() {
+    const modal = document.getElementById('modal-autobattle-settings');
+    if(!modal) return;
+    renderAutoBattleSettingsModal();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeAutoBattleSettings() {
+    const modal = document.getElementById('modal-autobattle-settings');
+    if(!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function setAutoBattleTargetPriority(value) {
+    globalProgression.settings.autoBattleTargetPriority = value;
+    saveGame();
+    renderAutoBattleSettingsModal();
+}
+
+function toggleAutoBattleUsable(key) {
+    if(!globalProgression.settings.autoBattleUsables) globalProgression.settings.autoBattleUsables = [];
+    let arr = globalProgression.settings.autoBattleUsables;
+    let idx = arr.indexOf(key);
+    if(idx !== -1) {
+        arr.splice(idx, 1);
+    } else {
+        if(arr.length >= 3) {
+            const warn = document.getElementById('autobattle-usable-warn');
+            if(warn) { warn.classList.remove('hidden'); setTimeout(() => warn.classList.add('hidden'), 2000); }
+            return;
+        }
+        arr.push(key);
+    }
+    saveGame();
+    renderAutoBattleSettingsModal();
+}
+
+function renderAutoBattleSettingsModal() {
+    const priority = globalProgression.settings.autoBattleTargetPriority || 'easy';
+    const selected = globalProgression.settings.autoBattleUsables || [];
+
+    // Render priority buttons
+    const easyBtn = document.getElementById('abt-btn-easy');
+    const hardBtn = document.getElementById('abt-btn-hard');
+    if(easyBtn && hardBtn) {
+        if(priority === 'easy') {
+            easyBtn.className = 'flex-1 py-2 rounded font-bold text-white transition active:scale-95 bg-green-600 hover:bg-green-500';
+            hardBtn.className = 'flex-1 py-2 rounded font-bold text-white transition active:scale-95 bg-gray-700 hover:bg-gray-600';
+        } else {
+            easyBtn.className = 'flex-1 py-2 rounded font-bold text-white transition active:scale-95 bg-gray-700 hover:bg-gray-600';
+            hardBtn.className = 'flex-1 py-2 rounded font-bold text-white transition active:scale-95 bg-red-600 hover:bg-red-500';
+        }
+    }
+
+    // Render usable items list
+    const list = document.getElementById('abt-usables-list');
+    if(!list) return;
+    list.innerHTML = '';
+    let hasAny = false;
+    Object.keys(USABLE_ITEMS).forEach(key => {
+        let amt = (globalProgression.usableItems || {})[key] || 0;
+        if(amt <= 0) return;
+        hasAny = true;
+        let item = USABLE_ITEMS[key];
+        let isSel = selected.includes(key);
+        let row = document.createElement('div');
+        row.className = 'flex items-center justify-between py-2 border-b border-gray-700';
+        row.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="text-xl">${item.icon || '🎒'}</span>
+                <div>
+                    <div class="text-sm font-bold text-white">${item.name}</div>
+                    <div class="text-xs text-gray-400">Owned: ${amt}</div>
+                </div>
+            </div>
+            <button onclick="toggleAutoBattleUsable('${key}')" class="px-3 py-1 rounded font-bold text-sm transition active:scale-95 ${isSel ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}">
+                ${isSel ? '✔ Selected' : 'Select'}
+            </button>`;
+        list.appendChild(row);
+    });
+    if(!hasAny) {
+        list.innerHTML = '<div class="text-gray-500 text-sm text-center py-3">No usable items owned.</div>';
+    }
 }
 
 // --- CODEX ---
