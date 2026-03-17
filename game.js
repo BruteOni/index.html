@@ -297,7 +297,7 @@ let globalProgression = {
     usableItems: {},
     equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null },
     newItems: {}, shopGear: [], shopLastRefresh: 0,
-    attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0 },
+    attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 },
     storyModeProgress: { hunting: 0, pillage: 0, workshop: 0, island_defense: 0 },
     settings: { sound: true, music: true },
     discoveredEnemies: {}, claimedCodexRewards: {}, killedBosses: {}, discoveredMythicBosses: [],
@@ -323,7 +323,7 @@ for(let i=1; i<=50; i++) {
 }
 
 let player = {
-    classId: 'warrior', data: CLASSES['warrior'], lvl: 1, xp: 0, maxHp: 0, currentHp: 0, shield: 0,
+    classId: 'warrior', data: CLASSES['warrior'], lvl: 0, xp: 0, maxHp: 0, currentHp: 0, shield: 0,
     statPoints: 0, treeProgress: 0, treeBonusHp: 0, treeBonusDmg: 0, treeBonusDef: 0, treeBonusRegen: 0,
     treeProgressFire: 0, treeProgressIce: 0, treeProgressOffense: 0, treeProgressDefense: 0,
     treeProgressHoly: 0, treeProgressGuardian: 0, treeProgressShadow: 0, treeProgressVenom: 0, treeProgressDivine: 0, treeProgressPlague: 0,
@@ -349,7 +349,7 @@ let petBattleAutoMode = false; let petBattleAutoTimer = null;
 // --- ENERGY SYSTEM ---
 function getMaxEnergy() {
     let baseCap = globalProgression.energyCapUnlocked ? 100 : 50;
-    return Math.min(baseCap, 10 + (player.lvl - 1));
+    return Math.min(baseCap, 10 + Math.max(0, player.lvl - 1));
 }
 
 function updateEnergy() {
@@ -491,7 +491,7 @@ function loadGameAndContinue() {
             inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0 },
             equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null },
             newItems: {}, shopGear: [], shopLastRefresh: 0,
-            attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0 },
+            attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 },
             storyModeProgress: { hunting: 0, pillage: 0, workshop: 0, island_defense: 0 },
             settings: { sound: true, music: true },
             gender: 'male',
@@ -501,7 +501,7 @@ function loadGameAndContinue() {
             saveVersion: 2
         };
         const defaultPlayer = {
-            classId: 'warrior', lvl: 1, xp: 0, maxHp: 0, currentHp: 0, shield: 0,
+            classId: 'warrior', lvl: 0, xp: 0, maxHp: 0, currentHp: 0, shield: 0,
             statPoints: 0, skillPoints: 0, treeProgress: 0, treeBonusHp: 0, treeBonusDmg: 0, treeBonusDef: 0, treeBonusRegen: 0,
             treeProgressFire: 0, treeProgressIce: 0, treeProgressOffense: 0, treeProgressDefense: 0,
             treeProgressHoly: 0, treeProgressGuardian: 0, treeProgressShadow: 0, treeProgressVenom: 0,
@@ -567,6 +567,7 @@ function loadGameAndContinue() {
         if(globalProgression.attributes.force === undefined) globalProgression.attributes.force = 0;
         if(globalProgression.attributes.revival === undefined) globalProgression.attributes.revival = 0;
         if(globalProgression.attributes.vampire === undefined) globalProgression.attributes.vampire = 0;
+        if(globalProgression.attributes.defense === undefined) globalProgression.attributes.defense = 0;
         // Remove legacy 'devastation' attribute if present in old saves
         if(globalProgression.attributes.devastation !== undefined) delete globalProgression.attributes.devastation;
         if(globalProgression.cooldowns.enchants === undefined) globalProgression.cooldowns.enchants = 0;
@@ -634,11 +635,19 @@ window.onload = () => { if(localStorage.getItem('EternalAscensionSaveDataV1') ||
 
 // --- UTILS & MATH ---
 function getXpForNextLevel(lvl) { 
-    return Math.floor(100 * Math.pow(1.1, lvl - 1)); 
+    // Bracket-based staircase XP curve
+    // battlesPerLevel = 4 + segment*10 + ceil(offset/10)
+    // where segment = floor((lvl-1)/100), offset = ((lvl-1)%100)+1
+    // XP per level = battlesPerLevel * 100
+    if (lvl <= 0) lvl = 0; // Level 0 uses offset=1 → 5 battles * 100 = 500 XP
+    let segment = Math.floor(Math.max(0, lvl - 1) / 100);
+    let offset = (Math.max(0, lvl - 1) % 100) + 1;
+    let battlesPerLevel = 4 + segment * 10 + Math.ceil(offset / 10);
+    return battlesPerLevel * 100;
 }
 
 function getDropRateMultiplier() {
-    let base = (globalProgression.wellDropBattles || 0) > 0 ? 5 : 1;
+    let base = (globalProgression.wellDropBattles || 0) > 0 ? 2 : 1;
     let dropRateBonus = 0;
     let enhancements = globalProgression.skillTreeEnhancements || [];
     enhancements.forEach(e => {
@@ -689,7 +698,7 @@ function getEquipStats() {
 function calculateMaxHp() {
     let a = globalProgression.attributes;
     // Base HP from class, level scaling, and tree bonus
-    let base = player.data.baseHp + ((player.lvl - 1) * 15) + player.treeBonusHp;
+    let base = player.data.baseHp + (Math.max(0, player.lvl - 1) * 15) + player.treeBonusHp;
     // HP attribute: +0.5% max HP per point
     let attrHpMult = 1 + ((a.hp || 1) * 0.005);
     base = Math.floor(base * attrHpMult);
@@ -735,12 +744,12 @@ function getBaseDamage() {
 
 function getPlayerDef() {
     let a = globalProgression.attributes;
-    return 1 + player.treeBonusDef; // Gear damage reduction now handled via bonusDmgReduction pct stat
+    return 50 + (a.defense || 0) + player.treeBonusDef; // 50 base + defense attribute + tree bonus
 }
 
 // Returns the permanent base attributes for each class (cannot go below these)
 function getClassBaseAttributes(classId) {
-    const base = { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0 };
+    const base = { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 };
     if (classId === 'warrior') {
         return { ...base, hp: 10, fury: 5 };
     } else if (classId === 'mage') {
@@ -759,28 +768,7 @@ function getClassBaseAttributes(classId) {
 
 // Returns the per-class attribute caps
 function getClassAttrCap(classId, attrId) {
-    if (classId === 'warrior') {
-        if (attrId === 'willpower') return 25;
-        if (attrId === 'fury') return 50;
-        if (attrId === 'hp') return 9999;
-    } else if (classId === 'mage') {
-        if (attrId === 'hp') return 50;
-        if (attrId === 'willpower') return 60;
-    } else if (classId === 'paladin') {
-        if (attrId === 'willpower') return 25;
-        if (attrId === 'fury') return 25;
-        if (attrId === 'hp') return 9999;
-    } else if (classId === 'ninja') {
-        if (attrId === 'willpower') return 75;
-        if (attrId === 'hp') return 40;
-    } else if (classId === 'cleric') {
-        if (attrId === 'willpower') return 20;
-    } else if (classId === 'archer') {
-        if (attrId === 'willpower') return 50;
-        if (attrId === 'hp') return 30;
-    }
-    if (attrId === 'willpower') return 50;
-    return 9999;
+    return 100; // Universal cap of 100 for all attributes, all classes
 }
 
 function switchScreen(screenId) {
@@ -979,7 +967,7 @@ function showHub() {
 
 function createFreshPlayer(classId) {
     return {
-        classId: classId, data: CLASSES[classId], lvl: 1, xp: 0, maxHp: 0, currentHp: 0, shield: 0,
+        classId: classId, data: CLASSES[classId], lvl: 0, xp: 0, maxHp: 0, currentHp: 0, shield: 0,
         statPoints: 0, skillPoints: 0, treeProgress: 0, treeBonusHp: 0, treeBonusDmg: 0, treeBonusDef: 0, treeBonusRegen: 0,
         treeProgressFire: 0, treeProgressIce: 0, treeProgressOffense: 0, treeProgressDefense: 0,
         treeProgressHoly: 0, treeProgressGuardian: 0, treeProgressShadow: 0, treeProgressVenom: 0, treeProgressDivine: 0, treeProgressPlague: 0,

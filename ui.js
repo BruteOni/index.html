@@ -18,7 +18,6 @@ function clearCharNotifications() {
 function showCharacter() {
     const lvlEl = document.getElementById('char-lvl'); if (lvlEl) lvlEl.innerText = player.lvl;
     
-    let eqStats = getEquipStats();
     document.getElementById('char-stat-hp').innerText = `${calculateMaxHp()}`;
     document.getElementById('char-stat-dmg').innerText = `${getBaseDamage()}`;
     document.getElementById('char-stat-def').innerText = `${getPlayerDef()}`;
@@ -34,8 +33,8 @@ function showCharacter() {
 
     // Dodge: resistance 0.25% per point + gear bonusDodge
     document.getElementById('char-stat-dodge').innerText = `${(((a.resistance || 1) * 0.0025 + getEquipBonusStat('bonusDodge')) * 100).toFixed(1)}%`;
-    // Hit: reflexes 0.1% per point + gear bonusHit
-    document.getElementById('char-stat-hit').innerText = `${(((a.reflexes || 1) * 0.001 + getEquipBonusStat('bonusHit')) * 100).toFixed(1)}%`;
+    // Hit: 80% base + reflexes 0.1% per point + gear bonusHit
+    document.getElementById('char-stat-hit').innerText = `${Math.min(100, (80 + ((a.reflexes || 1) * 0.1) + (getEquipBonusStat('bonusHit') * 100))).toFixed(1)}%`;
     // Crit: force 0.5% per point + gear bonusCritRate, capped at 75%
     document.getElementById('char-stat-crit').innerText = `${Math.min(75, ((a.force || 0) * 0.5) + (getEquipBonusStat('bonusCritRate') * 100)).toFixed(1)}%`;
     // Crit Dmg: fury 0.25% per point + gear bonusCritDmg
@@ -48,6 +47,10 @@ function showCharacter() {
     document.getElementById('char-stat-skilldmg').innerText = `${(getEquipBonusStat('bonusSkillDmg') * 100).toFixed(1)}%`;
     // Armor Pierce: reflexes 0.3% per point + gear bonusArmorPierce
     document.getElementById('char-stat-mitigation').innerText = `${(((a.reflexes || 1) * 0.003 + getEquipBonusStat('bonusArmorPierce')) * 100).toFixed(1)}%`;
+    // Life Steal: vampire 0.25% per point + gear bonusVamp
+    if(document.getElementById('char-stat-lifesteal')) document.getElementById('char-stat-lifesteal').innerText = `${(((a.vampire || 0) * 0.0025 + getEquipBonusStat('bonusVamp')) * 100).toFixed(2)}%`;
+    // Counter Chance: agility 0.25% per point
+    if(document.getElementById('char-stat-counter')) document.getElementById('char-stat-counter').innerText = `${(((a.agility || 1) * 0.0025) * 100).toFixed(2)}%`;
     
     const pClass = document.getElementById('char-class-name'); if(pClass) pClass.innerText = player.data.name;
     const pAv = document.getElementById('char-avatar-display'); if(pAv) setAvatarDisplay('char-avatar-display', player.data.avatar);
@@ -208,6 +211,7 @@ function showAttributes() {
         { id: 'tenacity',   name: 'Tenacity',   desc: '+0.3% damage reduction per point', color: 'text-orange-400' },
         { id: 'resistance', name: 'Resistance', desc: '+0.25% dodge chance per point', color: 'text-purple-400' },
         { id: 'hp',         name: 'HP',         desc: '+0.5% max HP per point', color: 'text-green-300' },
+        { id: 'defense',    name: 'Defense',    desc: '+1 defense per point (reduces damage by 1)', color: 'text-gray-300' },
         { id: 'reflexes',   name: 'Reflexes',   desc: '+0.3% armor pierce (ignore enemy defense) per point', color: 'text-green-400' },
         { id: 'force',      name: 'Force',      desc: '+0.5% crit rate per point', color: 'text-cyan-400' },
         { id: 'revival',    name: 'Revival',    desc: '+0.2% HP regen per turn per point', color: 'text-emerald-400' },
@@ -216,7 +220,7 @@ function showAttributes() {
     ];
 
     attrDefs.forEach(a => {
-        let zeroBaseAttrs = ['happiness', 'rawPower', 'force', 'revival', 'vampire'];
+        let zeroBaseAttrs = ['happiness', 'rawPower', 'force', 'revival', 'vampire', 'defense'];
         let isZeroBase = zeroBaseAttrs.includes(a.id);
         let currentVal = globalProgression.attributes[a.id] !== undefined ? globalProgression.attributes[a.id] : (isZeroBase ? 0 : 1);
         let classId = player.classId || 'warrior';
@@ -243,7 +247,7 @@ function showAttributes() {
         // -100 button: disabled if fewer than 100 levels above minimum
         let minus100Disabled = (currentVal - 100) < minVal ? 'disabled' : '';
 
-        let capDisplay = attrCap < 9999 ? ` / ${attrCap}` : '';
+        let capDisplay = ` / ${attrCap}`;
         let levelDisplay = `Lv. ${currentVal}${capDisplay}`;
         let baseNote = (minVal > 1) ? ` <span class="text-yellow-500 text-[9px]">(base ${minVal})</span>` : '';
 
@@ -281,8 +285,8 @@ function allocateAttribute(id, count) {
     let attrCap = getClassAttrCap(classId, id);
 
     let classBase = getClassBaseAttributes(classId);
-    // New attrs (rawPower, force, revival, vampire) start at 0; happiness starts at 0; others at 1
-    let zeroBaseAttrs = ['happiness', 'rawPower', 'force', 'revival', 'vampire'];
+    // New attrs (rawPower, force, revival, vampire, defense) start at 0; happiness starts at 0; others at 1
+    let zeroBaseAttrs = ['happiness', 'rawPower', 'force', 'revival', 'vampire', 'defense'];
     let defaultMin = zeroBaseAttrs.includes(id) ? 0 : 1;
     let currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : defaultMin;
     let canAllocate = Math.min(count, attrCap - currentVal, Math.floor(player.statPoints / cost));
@@ -300,7 +304,7 @@ function deallocateAttribute(id, count) {
     count = count || 1;
     let classId = player.classId || 'warrior';
     let classBase = getClassBaseAttributes(classId);
-    let zeroBaseAttrs = ['happiness', 'rawPower', 'force', 'revival', 'vampire'];
+    let zeroBaseAttrs = ['happiness', 'rawPower', 'force', 'revival', 'vampire', 'defense'];
     let defaultMin = zeroBaseAttrs.includes(id) ? 0 : 1;
     let minVal = (classBase[id] !== undefined) ? classBase[id] : defaultMin;
     let currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : minVal;
@@ -319,7 +323,7 @@ function deallocateAttribute(id, count) {
 function respecAttributes() {
     let classId = player.classId || 'warrior';
     let classBase = getClassBaseAttributes(classId);
-    const normalAttrs = ['hp', 'tenacity', 'agility', 'willpower', 'resistance', 'reflexes', 'fury', 'rawPower', 'force', 'revival', 'vampire'];
+    const normalAttrs = ['hp', 'tenacity', 'agility', 'willpower', 'resistance', 'reflexes', 'fury', 'rawPower', 'force', 'revival', 'vampire', 'defense'];
     let totalRefund = 0;
     normalAttrs.forEach(stat => {
         let currentVal = globalProgression.attributes[stat] !== undefined ? globalProgression.attributes[stat] : (classBase[stat] || 0);
@@ -2256,7 +2260,7 @@ function buyWellXpBuff() {
     globalProgression.gold -= 20;
     globalProgression.wellXpBattles = 10;
     globalProgression.wellLastXpDate = today;
-    log.innerText = '5x XP blessing is active for 10 battles!';
+    log.innerText = '2x XP blessing is active for 10 battles!';
     playSound('win');
     saveGame();
     showWell();
@@ -2270,7 +2274,7 @@ function buyWellDropBuff() {
     globalProgression.gold -= 20;
     globalProgression.wellDropBattles = 10;
     globalProgression.wellLastDropDate = today;
-    log.innerText = '5x drop blessing is active for 10 battles!';
+    log.innerText = '2x drop blessing is active for 10 battles!';
     playSound('win');
     saveGame();
     showWell();
@@ -2577,17 +2581,43 @@ const ENEMY_SKILL_POOL = [
     { id: 'silence', name: 'Silenced', cd: 5, desc: 'Silences 1 random hero skill slot (1-5) for 1 turn' }
 ];
 
+function getEnemyBracketStats(level) {
+    // Returns { baseHp, baseDmg, baseDef, perLevelMult } for the given level bracket
+    let bracket;
+    if (level <= 20)       bracket = { baseHp: 200,  baseDmg: 80,  baseDef: 10, mult: 1.0 };
+    else if (level <= 40)  bracket = { baseHp: 260,  baseDmg: 110, baseDef: 20, mult: 1.3 };
+    else if (level <= 60)  bracket = { baseHp: 340,  baseDmg: 150, baseDef: 35, mult: 1.7 };
+    else if (level <= 80)  bracket = { baseHp: 440,  baseDmg: 200, baseDef: 50, mult: 2.2 };
+    else                   bracket = { baseHp: 560,  baseDmg: 260, baseDef: 70, mult: 2.8 };
+
+    // Level within the bracket (1-based)
+    let bracketSize = 20;
+    let bracketStart = Math.floor((Math.min(level, 100) - 1) / bracketSize) * bracketSize + 1;
+    let levelWithinBracket = Math.min(level, 100) - bracketStart + 1;
+    // For levels above 100, continue scaling from the 81-100 bracket
+    if (level > 100) {
+        levelWithinBracket = level - 80; // continual scaling from level 80
+    }
+
+    let scalingFactor = 1 + (levelWithinBracket - 1) * 0.05;
+    return {
+        hp:  Math.floor(bracket.baseHp  * bracket.mult * scalingFactor),
+        dmg: Math.floor(bracket.baseDmg * bracket.mult * scalingFactor),
+        def: Math.floor(bracket.baseDef * bracket.mult * scalingFactor)
+    };
+}
+
 function assignEnemySkills(enemy) {
-    let numSkills = 1;
-    if(enemy.rarity === 'rare') numSkills = 2;
-    else if(enemy.rarity === 'epic') numSkills = 3;
-    else if(enemy.rarity === 'legendary' || enemy.isBoss) numSkills = 4;
-    else if(enemy.rarity === 'mythic') numSkills = 4;
+    let numSpecials = 0;
+    if(enemy.rarity === 'rare') numSpecials = 1;
+    else if(enemy.rarity === 'epic') numSpecials = 2;
+    else if(enemy.rarity === 'legendary' || enemy.isBoss) numSpecials = 3;
+    else if(enemy.rarity === 'mythic') numSpecials = 3;
     
     enemy.skills = ['hit']; // Always has hit
     let available = ENEMY_SKILL_POOL.map(s => s.id).filter(id => id !== 'hit');
     
-    for(let i=1; i<numSkills; i++) {
+    for(let i=0; i<numSpecials; i++) {
         if(available.length === 0) break;
         let pickIdx = Math.floor(Math.random() * available.length);
         enemy.skills.push(available.splice(pickIdx, 1)[0]);
@@ -2676,10 +2706,10 @@ function generateEnemies() {
         isBossFight = true; count = 1;
     } else {
         let countRoll = Math.random();
-        if(countRoll < 0.15) count = 4;
-        else if(countRoll < 0.35) count = 3;
-        else if(countRoll < 0.65) count = 2;
-        else count = 1;
+        if(countRoll < 0.05) count = 4;       // 5% chance
+        else if(countRoll < 0.10) count = 3;  // 5% chance
+        else if(countRoll < 0.50) count = 2;  // 40% chance
+        else count = 1;                        // 50% chance
     }
 
     let pool = ENEMIES_HUNT;
@@ -2716,7 +2746,7 @@ function generateEnemies() {
     }
 
     for(let i=0; i<count; i++) {
-        let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, rarity: 'common', isBoss: false };
+        let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, def: 0, rarity: 'common', isBoss: false };
         
         if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
             // Dungeon difficulty: Tier N = max(1, (N-1)*2.5) multiplier relative to Tier 1
@@ -2744,17 +2774,27 @@ function generateEnemies() {
             e.name = t.name; e.avatar = t.avatar;
 
             let rRoll = Math.random();
-            if(rRoll < 0.01) e.rarity = 'legendary'; 
-            else if (rRoll < 0.06) e.rarity = 'epic'; 
-            else if (rRoll < 0.26) e.rarity = 'rare'; 
-            else e.rarity = 'common';
+            if(rRoll < 0.01) e.rarity = 'mythic';
+            else if(rRoll < 0.05) e.rarity = 'legendary';
+            else if(rRoll < 0.15) e.rarity = 'epic';
+            else if(rRoll < 0.40) e.rarity = 'rare';
+            else e.rarity = 'common'; // 60% normal
 
             if (e.rarity !== 'common') { e.name = `${e.rarity.charAt(0).toUpperCase() + e.rarity.slice(1)} ${e.name}`; }
 
-            let rMult = RARITY_MULTS[e.rarity] || 1;
+            let bracketStats = getEnemyBracketStats(e.lvl);
+            let hpMult = (RARITY_HP_MULTS[e.rarity] || 1) * t.hpMult;
+            let dmgMult = (RARITY_DMG_MULTS[e.rarity] || 1) * t.dmgMult;
+            let defMult = (RARITY_DEF_MULTS[e.rarity] || 1);
             let dungeonDiffMult = currentMode === 'dungeon' ? (activeDungeonTier === 1 ? 1.5 : (activeDungeonTier - 1) * 2.5 * 1.5) : 1;
-            e.maxHp = Math.max(1, Math.floor(25 * t.hpMult * (1 + (e.lvl - 1) * 0.4) * rMult * dungeonDiffMult)); 
-            e.baseDmg = Math.max(1, Math.floor(e.lvl * rMult * dungeonDiffMult * (1 + (e.lvl - 1) * 0.01))); 
+            e.maxHp = Math.max(1, Math.floor(bracketStats.hp * hpMult * dungeonDiffMult));
+            e.baseDmg = Math.max(1, Math.floor(bracketStats.dmg * dmgMult * dungeonDiffMult));
+            e.def = Math.max(0, Math.floor(bracketStats.def * defMult));
+
+            // Guaranteed drops for epic/legendary/mythic
+            if (e.rarity === 'epic') e.guaranteedDrop = 'epic';
+            else if (e.rarity === 'legendary') e.guaranteedDrop = 'legendary';
+            else if (e.rarity === 'mythic') e.guaranteedDrop = 'mythic';
         }
 
         assignEnemySkills(e);
@@ -3470,6 +3510,19 @@ function usePlayerSkill(slotIndex) {
     }
     scaledPower = Math.max(1, Math.floor(scaledPower * dmgBoostMult));
 
+    // Infection buff: +5% dmg per effect stack (bleed, poison, burn) on active target
+    let infectionBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'infection') : null;
+    if(infectionBuff) {
+        let target = enemies[activeTargetIndex];
+        if(target && target.currentHp > 0) {
+            let effectStacks = (target.bleedStacks || 0) + (target.poisonStacks || 0) + (target.burnStacks || 0);
+            if(effectStacks > 0) {
+                let infectionMult = 1 + effectStacks * 0.05;
+                scaledPower = Math.max(1, Math.floor(scaledPower * infectionMult));
+            }
+        }
+    }
+
     if (skill.type === 'attack') {
         
         let totalDmg = 0;
@@ -3496,8 +3549,8 @@ function usePlayerSkill(slotIndex) {
 
                 setTimeout(() => triggerAnim(`enemy-card-${tIdx}`, 'anim-shake'), 150 * (i+1));
                 
-                // Hit chance: reflexes 0.1% per point + gear bonusHit
-                let hitChance = 0.95 + ((a.reflexes || 1) * 0.001) + getEquipBonusStat('bonusHit');
+                // Hit chance: 80% base + reflexes 0.1% per point + gear bonusHit
+                let hitChance = 0.80 + ((a.reflexes || 1) * 0.001) + getEquipBonusStat('bonusHit');
                 if(target.dodgeTurns > 0 || Math.random() > hitChance) {
                     addLog(`Missed ${target.name}!`, "text-gray-500");
                     showFloatText(`enemy-card-${tIdx}`, `MISS`, 'text-gray-400');
@@ -3528,6 +3581,10 @@ function usePlayerSkill(slotIndex) {
                 }
 
                 if (target.shield > 0) { hitDmg = Math.floor(hitDmg * (1 - target.shield)); target.shield = 0; }
+
+                // Apply enemy flat defense (subtract from damage)
+                let enemyDef = target.def || 0;
+                if(enemyDef > 0) hitDmg = Math.max(1, hitDmg - enemyDef);
                 
                 // Crit chance: force 0.5% per point + gear bonusCritRate
                 let critChance = Math.min(0.75, ((a.force || 0) * 0.005) + getEquipBonusStat('bonusCritRate'));
@@ -3633,17 +3690,18 @@ function usePlayerSkill(slotIndex) {
             isPlayerTurn = true; // Keep player turn active
         }
 
-        // Poke special: steal HP% from target (default 20%, configurable via skill.pokePct)
+        // Poke special: remove HP% from target and heal self for HP%
         if(skill.special === 'poke') {
             let pokeTarget = enemies[activeTargetIndex];
             if(pokeTarget && pokeTarget.currentHp > 0) {
-                let pokePct = skill.pokePct || 0.20;
-                let pokeDmg = Math.floor(pokeTarget.maxHp * pokePct);
+                let pokeEnemyPct = skill.pokeEnemyHpPct || skill.pokePct || 0.10;
+                let pokeSelfPct = skill.pokeSelfHealPct || pokeEnemyPct;
+                let pokeDmg = Math.floor(pokeTarget.maxHp * pokeEnemyPct);
                 pokeTarget.currentHp = Math.max(0, pokeTarget.currentHp - pokeDmg);
                 let healMult = player.activeBuffs.some(b => b.type === 'poison') ? 0.5 : 1.0;
                 let healingBuffMult = 1.0 + ((globalProgression.attributes.happiness || 0) * 0.0025) + getEquipBonusStat('bonusHealing');
                 if(player.activeBuffs) player.activeBuffs.filter(b => b.type === 'healingBuff').forEach(b => healingBuffMult += b.val);
-                let pokeHeal = Math.floor(pokeDmg * healMult * healingBuffMult);
+                let pokeHeal = Math.floor(player.maxHp * pokeSelfPct * healMult * healingBuffMult);
                 player.currentHp = Math.min(player.maxHp, player.currentHp + pokeHeal);
                 showFloatText('player-avatar-container', `+${pokeHeal}`, 'text-green-400');
                 showFloatText(`enemy-card-${activeTargetIndex}`, `-${pokeDmg}`, 'text-fuchsia-400');
@@ -3748,6 +3806,11 @@ function usePlayerSkill(slotIndex) {
             // Eruption buff: hits inflict bleed stacks
             player.activeBuffs.push({ type: 'eruption', turns: skill.self_effect.eruptionTurns || skill.self_effect.turns || 4 });
             addLog(`Eruption active! Hits inflict Bleed (${skill.self_effect.eruptionTurns||4}t)!`, 'text-red-400 font-bold');
+        }
+        if(skill.self_effect.infectionBuff) {
+            // Infection buff: +5% dmg per active effect stack on enemy (bleed/poison/burn)
+            player.activeBuffs.push({ type: 'infection', turns: skill.self_effect.infectionTurns || 5 });
+            addLog(`Infection active! +5% dmg per enemy effect stack (${skill.self_effect.infectionTurns||5}t)!`, 'text-green-400 font-bold');
         }
     }
 
@@ -4358,9 +4421,10 @@ function endBattle(playerWon) {
                     let bRoll = Math.random();
                     if(bRoll < 0.40) forceRarity = 'legendary'; else if(bRoll < 0.60) forceRarity = 'epic'; else if (bRoll < 0.70) forceRarity = 'rare';
                 } else {
-                    if (e.rarity === 'rare') forceRarity = 'rare';
-                    else if (e.rarity === 'epic') forceRarity = 'epic';
+                    if (e.rarity === 'mythic') { forceRarity = 'mythic'; }
                     else if (e.rarity === 'legendary') forceRarity = 'legendary';
+                    else if (e.rarity === 'epic') forceRarity = 'epic';
+                    else if (e.rarity === 'rare') forceRarity = 'rare';
                     else if (rollWithDropRate(0.50)) {
                         if (currentMode === 'pillage') {
                             let rRoll = Math.random();
@@ -4469,15 +4533,15 @@ function endBattle(playerWon) {
             } else if (e.isBoss) {
                 totalXp += Math.floor(nextLvlXp * 0.20); // Bosses give 20% of level
             } else {
-                if (e.rarity === 'mythic') totalXp += Math.floor(nextLvlXp * 1.00); // Mythic gives 100%
+                if (e.rarity === 'mythic') totalXp += Math.floor(nextLvlXp * 1.00); // Mythic gives 100% of level XP
                 else if (e.rarity === 'legendary') totalXp += Math.floor(nextLvlXp * 0.50); // Legendary gives 50%
                 else if (e.rarity === 'epic') totalXp += Math.floor(nextLvlXp * 0.25); // Epic gives 25%
-                else if (e.rarity === 'rare') totalXp += Math.floor(nextLvlXp * 0.10); // Rare gives 10%
-                else totalXp += Math.floor(nextLvlXp * 0.05); // Common gives 5%
+                else if (e.rarity === 'rare') totalXp += 200; // Rare gives 200 base XP
+                else totalXp += 100; // Normal gives 100 base XP (1 battle = 1/battlesPerLevel of a level)
             }
         });
         
-        if((globalProgression.wellXpBattles || 0) > 0) totalXp *= 5;
+        if((globalProgression.wellXpBattles || 0) > 0) totalXp *= 2;
         // Dungeons give 3x XP
         if(currentMode === 'dungeon') totalXp *= 3;
         // Apply XP Increase enhancements + XP Gain from accessories
