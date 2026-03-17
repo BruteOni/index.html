@@ -5,9 +5,9 @@
 const SLOT_FIXED_COLORS = ['bg-gray-700', 'bg-green-700', 'bg-green-700', 'bg-green-700', 'bg-green-700'];
 
 // Fixed shop buy prices by rarity
-const GEAR_BUY_PRICES = { common: 100, rare: 200, epic: 600, legendary: 1000 };
+const GEAR_BUY_PRICES = { common: 100, rare: 200, epic: 600, legendary: 1000, mythic: 5000 };
 // Sell prices are 50% of buy price
-const GEAR_SELL_PRICES = { common: 50, rare: 100, epic: 300, legendary: 500 };
+const GEAR_SELL_PRICES = { common: 50, rare: 100, epic: 300, legendary: 500, mythic: 2500 };
 
 // --- CHARACTER / EQUIPMENT SCREEN ---
 function clearCharNotifications() { 
@@ -648,14 +648,13 @@ function showSkillTree() {
             const container = document.getElementById('warrior-tree-container'); container.innerHTML = '';
             const headerRow = document.getElementById('warrior-tree-header'); headerRow.innerHTML = '';
             
-            // OFFENSE PATH (left column) - red themed, 12 nodes
+            // OFFENSE PATH (left column) - red themed, 25 nodes
             let offenseCol = document.createElement('div'); offenseCol.className = 'w-1/2 flex flex-col gap-2';
             headerRow.innerHTML = '<div class="w-1/2 text-center font-bold text-red-500 border-b border-red-700 pb-1">OFFENSE PATH</div><div class="w-1/2 text-center font-bold text-blue-500 border-b border-blue-700 pb-1">DEFENSE PATH</div>';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressOffense||0);
                 let isNext = i === (player.treeProgressOffense||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 3 : i===6 ? 4 : i===11 ? 5 : null;
+                let skillIdx = i===4 ? 3 : i===9 ? 4 : i===14 ? 5 : null;
                 
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-red-900 border-red-500 text-red-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
@@ -665,13 +664,12 @@ function showSkillTree() {
             }
             container.appendChild(offenseCol);
             
-            // DEFENSE PATH (right column) - blue themed, 12 nodes
+            // DEFENSE PATH (right column) - blue themed, 25 nodes
             let defenseCol = document.createElement('div'); defenseCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressDefense||0);
                 let isNext = i === (player.treeProgressDefense||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 6 : i===6 ? 7 : i===11 ? 8 : null;
+                let skillIdx = i===4 ? 6 : i===9 ? 7 : i===14 ? 8 : null;
                 
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-blue-900 border-blue-500 text-blue-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
@@ -691,11 +689,10 @@ function showSkillTree() {
             const mageHeaderRow = document.getElementById('mage-tree-header'); mageHeaderRow.innerHTML = '<div class="w-1/2 text-center font-bold text-orange-500 border-b border-orange-700 pb-1">FIRE PATH</div><div class="w-1/2 text-center font-bold text-cyan-500 border-b border-cyan-700 pb-1">ICE PATH</div>';
             
             let fireCol = document.createElement('div'); fireCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressFire||0);
                 let isNext = i === (player.treeProgressFire||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 3 : i===6 ? 4 : i===11 ? 5 : null;
+                let skillIdx = i===4 ? 3 : i===9 ? 4 : i===14 ? 5 : null;
                 
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-orange-900 border-orange-500 text-orange-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
@@ -706,11 +703,10 @@ function showSkillTree() {
             container.appendChild(fireCol);
             
             let iceCol = document.createElement('div'); iceCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressIce||0);
                 let isNext = i === (player.treeProgressIce||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 6 : i===6 ? 7 : i===11 ? 8 : null;
+                let skillIdx = i===4 ? 6 : i===9 ? 7 : i===14 ? 8 : null;
                 
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-cyan-900 border-cyan-500 text-cyan-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
@@ -730,11 +726,10 @@ function showSkillTree() {
             const paladinHeaderRow = document.getElementById('paladin-tree-header'); paladinHeaderRow.innerHTML = '<div class="w-1/2 text-center font-bold text-yellow-500 border-b border-yellow-700 pb-1">HOLY PATH</div><div class="w-1/2 text-center font-bold text-emerald-500 border-b border-emerald-700 pb-1">GUARDIAN PATH</div>';
             // Holy Path (left) — gold/yellow themed
             let holyCol = document.createElement('div'); holyCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressHoly||0);
                 let isNext = i === (player.treeProgressHoly||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 3 : i===6 ? 4 : i===11 ? 5 : null;
+                let skillIdx = i===4 ? 3 : i===9 ? 4 : i===14 ? 5 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-yellow-900 border-yellow-500 text-yellow-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'holy', i, isUnlocked, isNext, '✨', skillIdx);
@@ -743,11 +738,10 @@ function showSkillTree() {
             container.appendChild(holyCol);
             // Guardian Path (right) — emerald themed
             let guardianCol = document.createElement('div'); guardianCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressGuardian||0);
                 let isNext = i === (player.treeProgressGuardian||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 6 : i===6 ? 7 : i===11 ? 8 : null;
+                let skillIdx = i===4 ? 6 : i===9 ? 7 : i===14 ? 8 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-emerald-900 border-emerald-500 text-emerald-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'guardian', i, isUnlocked, isNext, '🛡️', skillIdx);
@@ -765,11 +759,10 @@ function showSkillTree() {
             const ninjaHeaderRow = document.getElementById('ninja-tree-header'); ninjaHeaderRow.innerHTML = '<div class="w-1/2 text-center font-bold text-violet-500 border-b border-violet-700 pb-1">SHADOW PATH</div><div class="w-1/2 text-center font-bold text-lime-500 border-b border-lime-700 pb-1">VENOM PATH</div>';
             // Shadow Path (left) — violet themed
             let shadowCol = document.createElement('div'); shadowCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressShadow||0);
                 let isNext = i === (player.treeProgressShadow||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 3 : i===6 ? 4 : i===11 ? 5 : null;
+                let skillIdx = i===4 ? 3 : i===9 ? 4 : i===14 ? 5 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-violet-900 border-violet-500 text-violet-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'shadow', i, isUnlocked, isNext, '🌑', skillIdx);
@@ -778,11 +771,10 @@ function showSkillTree() {
             container.appendChild(shadowCol);
             // Venom Path (right) — lime themed
             let venomCol = document.createElement('div'); venomCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressVenom||0);
                 let isNext = i === (player.treeProgressVenom||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 6 : i===6 ? 7 : i===11 ? 8 : null;
+                let skillIdx = i===4 ? 6 : i===9 ? 7 : i===14 ? 8 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-lime-900 border-lime-500 text-lime-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'venom', i, isUnlocked, isNext, '🐍', skillIdx);
@@ -800,11 +792,10 @@ function showSkillTree() {
             const clericHeaderRow = document.getElementById('cleric-tree-header'); clericHeaderRow.innerHTML = '<div class="w-1/2 text-center font-bold text-pink-400 border-b border-pink-700 pb-1">DIVINE PATH</div><div class="w-1/2 text-center font-bold text-green-600 border-b border-green-800 pb-1">PLAGUE PATH</div>';
             // Divine Path (left) — pink/green themed
             let divineCol = document.createElement('div'); divineCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressDivine||0);
                 let isNext = i === (player.treeProgressDivine||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 3 : i===6 ? 4 : i===11 ? 5 : null;
+                let skillIdx = i===4 ? 3 : i===9 ? 4 : i===14 ? 5 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-pink-900 border-pink-500 text-pink-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'divine', i, isUnlocked, isNext, '✨', skillIdx);
@@ -813,11 +804,10 @@ function showSkillTree() {
             container.appendChild(divineCol);
             // Plague Path (right) — dark green themed
             let plagueCol = document.createElement('div'); plagueCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressPlague||0);
                 let isNext = i === (player.treeProgressPlague||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 6 : i===6 ? 7 : i===11 ? 8 : null;
+                let skillIdx = i===4 ? 6 : i===9 ? 7 : i===14 ? 8 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-green-900 border-green-600 text-green-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'plague', i, isUnlocked, isNext, '☠️', skillIdx);
@@ -835,11 +825,10 @@ function showSkillTree() {
             const archerHeaderRow = document.getElementById('archer-tree-header'); archerHeaderRow.innerHTML = '<div class="w-1/2 text-center font-bold text-sky-400 border-b border-sky-700 pb-1">PRECISION PATH</div><div class="w-1/2 text-center font-bold text-amber-400 border-b border-amber-700 pb-1">SURVIVAL PATH</div>';
             // Precision Path (left) — sky themed
             let precisionCol = document.createElement('div'); precisionCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressPrecision||0);
                 let isNext = i === (player.treeProgressPrecision||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 3 : i===6 ? 4 : i===11 ? 5 : null;
+                let skillIdx = i===4 ? 3 : i===9 ? 4 : i===14 ? 5 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-sky-900 border-sky-500 text-sky-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'precision', i, isUnlocked, isNext, '🎯', skillIdx);
@@ -848,11 +837,10 @@ function showSkillTree() {
             container.appendChild(precisionCol);
             // Survival Path (right) — amber themed
             let survivalCol = document.createElement('div'); survivalCol.className = 'w-1/2 flex flex-col gap-2';
-            for(let i=0; i<12; i++) {
+            for(let i=0; i<25; i++) {
                 let isUnlocked = i < (player.treeProgressSurvival||0);
                 let isNext = i === (player.treeProgressSurvival||0);
-                let isSkillNode = (i===2 || i===6 || i===11);
-                let skillIdx = i===2 ? 6 : i===6 ? 7 : i===11 ? 8 : null;
+                let skillIdx = i===4 ? 6 : i===9 ? 7 : i===14 ? 8 : null;
                 let btn = document.createElement('button');
                 btn.className = `p-2 rounded text-[10px] md:text-xs font-bold border-2 transition-all shadow-md ${isUnlocked?'bg-amber-900 border-amber-500 text-amber-200':isNext?'bg-gray-700 border-yellow-400 text-white animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.5)]':'bg-gray-800 border-gray-700 text-gray-500 opacity-60'}`;
                 renderTreeNodeContent(btn, 'survival', i, isUnlocked, isNext, '🪤', skillIdx);
@@ -1445,9 +1433,10 @@ function generateShopGear() {
     for(let i=0; i<3; i++) {
         let roll = Math.random();
         let rarity = 'common';
-        if(roll < 0.01) rarity = 'legendary';
-        else if(roll < 0.11) rarity = 'epic';
-        else if(roll < 0.31) rarity = 'rare';
+        if(roll < 0.01) rarity = 'mythic';
+        else if(roll < 0.02) rarity = 'legendary';
+        else if(roll < 0.12) rarity = 'epic';
+        else if(roll < 0.32) rarity = 'rare';
         
         let item = rollEquipment(rarity);
         let cost = GEAR_BUY_PRICES[rarity] || GEAR_BUY_PRICES.common;
@@ -2224,6 +2213,7 @@ function schedulePetAutoAction() {
 }
 
 
+function showRoundResultFlash(playerDmg, enemyDmg) {
     let el = document.createElement('div');
     el.className = 'round-result-flash';
     if (enemyDmg > playerDmg) {

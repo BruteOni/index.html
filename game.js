@@ -791,23 +791,21 @@ function changeClass() {
     switchScreen('screen-class-select');
 }
 
-// --- GENDER SELECTION ---
+// --- GENDER / AVATAR SELECTION ---
 let pendingClassId = 'warrior';
 let pendingNewGame = false;
 
 function showGenderSelect(classId) {
     pendingClassId = classId;
-    let className = classId.charAt(0).toUpperCase() + classId.slice(1);
-    let maleAvatar = CLASS_GENDER_AVATARS[classId] ? CLASS_GENDER_AVATARS[classId].male : '🧑';
-    let femaleAvatar = CLASS_GENDER_AVATARS[classId] ? CLASS_GENDER_AVATARS[classId].female : '👩';
-    setAvatarDisplay('gender-male-preview', maleAvatar);
-    setAvatarDisplay('gender-female-preview', femaleAvatar);
-    document.getElementById('gender-male-class-label').innerText = 'Male ' + className;
-    document.getElementById('gender-female-class-label').innerText = 'Female ' + className;
     switchScreen('screen-gender-select');
 }
 
-function selectGenderAndStart(gender) {
+// selectAvatar: called when a player picks an emoji from the avatar grid
+function selectAvatar(emoji, gender) {
+    selectGenderAndStart(gender, emoji);
+}
+
+function selectGenderAndStart(gender, chosenAvatar) {
     try {
         if (typeof CLASSES === 'undefined') {
             console.error('selectGenderAndStart: CLASSES is not defined. Ensure data.js is loaded.');
@@ -820,6 +818,9 @@ function selectGenderAndStart(gender) {
 
         console.log(`selectGenderAndStart: gender=${gender}, classId=${pendingClassId}, isNewGame=${isNewGame}`);
 
+        // Determine the final avatar: use chosen emoji if provided, else fall back to class defaults
+        let finalAvatar = chosenAvatar || (CLASS_GENDER_AVATARS[pendingClassId] ? CLASS_GENDER_AVATARS[pendingClassId][gender] : (gender === 'female' ? '👩' : '🧑'));
+
         if (!isNewGame && classSave) {
             // Load existing class-specific save, preserve globalProgression
             const data = JSON.parse(classSave);
@@ -827,31 +828,22 @@ function selectGenderAndStart(gender) {
             player.classId = pendingClassId;
             player.data = CLASSES[player.classId];
             globalProgression.gender = gender;
-            let avatarMap = CLASS_GENDER_AVATARS[pendingClassId];
-            if (avatarMap) {
-                player.data = { ...player.data, avatar: avatarMap[gender] };
-                setAvatarDisplay('hub-avatar', player.data.avatar);
-            }
+            player.data = { ...player.data, avatar: finalAvatar };
+            setAvatarDisplay('hub-avatar', player.data.avatar);
         } else if (!isNewGame) {
             // Switching to a new class with no prior save: init player, keep globalProgression
             globalProgression.gender = gender;
             globalProgression.attributes = getClassBaseAttributes(pendingClassId);
             player = createFreshPlayer(pendingClassId);
-            let avatarMap = CLASS_GENDER_AVATARS[pendingClassId];
-            if (avatarMap) {
-                player.data = { ...player.data, avatar: avatarMap[gender] };
-            }
+            player.data = { ...player.data, avatar: finalAvatar };
             player.maxHp = calculateMaxHp();
             player.currentHp = player.maxHp;
         } else {
             // Explicit new game: full reset
             startGame(pendingClassId);
             globalProgression.gender = gender;
-            let avatarMap = CLASS_GENDER_AVATARS[pendingClassId];
-            if (avatarMap) {
-                player.data = { ...player.data, avatar: avatarMap[gender] };
-                setAvatarDisplay('hub-avatar', player.data.avatar);
-            }
+            player.data = { ...player.data, avatar: finalAvatar };
+            setAvatarDisplay('hub-avatar', player.data.avatar);
             saveGame();
             showHub();
             return;
