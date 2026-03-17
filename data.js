@@ -221,7 +221,7 @@ const CLASSES = {
             { name: 'Kunai Swarm', type: 'attack', mult: 2.0, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2 }, self_effect: { dmgBuff: 0.15, turns: 3 }, cd: 5, color: 'bg-orange-700', desc: 'Base damage +100% to ALL + 1 Poison stack + 15% self dmg buff (3t)' },
             { name: 'Poison Shuriken', type: 'attack', mult: 1.80, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2 }, cd: 6, color: 'bg-lime-700', desc: 'Base damage +80% to ALL + 1 Poison stack (reduces healing 50%)' },
             // Index 6-8: Venom Path
-            { name: 'Shuriken Rain', type: 'attack', mult: 0.333, hits: 3, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2 }, cd: 8, color: 'bg-emerald-600', desc: '3 hits to ALL enemies, each hit = 1/3 base damage + 1 Poison stack (max 2)' },
+            { name: 'Shuriken Rain', type: 'attack', mult: 0.333, hits: 3, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2 }, cd: 8, color: 'bg-emerald-600', desc: '3 hits to ALL enemies, each hit = 1/3 base damage. Each hit may add 1 Poison stack (capped at 2 total)' },
             { name: 'Smoke Bomb', type: 'attack', mult: 1.50, target: 'all', self_effect: { dodgeTurns: 2 }, cd: 7, color: 'bg-gray-500', desc: 'Base damage +50% to ALL + Dodge attacks (2t)' },
             { name: 'Huge Shuriken', type: 'attack', mult: 2.20, effect: { poisonStacks: 1, poisonTurns: 2, bleedStacks: 2, bleedTurns: 5, burnStacks: 1, burnTurns: 3, defDown: 0.20, defDownTurns: 3 }, cd: 8, color: 'bg-yellow-400', desc: 'Base damage +120% + 1 Poison + 2 Bleed + 1 Burn + Enemy DEF -20% (3t)' }
         ]
@@ -239,7 +239,7 @@ const CLASSES = {
             { name: 'Mud', type: 'attack', mult: 2.0, target: 'all', effect: { missStacks: 1 }, cd: 7, color: 'bg-yellow-800', desc: 'Base damage +100% to ALL + Inflicts Miss (40% miss, 1t)' },
             // Index 6-8: Plague Path
             { name: 'Face Scratch', type: 'attack', mult: 1.80, effect: { bleedStacks: 1, bleedTurns: 5 }, cd: 5, color: 'bg-red-600', desc: 'Base damage +80% + 1 Bleed stack (5t)' },
-            { name: 'Infection', type: 'attack', mult: 1.80, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2, bleedStacks: 1, bleedTurns: 5, burnStacks: 1, burnTurns: 3, missStacks: 1 }, self_effect: { reflect: 0.80, reflectTurns: 3 }, cd: 4, color: 'bg-green-800', desc: 'Base damage +80% AOE + 1 Poison/Bleed/Burn/Miss to all + Reflect 80% (3t). +5% dmg per effect stack on enemy (5t)' },
+            { name: 'Infection', type: 'attack', mult: 1.80, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2, bleedStacks: 1, bleedTurns: 5, burnStacks: 1, burnTurns: 3, missStacks: 1 }, self_effect: { reflect: 0.80, reflectTurns: 3, infectionBuff: true, infectionTurns: 5 }, cd: 4, color: 'bg-green-800', desc: 'Base damage +80% AOE + 1 Poison/Bleed/Burn/Miss to all + Reflect 80% (3t) + +5% dmg per effect stack on enemy (5t)' },
             { name: 'Poke', type: 'attack', mult: 0, special: 'poke', pokeEnemyHpPct: 0.10, pokeSelfHealPct: 0.10, cd: 8, color: 'bg-fuchsia-700', desc: 'Remove 10% enemy HP and heal self for 10% own max HP' }
         ]
     },

@@ -2746,7 +2746,7 @@ function generateEnemies() {
     }
 
     for(let i=0; i<count; i++) {
-        let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, def: 0, rarity: 'normal', isBoss: false };
+        let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, def: 0, rarity: 'common', isBoss: false };
         
         if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
             // Dungeon difficulty: Tier N = max(1, (N-1)*2.5) multiplier relative to Tier 1
@@ -2778,9 +2778,9 @@ function generateEnemies() {
             else if(rRoll < 0.05) e.rarity = 'legendary';
             else if(rRoll < 0.15) e.rarity = 'epic';
             else if(rRoll < 0.40) e.rarity = 'rare';
-            else e.rarity = 'normal';
+            else e.rarity = 'common'; // 60% normal
 
-            if (e.rarity !== 'normal') { e.name = `${e.rarity.charAt(0).toUpperCase() + e.rarity.slice(1)} ${e.name}`; }
+            if (e.rarity !== 'common') { e.name = `${e.rarity.charAt(0).toUpperCase() + e.rarity.slice(1)} ${e.name}`; }
 
             let bracketStats = getEnemyBracketStats(e.lvl);
             let hpMult = (RARITY_HP_MULTS[e.rarity] || 1) * t.hpMult;
@@ -3510,6 +3510,19 @@ function usePlayerSkill(slotIndex) {
     }
     scaledPower = Math.max(1, Math.floor(scaledPower * dmgBoostMult));
 
+    // Infection buff: +5% dmg per effect stack (bleed, poison, burn) on active target
+    let infectionBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'infection') : null;
+    if(infectionBuff) {
+        let target = enemies[activeTargetIndex];
+        if(target && target.currentHp > 0) {
+            let effectStacks = (target.bleedStacks || 0) + (target.poisonStacks || 0) + (target.burnStacks || 0);
+            if(effectStacks > 0) {
+                let infectionMult = 1 + effectStacks * 0.05;
+                scaledPower = Math.max(1, Math.floor(scaledPower * infectionMult));
+            }
+        }
+    }
+
     if (skill.type === 'attack') {
         
         let totalDmg = 0;
@@ -3793,6 +3806,11 @@ function usePlayerSkill(slotIndex) {
             // Eruption buff: hits inflict bleed stacks
             player.activeBuffs.push({ type: 'eruption', turns: skill.self_effect.eruptionTurns || skill.self_effect.turns || 4 });
             addLog(`Eruption active! Hits inflict Bleed (${skill.self_effect.eruptionTurns||4}t)!`, 'text-red-400 font-bold');
+        }
+        if(skill.self_effect.infectionBuff) {
+            // Infection buff: +5% dmg per active effect stack on enemy (bleed/poison/burn)
+            player.activeBuffs.push({ type: 'infection', turns: skill.self_effect.infectionTurns || 5 });
+            addLog(`Infection active! +5% dmg per enemy effect stack (${skill.self_effect.infectionTurns||5}t)!`, 'text-green-400 font-bold');
         }
     }
 

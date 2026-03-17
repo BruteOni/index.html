@@ -639,9 +639,9 @@ function getXpForNextLevel(lvl) {
     // battlesPerLevel = 4 + segment*10 + ceil(offset/10)
     // where segment = floor((lvl-1)/100), offset = ((lvl-1)%100)+1
     // XP per level = battlesPerLevel * 100
-    if (lvl <= 0) return 500; // Level 0 → 1: 5 battles * 100 XP
-    let segment = Math.floor((lvl - 1) / 100);
-    let offset = ((lvl - 1) % 100) + 1;
+    if (lvl <= 0) lvl = 0; // Level 0 uses offset=1 → 5 battles * 100 = 500 XP
+    let segment = Math.floor(Math.max(0, lvl - 1) / 100);
+    let offset = (Math.max(0, lvl - 1) % 100) + 1;
     let battlesPerLevel = 4 + segment * 10 + Math.ceil(offset / 10);
     return battlesPerLevel * 100;
 }
