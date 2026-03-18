@@ -461,6 +461,14 @@ function saveGame() {
         const classKey = 'EternalAscensionClassSave_' + player.classId;
         localStorage.setItem(classKey, data + "|" + checksum);
     }
+    // Persist saved enemies so they survive page reloads
+    try {
+        if (savedEnemies && typeof savedEnemies === 'object' && Object.keys(savedEnemies).length > 0) {
+            localStorage.setItem('EternalAscensionSavedEnemies', JSON.stringify(savedEnemies));
+        } else {
+            localStorage.removeItem('EternalAscensionSavedEnemies');
+        }
+    } catch(e) { /* ignore storage errors */ }
 }
 function applyDefaults(target, defaults) {
     for (const key of Object.keys(defaults)) {
@@ -645,6 +653,12 @@ function loadGameAndContinue() {
         let genderAvatars = CLASS_GENDER_AVATARS[player.classId];
         if (genderAvatars) { player.data = { ...player.data, avatar: genderAvatars[globalProgression.gender] }; }
 
+        // Restore saved enemies from previous session
+        try {
+            let seData = localStorage.getItem('EternalAscensionSavedEnemies');
+            if (seData) { let parsed = JSON.parse(seData); if (parsed && typeof parsed === 'object') savedEnemies = parsed; }
+        } catch(e) { /* ignore parse errors */ }
+
         showHub();
     }
     } catch (err) {
@@ -816,6 +830,7 @@ function confirmNewGameYes() {
     localStorage.removeItem('fogFighterSaveDataV22');
     localStorage.removeItem('fogFighterSaveDataV21');
     localStorage.removeItem('fogFighterSaveDataV20');
+    localStorage.removeItem('EternalAscensionSavedEnemies');
     // Remove all per-class saves
     ['warrior', 'mage', 'paladin', 'ninja', 'cleric', 'archer'].forEach(cls => {
         localStorage.removeItem('EternalAscensionClassSave_' + cls);
@@ -1060,6 +1075,7 @@ function createFreshPlayer(classId) {
         unlockedSkills: [0, 1, 2], equippedSkills: [0, 1, 2, null, null], skillCooldowns: {}, regenBuffs: [], activeBuffs: [], stunned: 0, bleedStacks: 0, bleedTurns: 0, dodgeTurns: 0,
         equippedUsables: ['pot_i1', null, null, null, null, null, null],
         wayOfHeavensCooldown: 0, rageUsed: false, rageActive: 0, divineShieldUsed: false, reflectUsed: false, usedConsumableThisTurn: false,
+        nodeEnhancements: {},
         progressStats: {
             levelReached: 1, highestDmg: 0, mostDmgSurvived: 0,
             longestWinStreak: 0, currentWinStreak: 0,

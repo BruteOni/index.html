@@ -823,6 +823,7 @@ function unlockNextNode(path, index=0) {
     function storeRolledEnhancement(p, idx) {
         let enh = rollEnhancement();
         globalProgression.skillTreeEnhancements.push(enh);
+        if(!player.nodeEnhancements) player.nodeEnhancements = {};
         if(!player.nodeEnhancements[p]) player.nodeEnhancements[p] = {};
         player.nodeEnhancements[p][idx] = enh;
         showEnhancementPopup(enh);
@@ -3561,7 +3562,7 @@ function updateCombatUI() {
             card.style.gridColumn = slotPositions[idx].col;
             card.style.gridRow = slotPositions[idx].row;
 
-            card.className = `enemy-card bg-gray-800 p-1.5 rounded-lg cursor-pointer flex flex-col items-center overflow-hidden ${borderClass} ${isDead ? 'enemy-dead' : ''}`;
+            card.className = `enemy-card bg-gray-800 p-1.5 rounded-lg cursor-pointer flex flex-col items-center overflow-visible ${borderClass} ${isDead ? 'enemy-dead' : ''}`;
             card.onclick = () => selectTarget(idx);
             
             let eStatus = '';
@@ -5040,7 +5041,6 @@ function handleEndNext() {
             returnToTown();
         }
     } else {
-        if(!consumeEnergy(1)) { showNoEnergyAnimation(); returnToTown(); return; }
         startBattle(true);
     }
 }
