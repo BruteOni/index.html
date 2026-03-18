@@ -153,7 +153,7 @@
             <div class="flex flex-col w-full bg-gray-800 p-3 rounded-xl shadow-lg border border-gray-700 mb-4">
                 <div class="flex justify-between items-center w-full mb-3">
                     <div class="flex items-center gap-3">
-                        <div class="text-3xl" id="hub-avatar">🗡️</div>
+                        <div class="text-5xl" id="hub-avatar">🗡️</div>
                         <button onclick="showProgressMenu()" class="text-left bg-gray-700 hover:bg-gray-600 active:scale-95 transition border border-blue-700/60 rounded-lg px-3 py-2 shadow-md" aria-label="View character progress and stats">
                             <div class="font-bold text-lg text-blue-400 flex items-center gap-2">
                                 <span id="hub-class">Warrior</span>
@@ -516,7 +516,7 @@
                 </div>
                 <div class="flex flex-col items-center gap-2 px-1">
                     <div class="text-xs text-yellow-400 font-bold bg-gray-800 px-3 py-1 rounded-full border border-gray-600 shadow-inner">Lvl <span id="char-lvl">1</span> <span id="char-class-name">Warrior</span></div>
-                    <div class="text-5xl my-2 drop-shadow-lg" id="char-avatar-display">🗡️</div>
+                    <div class="text-7xl my-4 drop-shadow-lg" id="char-avatar-display">🗡️</div>
                     <div class="flex gap-2">
                         <div class="equip-slot" id="slot-chest" onclick="openEquipModal('chest')" title="Chest">🦺</div>
                         <div class="equip-slot" id="slot-waist" onclick="openEquipModal('waist')" title="Waist">🪢</div>
@@ -935,11 +935,11 @@
 
                 <!-- Player Status + Usables -->
                 <div class="player-status-card">
-                    <div class="relative w-1/4 flex justify-center items-center" id="player-avatar-container">
-                        <div class="fighter-avatar text-4xl drop-shadow-md" id="combat-player-avatar">🧑</div>
+                    <div class="relative w-1/3 flex justify-center items-center" id="player-avatar-container">
+                        <div class="fighter-avatar text-6xl drop-shadow-md" id="combat-player-avatar">🧑</div>
                         <div id="player-stun-indicator" class="absolute -top-3 text-xl hidden">😵</div>
                     </div>
-                    <div class="w-3/4 pl-3 relative">
+                    <div class="w-2/3 pl-3 relative">
                         <div id="player-shield-indicator" class="absolute -top-1 right-0 text-xl hidden">🛡️</div><div id="player-regen-indicator" class="absolute -top-1 right-8 text-xl hidden animate-pulse">💖</div><div id="player-dizzy-indicator" class="absolute -top-1 right-16 text-xl hidden animate-pulse">💫</div>
                         <div class="flex justify-between items-end"><div class="text-md font-bold text-blue-400"><button onclick="showProgressMenu()" class="text-xs text-gray-400 font-normal hover:text-yellow-400 transition cursor-pointer" id="combat-player-class">Class</button></div><div class="text-xs font-mono text-gray-300" id="combat-player-hp-text">100/100</div></div>
                         <div class="flex items-center gap-1 mt-0.5"><span class="text-xs font-bold text-red-400">HP</span><div class="health-bar-container flex-1"><div id="combat-player-hp" class="health-bar"></div></div></div><div class="flex items-center gap-1 mt-0.5"><span class="text-xs font-bold text-yellow-400">XP</span><div class="xp-bar-container flex-1 !h-1 !mt-0" id="combat-xp-bar-container"><div id="combat-player-xp" class="xp-bar"></div></div></div><div class="flex gap-1 mt-1" id="combat-active-buffs"></div>

@@ -2965,6 +2965,16 @@ function returnToTown() {
 }
 function fleeBattle() { returnToTown(); }
 function showFloatText(targetId, text, colorClass) { const target = document.getElementById(targetId); if (!target) return; const floater = document.createElement('div'); floater.className = `float-text ${colorClass}`; floater.innerText = text; target.appendChild(floater); setTimeout(() => { if(floater.parentNode) floater.remove(); }, 900); }
+function showDamageNumber(targetId, damage, isCrit) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    const floater = document.createElement('div');
+    floater.className = 'damage-number' + (isCrit ? ' crit' : '');
+    floater.innerText = isCrit ? `CRIT! -${damage}` : `-${damage}`;
+    target.appendChild(floater);
+    setTimeout(() => { if (floater.parentNode) floater.remove(); }, 1000);
+}
+
 
 function generateEnemies() {
     enemies = [];
@@ -3501,13 +3511,13 @@ function updateCombatUI() {
             // Dynamic grid placement and sizing based on enemy count
             let avatarSizeClass, nameSizeClass, bossLabelSizeClass;
             if (enemies.length === 1) {
-                avatarSizeClass = 'text-4xl'; nameSizeClass = 'text-sm'; bossLabelSizeClass = 'text-xs';
+                avatarSizeClass = 'text-6xl'; nameSizeClass = 'text-sm'; bossLabelSizeClass = 'text-xs';
             } else if (enemies.length === 2) {
-                avatarSizeClass = 'text-3xl'; nameSizeClass = 'text-xs'; bossLabelSizeClass = 'text-[9px]';
+                avatarSizeClass = 'text-5xl'; nameSizeClass = 'text-xs'; bossLabelSizeClass = 'text-[9px]';
             } else if (enemies.length === 3) {
-                avatarSizeClass = 'text-2xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
+                avatarSizeClass = 'text-4xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
             } else {
-                avatarSizeClass = 'text-xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
+                avatarSizeClass = 'text-3xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
             }
             card.style.gridColumn = slotPositions[idx].col;
             card.style.gridRow = slotPositions[idx].row;
@@ -3531,7 +3541,7 @@ function updateCombatUI() {
             } else if (e.isBoss) {
                 bossLabel = `<div class="${bossLabelSizeClass} font-black text-yellow-200 bg-red-700 px-1.5 py-0.5 rounded-full shadow-lg mt-0.5 inline-block">👑 Boss</div>`;
             }
-            card.innerHTML = `<div class="relative w-full text-center overflow-hidden"><div class="absolute -top-1 -right-2 text-sm flex gap-1 z-10">${eStatus}</div><div class="${avatarSizeClass} enemy-avatar mb-1 mt-1 ${animClass} leading-none" style="max-height:3rem;">${e.avatar}</div></div>${bossLabel}<div class="${nameSizeClass} font-bold leading-tight break-words w-full text-center ${rarityColor}">Lv.${e.lvl} ${e.name}</div><div class="health-bar-container !h-1.5 !mt-1"><div class="health-bar" style="width: ${(Math.max(0, e.currentHp) / e.maxHp) * 100}%"></div></div><div class="text-[9px] text-gray-400 mt-0.5 text-center leading-tight">HP: ${Math.max(0,e.currentHp)}/${e.maxHp} | DMG: ${e.baseDmg}</div>${isDead ? '<div class="enemy-death-overlay">💀</div>' : ''}`;
+            card.innerHTML = `<div class="relative w-full text-center overflow-hidden"><div class="absolute -top-1 -right-2 text-sm flex gap-1 z-10">${eStatus}</div><div class="${avatarSizeClass} enemy-avatar mb-1 mt-1 ${animClass} leading-none" style="max-height:5rem;">${e.avatar}</div></div>${bossLabel}<div class="${nameSizeClass} font-bold leading-tight break-words w-full text-center ${rarityColor}">Lv.${e.lvl} ${e.name}</div><div class="health-bar-container !h-1.5 !mt-1"><div class="health-bar" style="width: ${(Math.max(0, e.currentHp) / e.maxHp) * 100}%"></div></div><div class="text-[9px] text-gray-400 mt-0.5 text-center leading-tight">HP: ${Math.max(0,e.currentHp)}/${e.maxHp} | DMG: ${e.baseDmg}</div>${isDead ? '<div class="enemy-death-overlay">💀</div>' : ''}`;
             eContainer.appendChild(card);
         });
         // Add empty placeholder slots for unused grid positions
@@ -3905,7 +3915,7 @@ function usePlayerSkill(slotIndex) {
 
             if(targets.length === 0) break;
 
-            playSound('hit'); triggerAnim('combat-player-avatar', 'anim-strike'); 
+            playSound('hit'); triggerAnim('combat-player-avatar', 'anim-avatar-attack'); 
 
             targets.forEach(tObj => {
                 let target = tObj.e;
@@ -3963,7 +3973,7 @@ function usePlayerSkill(slotIndex) {
                 
                 target.currentHp -= Math.max(1, hitDmg); 
                 totalDmg += hitDmg;
-                showFloatText(`enemy-card-${tIdx}`, `-${hitDmg}`, isCrit ? 'text-orange-400 font-black text-2xl drop-shadow-[0_0_8px_rgba(251,146,60,0.9)]' : 'text-yellow-300 font-bold');
+                showDamageNumber(`enemy-card-${tIdx}`, hitDmg, isCrit);
 
                 // Vampire: life steal from attribute (0.25% per point) + gear bonusVamp
                 let vampPct = ((a.vampire || 0) * 0.0025) + getEquipBonusStat('bonusVamp');
@@ -4539,14 +4549,14 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
 
     // Crit received: larger, more vigorous animation and sound
     if (isCritHit) {
-        showFloatText('player-avatar-container', `-${dmg} CRIT!`, 'text-red-400 font-black text-2xl drop-shadow-[0_0_10px_rgba(239,68,68,0.9)]');
+        showDamageNumber('player-avatar-container', dmg, true);
         triggerAnim('combat-player-avatar', 'anim-crit');
         playSound('crit');
         // Extra screen shake for received crit
         let screen = document.getElementById('screen-combat');
         if(screen) { screen.classList.add('screen-shake'); setTimeout(() => screen.classList.remove('screen-shake'), 500); }
     } else {
-        showFloatText('player-avatar-container', `-${dmg}`, 'text-red-500');
+        showDamageNumber('player-avatar-container', dmg, false);
     }
 
     // Reflect: from gear bonusDmgReflect (tenacity no longer directly provides reflect)

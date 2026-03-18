@@ -9,8 +9,8 @@ function setAvatarDisplay(elementId, avatar) {
         const img = document.createElement('img');
         img.src = avatar;
         img.alt = 'Avatar';
-        img.style.width = '48px';
-        img.style.height = '48px';
+        img.style.width = '96px';
+        img.style.height = '96px';
         img.className = 'object-contain inline-block';
         el.innerHTML = '';
         el.style.display = 'flex';
