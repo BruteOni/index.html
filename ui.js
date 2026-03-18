@@ -2684,10 +2684,11 @@ function generateEnemies() {
         for(let i = 0; i < spawnCount; i++) {
             let t = pool[Math.floor(Math.random() * pool.length)];
             let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, rarity: 'epic', isBoss: false };
-            e.lvl = 500;
+            let invasionLevel = Math.max(100, Math.min(player.lvl, 500));
+            e.lvl = invasionLevel;
             e.name = 'Invader ' + t.name; e.avatar = t.avatar;
-            e.maxHp = Math.max(1, Math.floor(25 * t.hpMult * (1 + (500 - 1) * 0.4) * 5));
-            e.baseDmg = Math.max(1, Math.floor(500 * 5 * (1 + (500 - 1) * 0.01)));
+            e.maxHp = Math.max(1, Math.floor(25 * t.hpMult * (1 + (invasionLevel - 1) * 0.4) * 5));
+            e.baseDmg = Math.max(1, Math.floor(invasionLevel * 5 * (1 + (invasionLevel - 1) * 0.01)));
             assignEnemySkills(e);
             e.currentHp = e.maxHp;
             enemies.push(e);
