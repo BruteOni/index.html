@@ -190,6 +190,21 @@
         </div>
     </div>
 
+    <!-- 1c. MAGE INTRO VIDEO SCREEN -->
+    <div id="screen-mage-intro-video" class="screen" style="background: radial-gradient(ellipse at center, #1a0a2e 0%, #0d0d1a 100%); display:none; align-items:center; justify-content:center; flex-direction:column;">
+        <div style="width:90%; max-width:800px; display:flex; flex-direction:column; align-items:center; gap:1rem;">
+            <div style="position:relative; width:100%; padding-top:56.25%; border-radius:12px; overflow:hidden; box-shadow:0 0 40px rgba(138,43,226,0.5);">
+                <iframe id="mage-intro-iframe"
+                    src=""
+                    style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"
+                    allow="autoplay; encrypted-media"
+                    allowfullscreen>
+                </iframe>
+            </div>
+            <button onclick="onMageVideoEnd()" class="btn-skip-video">⏭ Skip Video</button>
+        </div>
+    </div>
+
     <!-- 2. TOWN HUB -->
     <div id="screen-hub" class="screen py-4">
         <div class="w-full max-w-2xl px-4 flex flex-col items-center">

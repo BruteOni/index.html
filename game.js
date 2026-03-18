@@ -840,6 +840,25 @@ let pendingNewGame = false;
 
 function showGenderSelect(classId) {
     pendingClassId = classId;
+    if (classId === 'mage' && pendingNewGame &&
+        !localStorage.getItem('EternalAscensionClassSave_mage') &&
+        !localStorage.getItem('mageIntroVideoPlayed')) {
+        const iframe = document.getElementById('mage-intro-iframe');
+        if (iframe) {
+            iframe.src = 'https://www.youtube.com/embed/MXyka2u-2-o?autoplay=1&enablejsapi=1&rel=0';
+        }
+        switchScreen('screen-mage-intro-video');
+        return;
+    }
+    switchScreen('screen-gender-select');
+}
+
+function onMageVideoEnd() {
+    localStorage.setItem('mageIntroVideoPlayed', 'true');
+    const iframe = document.getElementById('mage-intro-iframe');
+    if (iframe) {
+        iframe.src = 'about:blank';
+    }
     switchScreen('screen-gender-select');
 }
 
