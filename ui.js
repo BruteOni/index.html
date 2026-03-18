@@ -2,6 +2,7 @@
 // Note: confirmNewGame, closeConfirmNewGame, confirmNewGameYes, and switchScreen are defined in game.js.
 
 // No-Energy animation overlay
+const NO_ENERGY_OVERLAY_DURATION_MS = 1500;
 function showNoEnergyAnimation() {
     let existing = document.getElementById('no-energy-overlay');
     if(existing) existing.remove();
@@ -11,7 +12,7 @@ function showNoEnergyAnimation() {
     overlay.innerHTML = '<div class="no-energy-emoji">⚡</div><div class="no-energy-label">No Energy!</div>';
     document.body.appendChild(overlay);
     playSound('lose');
-    setTimeout(() => { let el = document.getElementById('no-energy-overlay'); if(el) el.remove(); }, 1500);
+    setTimeout(() => { let el = document.getElementById('no-energy-overlay'); if(el) el.remove(); }, NO_ENERGY_OVERLAY_DURATION_MS);
 }
 
 // Fixed background color per skill slot index (slot 1=grey, slots 2-5=green; slot 6/WoH is always yellow)

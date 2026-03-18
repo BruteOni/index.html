@@ -1520,6 +1520,7 @@ function gambleGold(amount) {
 
 function checkLevelUp() {
     let levelsGained = 0;
+    // Cap at 5 levels per call to prevent huge jumps from large XP gains (e.g. quest rewards)
     const MAX_LEVELS_PER_CHECK = 5;
     while(player.lvl < 500 && levelsGained < MAX_LEVELS_PER_CHECK) {
         let xpNeeded = getXpForNextLevel(player.lvl);
