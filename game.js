@@ -453,6 +453,7 @@ function saveGame() {
         player.progressStats.totalPlayTimeSeconds = (player.progressStats.totalPlayTimeSeconds || 0) + Math.floor(elapsed);
         player.progressStats.sessionStartTime = now;
     }
+    if (typeof clampAttributes === 'function') clampAttributes();
     const data = JSON.stringify({ global: globalProgression, pState: player });
     const checksum = btoa(data.length.toString());
     localStorage.setItem('EternalAscensionSaveDataV1', data + "|" + checksum);
@@ -659,6 +660,7 @@ function loadGameAndContinue() {
             if (seData) { let parsed = JSON.parse(seData); if (parsed && typeof parsed === 'object') savedEnemies = parsed; }
         } catch(e) { /* ignore parse errors */ }
 
+        if (typeof clampAttributes === 'function') clampAttributes();
         showHub();
     }
     } catch (err) {
@@ -1578,6 +1580,7 @@ function checkLevelUp() {
     }
     if(levelsGained > 0) {
         player.maxHp = calculateMaxHp(); player.currentHp = player.maxHp;
+        if (typeof clampAttributes === 'function') clampAttributes();
         playSound('win');
         document.getElementById('hub-level-up-noti').classList.remove('hidden');
     }

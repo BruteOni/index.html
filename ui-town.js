@@ -1,0 +1,1195 @@
+function showAlchemist() {
+    let p = globalProgression; document.getElementById('alch-gold-display').innerText = p.gold; document.getElementById('alch-herb-red').innerText = p.inventory.herb_red || 0; document.getElementById('alch-herb-blue').innerText = p.inventory.herb_blue || 0;
+    const list = document.getElementById('alch-craft-list'); list.innerHTML = '';
+    RECIPES_ALCHEMIST.forEach(rec => {
+        let pot = CONSUMABLES[rec.id]; let btn = document.createElement('button'); btn.className = `bg-gray-800 p-2 rounded-lg flex justify-between items-center border border-gray-700 hover:border-green-500 transition active:scale-95`;
+        let canCraft = p.gold >= rec.gold && (p.inventory[rec.herb] || 0) >= rec.herbAmt && (p.inventory[rec.id] || 0) < INVENTORY_STACK_CAP;
+        btn.disabled = !canCraft; if(!canCraft) btn.classList.add('opacity-50');
+        let herbIcon = rec.herb === 'herb_red' ? '🌺' : '💠';
+        btn.innerHTML = `<div class="text-left flex items-center gap-2"><span class="text-2xl">${pot.icon}</span> <div><b class="text-white">${pot.name}</b><br><span class="text-[10px] text-gray-400">${pot.desc}</span>${(p.inventory[rec.id] || 0) >= INVENTORY_STACK_CAP ? '<span class="text-red-400 text-[10px] font-bold"> (Full 99)</span>' : ''}</div></div><div class="text-yellow-400 font-bold bg-gray-900 px-2 py-1 rounded shadow-inner text-xs flex flex-col items-center gap-1"><span>${herbIcon} ${rec.herbAmt}</span><span>💰 ${rec.gold}</span></div>`;
+        btn.onclick = () => { p.gold -= rec.gold; p.inventory[rec.herb] -= rec.herbAmt; addToInventory(rec.id, 1); playSound('heal'); saveGame(); showAlchemist(); };
+        list.appendChild(btn);
+    });
+    switchScreen('screen-alchemist');
+}
+
+function showChef() {
+    let p = globalProgression; document.getElementById('chef-gold-display').innerText = p.gold; const list = document.getElementById('chef-craft-list'); list.innerHTML = '';
+    RECIPES_CHEF.forEach(rec => {
+        let food = CONSUMABLES[rec.id]; let btn = document.createElement('button'); btn.className = `bg-gray-800 p-2 rounded-lg flex justify-between items-center border border-gray-700 hover:border-orange-500 transition active:scale-95`;
+        let canCraft = p.gold >= rec.gold && (p.inventory[rec.fish] || 0) >= rec.fishAmt && (p.inventory[rec.id] || 0) < INVENTORY_STACK_CAP;
+        btn.disabled = !canCraft; if(!canCraft) btn.classList.add('opacity-50');
+        btn.innerHTML = `<div class="text-left flex items-center gap-2"><span class="text-2xl">${food.icon}</span> <div><b class="text-white">${food.name}</b><br><span class="text-[10px] text-gray-400">${food.desc}</span>${(p.inventory[rec.id] || 0) >= INVENTORY_STACK_CAP ? '<span class="text-red-400 text-[10px] font-bold"> (Full 99)</span>' : ''}</div></div><div class="text-yellow-400 font-bold bg-gray-900 px-2 py-1 rounded shadow-inner text-xs flex flex-col items-center gap-1"><span>${MAT_ICONS[rec.fish]} ${rec.fishAmt}</span><span>💰 ${rec.gold}</span></div>`;
+        btn.onclick = () => { p.gold -= rec.gold; p.inventory[rec.fish] -= rec.fishAmt; addToInventory(rec.id, 1); playSound('win'); saveGame(); showChef(); };
+        list.appendChild(btn);
+    });
+    switchScreen('screen-chef');
+}
+
+// --- WORKSHOP MERCHANT ---
+function showWorkshop() {
+    document.getElementById('workshop-pebbles').innerText = globalProgression.inventory.soul_pebbles || 0;
+    const list = document.getElementById('workshop-items-list');
+    list.innerHTML = '';
+
+    // Collect ALL mythic items (equipped + in inventory)
+    let mythicItems = [];
+    // Equipped items
+    Object.values(globalProgression.equipped).forEach(item => {
+        if(item && item.rarity === 'mythic') mythicItems.push({ item, source: 'equipped' });
+    });
+    // Inventory items
+    (globalProgression.equipInventory || []).forEach((item, idx) => {
+        if(item.rarity === 'mythic') mythicItems.push({ item, source: 'inventory', idx });
+    });
+
+    if(mythicItems.length === 0) {
+        list.innerHTML = '<div class="text-gray-500 text-center py-8 bg-gray-900 rounded-xl border border-gray-700">No Mythic items found. Defeat Mythic Bosses to get them!</div>';
+    } else {
+        mythicItems.forEach(({ item, source }) => {
+            let itemLvl = item.lvl || 1;
+            let alreadyMaxed = itemLvl >= player.lvl;
+            let hasPebbles = (globalProgression.inventory.soul_pebbles || 0) >= 10;
+            let canEnhance = !alreadyMaxed && hasPebbles;
+
+            let card = document.createElement('div');
+            card.className = 'bg-gray-900 border-2 border-white rounded-xl p-4 flex justify-between items-center shadow-lg';
+            card.style.boxShadow = '0 0 15px rgba(255,255,255,0.3)';
+            card.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">${item.icon || '✨'}</span>
+                    <div>
+                        <div class="font-black text-white text-sm drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">${item.name}</div>
+                        <div class="text-xs text-gray-300">Slot: ${item.type}</div>
+                        <div class="text-xs mt-1">
+                            <span class="text-cyan-300">Item Lvl: ${itemLvl}</span>
+                            <span class="text-gray-400 mx-1">→</span>
+                            <span class="text-green-300">Your Lvl: ${player.lvl}</span>
+                        </div>
+                        <div class="text-xs text-gray-400">${source === 'equipped' ? '📦 Equipped' : '🧳 In Bag'}</div>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    ${alreadyMaxed
+                        ? '<span class="text-xs text-green-400 font-bold text-center">✓ Already<br>at level</span>'
+                        : `<button onclick="workshopEnhance(this)" data-item-name="${item.name}" data-source="${source}" class="bg-cyan-700 hover:bg-cyan-600 text-white font-bold px-3 py-2 rounded-lg transition active:scale-95 text-sm border border-cyan-400 shadow-md ${canEnhance ? '' : 'opacity-50 cursor-not-allowed'}" ${canEnhance ? '' : 'disabled'}>
+                            Scale Enhance<br><span class="text-xs text-purple-300">🔮 10</span>
+                           </button>`
+                    }
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+    switchScreen('screen-workshop');
+}
+
+function workshopEnhance(btn) {
+    if((globalProgression.inventory.soul_pebbles || 0) < 10) return;
+    let itemName = btn.dataset.itemName;
+    let source = btn.dataset.source;
+
+    // Find and update the item
+    let found = false;
+    function recalcMythicItem(item) {
+        let newLvl = player.lvl;
+        item.lvl = newLvl;
+        item.itemLevel = newLvl;
+        // Recalculate weapon base damage percentage
+        if(item.type === 'weapon') {
+            item.weaponBaseDmgPct = 0.001 * newLvl;
+        }
+        // Recalculate all bonus stat values based on basePerLevel
+        if(item.bonusStats) {
+            item.bonusStats.forEach(bs => {
+                if(bs.basePerLevel) bs.value = bs.basePerLevel * newLvl;
+            });
+        }
+        // Update item name to reflect new level
+        let namePrefix = item.name.split(' [Lv.')[0];
+        item.name = `${namePrefix} [Lv.${newLvl}]`;
+    }
+    if(source === 'equipped') {
+        Object.values(globalProgression.equipped).forEach(item => {
+            if(item && item.name && item.name.includes(itemName.split(' [Lv.')[0]) && item.rarity === 'mythic') {
+                recalcMythicItem(item);
+                found = true;
+            }
+        });
+    } else {
+        (globalProgression.equipInventory || []).forEach(item => {
+            if(item && item.name && item.name.includes(itemName.split(' [Lv.')[0]) && item.rarity === 'mythic') {
+                recalcMythicItem(item);
+                found = true;
+            }
+        });
+    }
+
+    if(found) {
+        globalProgression.inventory.soul_pebbles -= 10;
+        playSound('win');
+        // Success animation on button
+        btn.innerText = '✨ Scaled!';
+        btn.style.background = 'linear-gradient(135deg, #0891b2, #0e7490)';
+        btn.disabled = true;
+        saveGame();
+        setTimeout(() => showWorkshop(), 1000);
+    }
+}
+
+// --- BURGLAR MERCHANT ---
+function showBurglar() {
+    const today = new Date().toDateString();
+    if(globalProgression.burglarLastPurchaseDate !== today) {
+        globalProgression.burglarDailyPurchasesPerItem = {};
+        globalProgression.burglarLastPurchaseDate = today;
+    }
+    if(!globalProgression.burglarDailyPurchasesPerItem) globalProgression.burglarDailyPurchasesPerItem = {};
+    document.getElementById('burglar-gold-display').innerText = globalProgression.gold;
+
+    const list = document.getElementById('burglar-items-list');
+    list.innerHTML = '';
+
+    Object.values(USABLE_ITEMS).forEach(item => {
+        let itemCount = (globalProgression.burglarDailyPurchasesPerItem[item.id] || 0);
+        let canBuy = globalProgression.gold >= item.price && itemCount < 5;
+        let ownedAmt = (globalProgression.usableItems || {})[item.id] || 0;
+
+        let card = document.createElement('div');
+        card.className = 'bg-gray-800 border border-gray-600 rounded-xl p-3 flex justify-between items-center transition hover:border-red-600';
+        card.innerHTML = `
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">${item.icon}</span>
+                <div>
+                    <div class="font-bold text-white text-sm">${item.name}</div>
+                    <div class="text-[10px] text-gray-400">${item.desc}</div>
+                    <div class="text-[10px] mt-1">
+                        ${item.cooldown > 0 ? `<span class="text-blue-300">⏱ ${item.cooldown}t cooldown</span>` : '<span class="text-green-300">⚡ No cooldown</span>'}
+                        ${item.immuneToCDR ? '<span class="text-yellow-400 ml-1">🔒 CDR immune</span>' : ''}
+                    </div>
+                    <div class="text-[10px] text-gray-500">Owned: ${ownedAmt} · Today: ${itemCount}/5</div>
+                </div>
+            </div>
+            <button onclick="burglarBuy('${item.id}')" class="bg-red-700 hover:bg-red-600 text-white font-bold px-3 py-2 rounded-lg transition active:scale-95 text-sm flex flex-col items-center border border-red-500 ${canBuy ? '' : 'opacity-50 cursor-not-allowed'}" ${canBuy ? '' : 'disabled'}>
+                BUY<span class="text-yellow-400 text-xs">💰${item.price}</span>
+            </button>
+        `;
+        list.appendChild(card);
+    });
+    switchScreen('screen-burglar');
+}
+
+function burglarBuy(itemId) {
+    const today = new Date().toDateString();
+    if(globalProgression.burglarLastPurchaseDate !== today) {
+        globalProgression.burglarDailyPurchasesPerItem = {};
+        globalProgression.burglarLastPurchaseDate = today;
+    }
+    if(!globalProgression.burglarDailyPurchasesPerItem) globalProgression.burglarDailyPurchasesPerItem = {};
+    if((globalProgression.burglarDailyPurchasesPerItem[itemId] || 0) >= 5) return;
+    let item = USABLE_ITEMS[itemId];
+    if(!item || globalProgression.gold < item.price) return;
+
+    globalProgression.gold -= item.price;
+    if(!globalProgression.usableItems) globalProgression.usableItems = {};
+    globalProgression.usableItems[itemId] = (globalProgression.usableItems[itemId] || 0) + 1;
+    if (!player.equippedUsables) player.equippedUsables = [null, null, null, null, null, null, null];
+    let numUnlocked = Math.min(7, 1 + Math.floor(player.lvl / 4));
+    let emptySlot = -1;
+    for (let i = 0; i < numUnlocked; i++) {
+        if (player.equippedUsables[i] === null) { emptySlot = i; break; }
+    }
+    if (emptySlot !== -1) player.equippedUsables[emptySlot] = itemId;
+    globalProgression.burglarDailyPurchasesPerItem[itemId] = (globalProgression.burglarDailyPurchasesPerItem[itemId] || 0) + 1;
+    let ps = ensureProgressStats(); ps.goldSpent += item.price;
+    playSound('win');
+    saveGame();
+    showBurglar();
+}
+
+// --- WEAPON SMITH ---
+function showWeaponSmith() {
+    const p = globalProgression;
+    document.getElementById('ws-gold-display').innerText = p.gold;
+    document.getElementById('ws-shards-display').innerText = p.inventory.titan_shard || 0;
+    document.getElementById('ws-log').innerText = '';
+
+    const list = document.getElementById('ws-weapon-list');
+    list.innerHTML = '';
+
+    // Get all equipped and inventory weapons
+    let weapons = [];
+    if(p.equipped) {
+        let w = p.equipped['weapon'];
+        if(w) weapons.push({ item: w, source: 'equipped', label: '(Equipped)' });
+    }
+    (p.equipInventory || []).filter(e => e.type === 'weapon').forEach(e => {
+        weapons.push({ item: e, source: 'inventory', label: '(Inventory)' });
+    });
+
+    if(weapons.length === 0) {
+        list.innerHTML = '<p class="text-gray-500 text-sm text-center">No weapons found. Equip or obtain a weapon first.</p>';
+        switchScreen('screen-weaponsmith');
+        return;
+    }
+
+    weapons.forEach(({ item, source, label }) => {
+        let enhLvl = item.weaponEnhance || 0;
+        let isMaxed = enhLvl >= 100;
+        let enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0; // cumulative: 30 at lv1, 70 at lv2, 120 at lv3...
+        let enhLabel = enhLvl > 0 ? `+${enhBonus} dmg` : 'Not Enhanced';
+        let maxBonus = isMaxed ? ' (+5% dmg bonus!)' : '';
+        let canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 50;
+
+        let div = document.createElement('div');
+        div.className = `bg-gray-800 border-2 rarity-${item.rarity} p-3 rounded-lg shadow-md`;
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">${item.icon}</span>
+                    <div>
+                        <div class="font-bold text-white text-sm">${item.name} ${label}</div>
+                        <div class="text-xs text-yellow-300">Enhance Lv. ${enhLvl}/100${isMaxed ? ' (MAX)' : ''}</div>
+                        <div class="text-xs text-green-400">${enhLabel}${maxBonus}</div>
+                    </div>
+                </div>
+                <button onclick="enhanceWeapon('${item.id}')" 
+                    class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    ${canEnhance ? '' : 'disabled'}>
+                    🔨 Enhance<br><span class="text-yellow-300">50💰 + 1🔱</span>
+                </button>
+            </div>
+            <div class="text-[10px] text-gray-400">Next level: +${30 + enhLvl * 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
+        `;
+        list.appendChild(div);
+    });
+
+    switchScreen('screen-weaponsmith');
+}
+
+function enhanceWeapon(itemId) {
+    const p = globalProgression;
+    const log = document.getElementById('ws-log');
+
+    // Find weapon by id
+    let item = null;
+    if(p.equipped && p.equipped['weapon'] && p.equipped['weapon'].id === itemId) {
+        item = p.equipped['weapon'];
+    }
+    if(!item) {
+        item = (p.equipInventory || []).find(e => e.id === itemId && e.type === 'weapon');
+    }
+
+    if(!item) { log.innerText = 'Weapon not found!'; return; }
+    let enhLvl = item.weaponEnhance || 0;
+    if(enhLvl >= 100) { log.innerText = 'Already at max enhancement level!'; return; }
+    if((p.inventory.titan_shard || 0) < 1) { log.innerText = 'Not enough Titan Shards!'; playSound('lose'); return; }
+    if(p.gold < 50) { log.innerText = 'Not enough Gold! (50 needed)'; playSound('lose'); return; }
+
+    // Consume resources
+    p.gold -= 50;
+    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - 1;
+
+    // 40% failure rate
+    if(Math.random() < 0.40) {
+        log.className = 'anim-enhance-fail';
+        void log.offsetWidth; // force reflow to restart animation
+        log.innerText = '💥 Enhancement failed! Resources consumed.';
+        playSound('lose');
+    } else {
+        let newLvl = enhLvl + 1;
+        item.weaponEnhance = newLvl;
+        // Apply bonus damage: level N adds (30 + (N-1)*10) damage
+        let dmgAdd = 30 + enhLvl * 10; // +30 at lv1, +40 at lv2, +50 at lv3, etc.
+        item.stats.dmg = (item.stats.dmg || 0) + dmgAdd;
+        log.className = 'anim-enhance-success';
+        void log.offsetWidth; // force reflow to restart animation
+        if(newLvl === 100) {
+            item.weaponEnhanceMaxBonus = true; // flag for +5% dmg
+            log.innerText = `⭐ MAX ENHANCE reached! +5% damage bonus granted!`;
+        } else {
+            log.innerText = `✅ Enhancement success! Lv.${newLvl} (+${dmgAdd} dmg added)`;
+        }
+        playSound('win');
+    }
+
+    saveGame();
+    showWeaponSmith();
+}
+
+
+function showInvasion() {
+    document.getElementById('invasion-gold-display').innerText = globalProgression.gold;
+    let energyEl = document.getElementById('invasion-energy-display');
+    if(energyEl) energyEl.innerText = globalProgression.energy || 0;
+    switchScreen('screen-invasion');
+}
+
+function startInvasion() {
+    if(!consumeEnergy(1)) {
+        showNoEnergyAnimation();
+        return;
+    }
+    invasionTotalKills = 0;
+    invasionSpawned = 0;
+    invasionKillGoal = 0; // 0 = unlimited (continuous until player leaves or energy runs out)
+    invasionMaxOnScreen = 4;
+    currentMode = 'invasion';
+    saveGame();
+    startBattle(true);
+}
+
+// --- PET BATTLE ---
+function regenPetBattleEnergy() {
+    const MAX_PET_ENERGY = 10;
+    const REGEN_MS = 300000; // 5 minutes
+    if(globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
+    if(globalProgression.petBattleLastEnergyTime === undefined) globalProgression.petBattleLastEnergyTime = Date.now();
+    if(globalProgression.petBattleEnergy < MAX_PET_ENERGY) {
+        let now = Date.now();
+        let msPassed = now - globalProgression.petBattleLastEnergyTime;
+        let ticksPassed = Math.floor(msPassed / REGEN_MS);
+        if(ticksPassed > 0) {
+            globalProgression.petBattleEnergy = Math.min(MAX_PET_ENERGY, globalProgression.petBattleEnergy + ticksPassed);
+            // Set lastEnergyTime to the timestamp of the most recent complete regen tick,
+            // preserving partial progress toward the next tick.
+            globalProgression.petBattleLastEnergyTime = now - (msPassed % REGEN_MS);
+            saveGame();
+        }
+    } else {
+        globalProgression.petBattleLastEnergyTime = Date.now();
+    }
+}
+
+const MAX_PET_FAVORITES = 3;
+
+function togglePetFavorite(petId) {
+    if(!globalProgression.petFavorites) globalProgression.petFavorites = [];
+    let favs = globalProgression.petFavorites;
+    let idx = favs.indexOf(petId);
+    if(idx !== -1) {
+        favs.splice(idx, 1);
+    } else {
+        if(favs.length >= MAX_PET_FAVORITES) {
+            alert(`You can only have ${MAX_PET_FAVORITES} favorite pets! Remove one first.`);
+            return;
+        }
+        favs.push(petId);
+    }
+    saveGame();
+    showPetBattle();
+}
+
+function showPetBattle() {
+    regenPetBattleEnergy();
+    document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
+    document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
+    petBattleActive = false;
+    petBattlePlayerPet = null;
+
+    // Show select area, hide battle area
+    document.getElementById('pet-select-area').classList.remove('hidden');
+    document.getElementById('pet-battle-area').classList.add('hidden');
+
+    const ownedList = document.getElementById('pet-owned-list');
+    const noMsg = document.getElementById('pet-no-pets-msg');
+    ownedList.innerHTML = '';
+
+    let owned = globalProgression.petsOwned || [];
+    let favs = globalProgression.petFavorites || [];
+
+    if(owned.length === 0) {
+        noMsg.classList.remove('hidden');
+    } else {
+        noMsg.classList.add('hidden');
+        // Sort: favorites first, then others
+        let sortedOwned = [...owned].sort((a, b) => {
+            let aFav = favs.includes(a) ? 0 : 1;
+            let bFav = favs.includes(b) ? 0 : 1;
+            return aFav - bFav;
+        });
+        sortedOwned.forEach(petId => {
+            let pet = PET_DATA.find(p => p.id === petId);
+            if(!pet) return;
+            let isFav = favs.includes(petId);
+            let wrapper = document.createElement('div');
+            wrapper.className = `relative bg-gray-800 rounded-xl p-2 flex flex-col items-center transition border-2 ${isFav ? 'border-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'border-pink-700'}`;
+            // Favorite star button
+            let starBtn = document.createElement('button');
+            starBtn.className = `absolute top-1 right-1 text-sm leading-none z-10`;
+            starBtn.innerHTML = isFav ? '⭐' : '☆';
+            starBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+            starBtn.onclick = (e) => { e.stopPropagation(); togglePetFavorite(petId); };
+            wrapper.appendChild(starBtn);
+            // Pet button
+            let btn = document.createElement('button');
+            btn.className = 'flex flex-col items-center w-full active:scale-95';
+            btn.innerHTML = `<span class="text-3xl">${pet.emoji}</span><span class="text-xs text-pink-300 font-bold mt-1">${pet.name}</span>${isFav ? '<span class="text-[9px] text-yellow-400">★ Favorite</span>' : ''}`;
+            btn.onclick = () => startPetBattle(petId);
+            wrapper.appendChild(btn);
+            ownedList.appendChild(wrapper);
+        });
+    }
+    switchScreen('screen-pet-battle');
+}
+
+function startPetBattle(playerPetId) {
+    regenPetBattleEnergy();
+    if((globalProgression.petBattleEnergy || 0) <= 0) {
+        let energyMsg = document.getElementById('pet-energy-msg');
+        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy recharges in 5 min.'; energyMsg.classList.remove('hidden'); }
+        return;
+    }
+    let energyMsg = document.getElementById('pet-energy-msg');
+    if(energyMsg) energyMsg.classList.add('hidden');
+    // Cancel any active auto-battle before entering pet battle
+    if(typeof isAutoBattle !== 'undefined' && isAutoBattle) {
+        isAutoBattle = false;
+        combatActive = false;
+        const autoBtn = document.getElementById('btn-auto');
+        if(autoBtn) autoBtn.classList.remove('auto-on');
+    }
+    petBattlePlayerPet = PET_DATA.find(p => p.id === playerPetId);
+    // Random enemy pet from full pool
+    petBattleEnemyPet = PET_DATA[Math.floor(Math.random() * PET_DATA.length)];
+    petBattleActive = true;
+    petBattlePlayerHp = 10;
+    petBattleEnemyHp = 10;
+    petBattleLastAction = null;
+    petBattleEnemyLastAction = null;
+
+    document.getElementById('pet-select-area').classList.add('hidden');
+    document.getElementById('pet-battle-area').classList.remove('hidden');
+    document.getElementById('pb-player-emoji').innerText = petBattlePlayerPet.emoji;
+    document.getElementById('pb-player-name').innerText = petBattlePlayerPet.name;
+    document.getElementById('pb-enemy-emoji').innerText = petBattleEnemyPet.emoji;
+    document.getElementById('pb-enemy-name').innerText = petBattleEnemyPet.name;
+    updatePetBattleUI();
+    updatePetBattleRecords();
+    document.getElementById('pb-result-text').innerText = 'Choose your action!';
+    // Enable all action buttons
+    ['attack', 'block', 'counter'].forEach(action => {
+        let btn = document.getElementById(`pb-btn-${action}`);
+        if(btn) { btn.disabled = false; btn.classList.remove('opacity-50'); }
+    });
+    document.getElementById('pb-cooldown-info').innerText = '';
+    if(petBattleAutoMode) schedulePetAutoAction();
+}
+
+function updatePetBattleUI() {
+    document.getElementById('pb-player-hp').innerText = Math.max(0, petBattlePlayerHp).toFixed(1);
+    document.getElementById('pb-enemy-hp').innerText = Math.max(0, petBattleEnemyHp).toFixed(1);
+    document.getElementById('pb-player-hp-bar').style.width = Math.max(0, (petBattlePlayerHp / 10) * 100) + '%';
+    document.getElementById('pb-enemy-hp-bar').style.width = Math.max(0, (petBattleEnemyHp / 10) * 100) + '%';
+    document.getElementById('pb-player-hp-bar').className = `h-2 rounded-full transition-all ${petBattlePlayerHp > 5 ? 'bg-green-500' : petBattlePlayerHp > 2 ? 'bg-yellow-500' : 'bg-red-500'}`;
+    document.getElementById('pb-enemy-hp-bar').className = `h-2 rounded-full transition-all ${petBattleEnemyHp > 5 ? 'bg-green-500' : petBattleEnemyHp > 2 ? 'bg-yellow-500' : 'bg-red-500'}`;
+
+    // Update cooldown info and button visuals
+    let cdText = (petBattleLastAction && petBattleLastAction !== 'attack') ? `⏱ ${petBattleLastAction.charAt(0).toUpperCase() + petBattleLastAction.slice(1)} is on cooldown for 1 turn` : '';
+    document.getElementById('pb-cooldown-info').innerText = cdText;
+
+    ['attack', 'block', 'counter'].forEach(action => {
+        let btn = document.getElementById(`pb-btn-${action}`);
+        if(btn) {
+            btn.disabled = !petBattleActive || (action !== 'attack' && action === petBattleLastAction);
+            let lbl = btn.querySelector('.text-xs');
+            if(action !== 'attack' && action === petBattleLastAction && petBattleActive) {
+                btn.classList.add('opacity-50');
+                if(lbl) lbl.innerText = '(1 turn CD)';
+            } else {
+                btn.classList.remove('opacity-50');
+                if(lbl) lbl.innerText = action.charAt(0).toUpperCase() + action.slice(1);
+            }
+        }
+    });
+}
+
+function updatePetBattleRecords() {
+    if(!globalProgression.petWinLoss) globalProgression.petWinLoss = {};
+    let playerRec = petBattlePlayerPet ? (globalProgression.petWinLoss[petBattlePlayerPet.id] || {wins:0,losses:0}) : {wins:0,losses:0};
+    let enemyRec = petBattleEnemyPet ? (globalProgression.petWinLoss[petBattleEnemyPet.id] || {wins:0,losses:0}) : {wins:0,losses:0};
+    let playerRecEl = document.getElementById('pb-player-record');
+    let enemyRecEl = document.getElementById('pb-enemy-record');
+    if(playerRecEl) playerRecEl.innerText = `W: ${playerRec.wins} / L: ${playerRec.losses}`;
+    if(enemyRecEl) enemyRecEl.innerText = `W: ${enemyRec.wins} / L: ${enemyRec.losses}`;
+}
+
+function petBattleAction(playerAction) {
+    if(!petBattleActive || (playerAction !== 'attack' && playerAction === petBattleLastAction)) return;
+
+    // Disable all buttons during animation
+    ['attack', 'block', 'counter'].forEach(action => {
+        let btn = document.getElementById(`pb-btn-${action}`);
+        if(btn) btn.disabled = true;
+    });
+
+    // Add animation to emojis
+    let animClass = playerAction === 'attack' ? 'anim-pet-attack' : playerAction === 'block' ? 'anim-pet-block' : 'anim-pet-counter';
+    let playerEmojiEl = document.getElementById('pb-player-emoji');
+    let enemyEmojiEl = document.getElementById('pb-enemy-emoji');
+    if(playerEmojiEl) playerEmojiEl.classList.add(animClass);
+    if(enemyEmojiEl) enemyEmojiEl.classList.add('anim-pet-attack');
+
+    // Play action sound
+    if(playerAction === 'block') playSound('buff'); else playSound('hit');
+
+    // Show emoji particle
+    showPetParticle(playerAction);
+
+    // Enemy picks random action excluding its last action
+    let actions = ['attack', 'block', 'counter'];
+    let enemyChoices = actions.filter(a => a !== petBattleEnemyLastAction);
+    let enemyAction = enemyChoices[Math.floor(Math.random() * enemyChoices.length)];
+
+    let actionIcons = { attack: '⚔️', block: '🛡️', counter: '🔄' };
+    document.getElementById('pb-result-text').innerText = `You: ${actionIcons[playerAction]} | Enemy: ${actionIcons[enemyAction]}\nResolving...`;
+
+    setTimeout(() => {
+        try {
+        // Remove animation classes
+        if(playerEmojiEl) playerEmojiEl.classList.remove(animClass);
+        if(enemyEmojiEl) enemyEmojiEl.classList.remove('anim-pet-attack');
+
+        // Resolve damage
+        let playerDmg = 0, enemyDmg = 0;
+        let resultText = '';
+
+        // Damage matrix
+        if(playerAction === 'attack' && enemyAction === 'attack')   { playerDmg = 1; enemyDmg = 1; resultText = '⚔️ Both attacked! Both take 1 damage.'; }
+        else if(playerAction === 'attack' && enemyAction === 'block')   { playerDmg = 0.5; enemyDmg = 0; resultText = '⚔️ vs 🛡️ — Blocked! Attacker takes 0.5 damage.'; }
+        else if(playerAction === 'attack' && enemyAction === 'counter') { playerDmg = 0; enemyDmg = 1; resultText = '⚔️ vs 🔄 — Attack beats counter! Counter takes 1 damage.'; }
+        else if(playerAction === 'block' && enemyAction === 'attack')   { playerDmg = 0; enemyDmg = 1; resultText = '🛡️ vs ⚔️ — Block beats attack! Attacker takes 1 damage.'; }
+        else if(playerAction === 'block' && enemyAction === 'block')    { playerDmg = 0.5; enemyDmg = 0.5; resultText = '🛡️ vs 🛡️ — Both blocked! Both take 0.5 damage.'; }
+        else if(playerAction === 'block' && enemyAction === 'counter')  { playerDmg = 0; enemyDmg = 1; resultText = '🛡️ vs 🔄 — Block beats counter! Counter takes 1 damage.'; }
+        else if(playerAction === 'counter' && enemyAction === 'attack') { playerDmg = 1; enemyDmg = 0; resultText = '🔄 vs ⚔️ — Counter loses to attack! Counter takes 1 damage.'; }
+        else if(playerAction === 'counter' && enemyAction === 'block')  { playerDmg = 1; enemyDmg = 0; resultText = '🔄 vs 🛡️ — Block beats counter! Counter takes 1 damage.'; }
+        else if(playerAction === 'counter' && enemyAction === 'counter'){ playerDmg = 0.5; enemyDmg = 0.5; resultText = '🔄 vs 🔄 — Both countered! Both take 0.5 damage.'; }
+
+        petBattlePlayerHp -= playerDmg;
+        petBattleEnemyHp -= enemyDmg;
+        petBattleLastAction = playerAction === 'attack' ? null : playerAction;
+        petBattleEnemyLastAction = enemyAction;
+
+        let resultEl = document.getElementById('pb-result-text');
+        if(resultEl) resultEl.innerText = `You: ${actionIcons[playerAction]} | Enemy: ${actionIcons[enemyAction]}\n${resultText}`;
+
+        updatePetBattleUI();
+        showRoundResultFlash(playerDmg, enemyDmg);
+
+        // Check win/loss
+        if(petBattlePlayerHp <= 0 && petBattleEnemyHp <= 0) {
+            // Both dead - draw, restart round
+            setTimeout(() => { petBattleRoundEnd(false); }, 1200);
+        } else if(petBattleEnemyHp <= 0) {
+            // Player wins round
+            setTimeout(() => { petBattleRoundEnd(true); }, 1200);
+        } else if(petBattlePlayerHp <= 0) {
+            // Player loses
+            setTimeout(() => { petBattleLose(); }, 1200);
+        } else {
+            // Round continues — schedule next auto action if auto mode is on
+            if(petBattleAutoMode) schedulePetAutoAction();
+        }
+        } catch(err) {
+            console.error('Pet battle action error:', err);
+            // Re-enable buttons so the battle is never permanently frozen
+            ['attack', 'block', 'counter'].forEach(action => {
+                let btn = document.getElementById(`pb-btn-${action}`);
+                if(btn) btn.disabled = !petBattleActive || (action !== 'attack' && action === petBattleLastAction);
+            });
+        }
+    }, 1000);
+}
+
+function petBattleRoundEnd(playerWon) {
+    // Disable buttons while round ends and new enemy loads
+    ['attack', 'block', 'counter'].forEach(action => {
+        let btn = document.getElementById(`pb-btn-${action}`);
+        if(btn) btn.disabled = true;
+    });
+    if(playerWon) {
+        globalProgression.gold += 15;
+        globalProgression.petBattleEnergy = Math.max(0, (globalProgression.petBattleEnergy || 0) - 1);
+        globalProgression.petBattleLastEnergyTime = Date.now();
+        // Drop a Titan Shard for winning
+        globalProgression.inventory.titan_shard = (globalProgression.inventory.titan_shard || 0) + 1;
+        let xpGain = Math.floor(getXpForNextLevel(player.lvl) * 0.01);
+        player.xp += xpGain;
+        globalProgression.petBattlesWon = (globalProgression.petBattlesWon || 0) + 1;
+        globalProgression.petBattleWinStreak = (globalProgression.petBattleWinStreak || 0) + 1;
+        // Record win for player pet, loss for enemy pet
+        if(!globalProgression.petWinLoss) globalProgression.petWinLoss = {};
+        if(petBattlePlayerPet) {
+            if(!globalProgression.petWinLoss[petBattlePlayerPet.id]) globalProgression.petWinLoss[petBattlePlayerPet.id] = {wins:0,losses:0};
+            globalProgression.petWinLoss[petBattlePlayerPet.id].wins++;
+        }
+        if(petBattleEnemyPet) {
+            if(!globalProgression.petWinLoss[petBattleEnemyPet.id]) globalProgression.petWinLoss[petBattleEnemyPet.id] = {wins:0,losses:0};
+            globalProgression.petWinLoss[petBattleEnemyPet.id].losses++;
+        }
+        if(globalProgression.petBattleWinStreak > (globalProgression.petBattleBestStreak || 0)) {
+            globalProgression.petBattleBestStreak = globalProgression.petBattleWinStreak;
+        }
+        checkLevelUp();
+        let ps = ensureProgressStats();
+        ps.battlesWon = (ps.battlesWon || 0) + 1;
+        document.getElementById('pb-result-text').innerText = `🎉 You won! +15 Gold, +1 🔱 Titan Shard, +${xpGain} XP\nStreak: ${globalProgression.petBattleWinStreak}`;
+        playSound('win');
+        showPetBattleVictory();
+        saveGame();
+        document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
+        document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
+        // Heal and start next round
+        setTimeout(() => {
+            petBattlePlayerHp = 10;
+            petBattleEnemyHp = 10;
+            petBattleLastAction = null;
+            petBattleEnemyLastAction = null;
+            // Check energy for next round
+            regenPetBattleEnergy();
+            if((globalProgression.petBattleEnergy || 0) <= 0) {
+                document.getElementById('pb-result-text').innerText = '😴 Out of energy! Recharges in 5 min.';
+                ['attack', 'block', 'counter'].forEach(action => {
+                    let btn = document.getElementById(`pb-btn-${action}`);
+                    if(btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
+                });
+                if(petBattleAutoMode) {
+                    petBattleAutoMode = false;
+                    if(petBattleAutoTimer) { clearTimeout(petBattleAutoTimer); petBattleAutoTimer = null; }
+                    let autoBtn = document.getElementById('pb-btn-auto');
+                    if(autoBtn) { autoBtn.classList.remove('auto-on'); autoBtn.innerText = '🤖 Auto'; }
+                }
+                return;
+            }
+            // New enemy pet
+            petBattleEnemyPet = PET_DATA[Math.floor(Math.random() * PET_DATA.length)];
+            document.getElementById('pb-enemy-emoji').innerText = petBattleEnemyPet.emoji;
+            document.getElementById('pb-enemy-name').innerText = petBattleEnemyPet.name;
+            updatePetBattleUI();
+            updatePetBattleRecords();
+            document.getElementById('pb-result-text').innerText = '✨ New enemy appeared! Choose your action.';
+            // Re-enable action buttons now that a new pet is generated
+            ['attack', 'block', 'counter'].forEach(action => {
+                let btn = document.getElementById(`pb-btn-${action}`);
+                if(btn) { btn.disabled = false; btn.classList.remove('opacity-50'); }
+            });
+            if(petBattleAutoMode) schedulePetAutoAction();
+        }, 2000);
+    } else {
+        // Draw
+        document.getElementById('pb-result-text').innerText = "Draw! Both pets fell — healing for next round.";
+        setTimeout(() => {
+            petBattlePlayerHp = 10;
+            petBattleEnemyHp = 10;
+            petBattleLastAction = null;
+            petBattleEnemyLastAction = null;
+            updatePetBattleUI();
+            document.getElementById('pb-result-text').innerText = '✨ Round reset! Choose your action.';
+            // Re-enable action buttons
+            ['attack', 'block', 'counter'].forEach(action => {
+                let btn = document.getElementById(`pb-btn-${action}`);
+                if(btn) { btn.disabled = false; btn.classList.remove('opacity-50'); }
+            });
+            if(petBattleAutoMode) schedulePetAutoAction();
+        }, 2000);
+    }
+}
+
+function petBattleLose() {
+    petBattleActive = false;
+    petBattleAutoMode = false;
+    if(petBattleAutoTimer) { clearTimeout(petBattleAutoTimer); petBattleAutoTimer = null; }
+    let autoBtn = document.getElementById('pb-btn-auto');
+    if(autoBtn) { autoBtn.classList.remove('auto-on'); autoBtn.innerText = '🤖 Auto'; }
+    globalProgression.petBattleWinStreak = 0;
+    // Record loss for player pet, win for enemy pet
+    if(!globalProgression.petWinLoss) globalProgression.petWinLoss = {};
+    if(petBattlePlayerPet) {
+        if(!globalProgression.petWinLoss[petBattlePlayerPet.id]) globalProgression.petWinLoss[petBattlePlayerPet.id] = {wins:0,losses:0};
+        globalProgression.petWinLoss[petBattlePlayerPet.id].losses++;
+    }
+    if(petBattleEnemyPet) {
+        if(!globalProgression.petWinLoss[petBattleEnemyPet.id]) globalProgression.petWinLoss[petBattleEnemyPet.id] = {wins:0,losses:0};
+        globalProgression.petWinLoss[petBattleEnemyPet.id].wins++;
+    }
+    updatePetBattleRecords();
+    let ps = ensureProgressStats();
+    ps.battlesLost = (ps.battlesLost || 0) + 1;
+    playSound('lose');
+    showPetBattleDefeat();
+    saveGame();
+    document.getElementById('pb-result-text').innerText = '💀 You lost! Your pet was defeated.';
+    // Disable action buttons until a new pet battle is started
+    ['attack', 'block', 'counter'].forEach(action => {
+        let btn = document.getElementById(`pb-btn-${action}`);
+        if(btn) btn.disabled = true;
+    });
+    document.getElementById('pb-cooldown-info').innerText = 'Game over. Leave and try again.';
+}
+
+function showPetBattleVictory() {
+    let overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 flex items-center justify-center z-50 pointer-events-none';
+    overlay.innerHTML = '<div class="text-6xl font-black text-yellow-400 anim-victory drop-shadow-lg">🎉 VICTORY!</div>';
+    document.body.appendChild(overlay);
+    let screen = document.getElementById('screen-pet-battle');
+    if(screen) screen.classList.add('anim-screen-shake');
+    setTimeout(() => { overlay.remove(); if(screen) screen.classList.remove('anim-screen-shake'); }, 2000);
+}
+
+function showPetBattleDefeat() {
+    let overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 flex items-center justify-center z-50 pointer-events-none';
+    overlay.innerHTML = '<div class="text-6xl font-black text-red-500 anim-defeat drop-shadow-lg">💀 DEFEAT</div>';
+    document.body.appendChild(overlay);
+    let screen = document.getElementById('screen-pet-battle');
+    if(screen) screen.classList.add('anim-screen-shake');
+    setTimeout(() => { overlay.remove(); if(screen) screen.classList.remove('anim-screen-shake'); }, 2000);
+}
+
+function showPetBattleStart() {
+    let overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 flex items-center justify-center z-50 pointer-events-none';
+    overlay.innerHTML = '<div class="text-6xl font-black text-green-400 drop-shadow-lg" style="animation: petStartPulse 0.6s ease-in-out 3 alternate;">⚡ START!</div>';
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+        overlay.remove();
+        // Re-enable buttons after START animation
+        ['attack', 'block', 'counter'].forEach(action => {
+            let btn = document.getElementById(`pb-btn-${action}`);
+            if(btn) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+                let lbl = btn.querySelector('.text-xs');
+                if(lbl) lbl.innerText = action.charAt(0).toUpperCase() + action.slice(1);
+            }
+        });
+        document.getElementById('pb-cooldown-info').innerText = '';
+    }, 1800);
+}
+
+function togglePetBattleAuto() {
+    petBattleAutoMode = !petBattleAutoMode;
+    let btn = document.getElementById('pb-btn-auto');
+    if(petBattleAutoMode) {
+        if(btn) { btn.classList.add('auto-on'); btn.innerText = '⏹ Stop Auto'; }
+        if(petBattleActive) schedulePetAutoAction();
+    } else {
+        if(btn) { btn.classList.remove('auto-on'); btn.innerText = '🤖 Auto'; }
+        if(petBattleAutoTimer) { clearTimeout(petBattleAutoTimer); petBattleAutoTimer = null; }
+    }
+}
+
+function schedulePetAutoAction() {
+    if(!petBattleAutoMode || !petBattleActive) return;
+    petBattleAutoTimer = setTimeout(() => {
+        if(!petBattleAutoMode || !petBattleActive) return;
+        // Check if buttons are usable
+        let attackBtn = document.getElementById('pb-btn-attack');
+        if(attackBtn && attackBtn.disabled) { schedulePetAutoAction(); return; }
+        let actions = ['attack', 'block', 'counter'];
+        let available = actions.filter(a => !(a !== 'attack' && a === petBattleLastAction));
+        let action = available[Math.floor(Math.random() * available.length)];
+        petBattleAction(action);
+    }, 1200);
+}
+
+
+function showRoundResultFlash(playerDmg, enemyDmg) {
+    let el = document.createElement('div');
+    el.className = 'round-result-flash';
+    if (enemyDmg > playerDmg) {
+        el.style.color = '#4ade80';
+        el.style.borderColor = '#4ade80';
+        el.innerText = '✅ WIN';
+    } else if (playerDmg > enemyDmg) {
+        el.style.color = '#ef4444';
+        el.style.borderColor = '#ef4444';
+        el.innerText = '❌ LOSE';
+    } else {
+        el.style.color = '#9ca3af';
+        el.innerText = '➖ TIE';
+    }
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+}
+
+function showPetParticle(action) {
+    let emoji = action === 'attack' ? '⚔️' : action === 'block' ? '🛡️' : '🔄';
+    let pEl = document.getElementById('pb-player-emoji');
+    if(!pEl) return;
+    let rect = pEl.getBoundingClientRect();
+    let particle = document.createElement('div');
+    particle.className = 'anim-particle';
+    particle.style.left = (rect.left + rect.width / 2 - 16) + 'px';
+    particle.style.top = (rect.top - 10) + 'px';
+    particle.innerText = emoji;
+    document.body.appendChild(particle);
+    setTimeout(() => { if(particle.parentNode) particle.remove(); }, 1000);
+}
+
+function leavePetBattle() {
+    petBattleActive = false;
+    petBattleAutoMode = false;
+    if(petBattleAutoTimer) { clearTimeout(petBattleAutoTimer); petBattleAutoTimer = null; }
+    let autoBtn = document.getElementById('pb-btn-auto');
+    if(autoBtn) { autoBtn.classList.remove('auto-on'); autoBtn.innerText = '🤖 Auto'; }
+    showPortal();
+}
+
+function showWell() {
+    const today = new Date().toDateString();
+    const canUseXp = (globalProgression.wellLastXpDate || '') !== today;
+    const canUseDrop = (globalProgression.wellLastDropDate || '') !== today;
+    const canUseEnergy50 = (globalProgression.wellLastEnergy50Date || '') !== today;
+    const canUseEnergy100 = (globalProgression.wellLastEnergy100Date || '') !== today;
+    const p = globalProgression;
+
+    document.getElementById('well-gold-display').innerText = p.gold;
+    document.getElementById('well-xp-status').innerText = !canUseXp ? 'Used Today' : p.wellXpBattles > 0 ? `${p.wellXpBattles} battles left` : 'Inactive';
+    document.getElementById('well-drop-status').innerText = !canUseDrop ? 'Used Today' : p.wellDropBattles > 0 ? `${p.wellDropBattles} battles left` : 'Inactive';
+    document.getElementById('well-energy50-status').innerText = canUseEnergy50 ? 'Ready' : 'Used Today';
+    document.getElementById('well-energy100-status').innerText = canUseEnergy100 ? 'Ready' : 'Used Today';
+    document.getElementById('well-energy-cap-status').innerText = p.energyCapUnlocked ? '✅ Unlocked' : 'Locked';
+    
+    const healBtn = document.getElementById('well-heal-btn');
+    const xpBtn = document.getElementById('well-xp-btn');
+    const dropBtn = document.getElementById('well-drop-btn');
+    const energy50Btn = document.getElementById('well-energy50-btn');
+    const energy100Btn = document.getElementById('well-energy100-btn');
+    const energyCapBtn = document.getElementById('well-energy-cap-btn');
+    healBtn.disabled = p.gold < 50;
+    xpBtn.disabled = !canUseXp || p.gold < 20;
+    dropBtn.disabled = !canUseDrop || p.gold < 20;
+    energy50Btn.disabled = !canUseEnergy50 || p.gold < 50;
+    energy100Btn.disabled = !canUseEnergy100 || p.gold < 100;
+    energyCapBtn.disabled = p.energyCapUnlocked || p.gold < 300 || getMaxEnergy() < 50;
+
+    document.getElementById('well-log').innerText = '';
+    switchScreen('screen-well');
+}
+
+function useWellHeal() {
+    const log = document.getElementById('well-log');
+    if(globalProgression.gold < 50) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
+
+    globalProgression.gold -= 50;
+    player.maxHp = calculateMaxHp();
+    player.currentHp = player.maxHp;
+    log.innerText = 'You feel renewed. HP fully restored!';
+    playSound('heal');
+    saveGame();
+    showWell();
+}
+
+function buyWellXpBuff() {
+    const today = new Date().toDateString();
+    const log = document.getElementById('well-log');
+    if((globalProgression.wellLastXpDate || '') === today) { log.innerText = 'XP Blessing already used today.'; playSound('lose'); return; }
+    if(globalProgression.gold < 20) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
+    globalProgression.gold -= 20;
+    globalProgression.wellXpBattles = 10;
+    globalProgression.wellLastXpDate = today;
+    log.innerText = '2x XP blessing is active for 10 battles!';
+    playSound('win');
+    saveGame();
+    showWell();
+}
+
+function buyWellDropBuff() {
+    const today = new Date().toDateString();
+    const log = document.getElementById('well-log');
+    if((globalProgression.wellLastDropDate || '') === today) { log.innerText = 'Drop Blessing already used today.'; playSound('lose'); return; }
+    if(globalProgression.gold < 20) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
+    globalProgression.gold -= 20;
+    globalProgression.wellDropBattles = 10;
+    globalProgression.wellLastDropDate = today;
+    log.innerText = '2x drop blessing is active for 10 battles!';
+    playSound('win');
+    saveGame();
+    showWell();
+}
+function useWellEnergy50() {
+    const p = globalProgression; const today = new Date().toDateString();
+    const log = document.getElementById('well-log');
+    if((p.wellLastEnergy50Date || '') === today) { log.innerText = 'Energy refill (50g) already used today.'; playSound('lose'); return; }
+    if(p.gold < 50) { log.innerText = 'Not enough Gold!'; playSound('lose'); return; }
+    let maxEnergy = getMaxEnergy();
+    p.gold -= 50; p.energy = maxEnergy; p.wellLastEnergy50Date = today; saveGame(); updateEnergy();
+    log.innerText = `⚡ Energy refilled to ${maxEnergy}!`; playSound('chest');
+    showWell();
+}
+function useWellEnergy100() {
+    const p = globalProgression; const today = new Date().toDateString();
+    const log = document.getElementById('well-log');
+    if((p.wellLastEnergy100Date || '') === today) { log.innerText = 'Energy refill (100g) already used today.'; playSound('lose'); return; }
+    if(p.gold < 100) { log.innerText = 'Not enough Gold!'; playSound('lose'); return; }
+    let maxEnergy = getMaxEnergy();
+    p.gold -= 100; p.energy = maxEnergy; p.wellLastEnergy100Date = today; saveGame(); updateEnergy();
+    log.innerText = `⚡ Energy refilled to ${maxEnergy}!`; playSound('chest');
+    showWell();
+}
+
+function unlockEnergyCapUpgrade() {
+    const p = globalProgression;
+    const log = document.getElementById('well-log');
+    if(p.energyCapUnlocked) { log.innerText = 'Energy cap already unlocked!'; return; }
+    if(getMaxEnergy() < 50) { log.innerText = `Reach 50 Energy first! (You currently have ${getMaxEnergy()} max energy)`; playSound('lose'); return; }
+    if(p.gold < 300) { log.innerText = 'Not enough Gold! (Need 300)'; playSound('lose'); return; }
+    p.gold -= 300;
+    p.energyCapUnlocked = true;
+    log.innerText = '❗ Energy cap upgraded to 100! Level up to reach energies 51-100.';
+    playSound('win');
+    saveGame();
+    updateEnergy();
+    showWell();
+}
+
+// --- QUESTS ---
+function generateQuest(qNum) {
+    let roll = Math.random(); 
+    let rarity = 'common'; let mult = 1;
+    if (roll < 0.01) { rarity = 'legendary'; mult = 7; } 
+    else if (roll < 0.11) { rarity = 'epic'; mult = 3; } 
+    else if (roll < 0.31) { rarity = 'rare'; mult = 1.5; } 
+
+    globalProgression[`questRarity${qNum}`] = rarity; 
+    globalProgression[`questProg${qNum}`] = 0;
+    globalProgression[`questGoal${qNum}`] = 3; 
+    
+    let baseReward = 50;
+    if(qNum === 2) baseReward = 100;
+    if(qNum === 3) baseReward = 150;
+    if(qNum === 4) baseReward = 200;
+
+    globalProgression[`questRwd${qNum}`] = Math.floor(baseReward * mult * (1 + player.lvl * 0.005));
+}
+
+function updateQuestUI(qNum) {
+    let prog = globalProgression[`questProg${qNum}`]; let goal = globalProgression[`questGoal${qNum}`]; let rarity = globalProgression[`questRarity${qNum}`] || 'common';
+    
+    const container = document.getElementById(`quest-container-${qNum}`);
+    if(!container) return; 
+    
+    const titleEl = document.getElementById(`quest-${qNum}-title`); const rwdEl = document.getElementById(`quest-${qNum}-rwd`);
+    if(!titleEl || !rwdEl) return;
+
+    if(globalProgression.questsCompletedToday >= 10) {
+        container.innerHTML = `<div class="text-center py-6 text-gray-500 font-bold bg-gray-900 rounded-xl">Come back tomorrow!</div>`;
+        return;
+    }
+
+    if(rarity === 'legendary') { container.className = "bg-quest-legendary border-2 border-yellow-400 rounded-xl p-5 shadow-[0_0_20px_rgba(251,191,36,0.6)] mb-4 transition-colors"; titleEl.className = "text-lg font-bold text-yellow-400 uppercase tracking-wider"; } 
+    else if (rarity === 'epic') { container.className = "bg-quest-epic border-2 border-purple-500 rounded-xl p-5 shadow-[0_0_15px_rgba(168,85,247,0.5)] mb-4 transition-colors"; titleEl.className = "text-lg font-bold text-purple-300 uppercase"; } 
+    else if (rarity === 'rare') { container.className = "bg-quest-rare border-2 border-blue-500 rounded-xl p-5 shadow-lg mb-4 transition-colors"; titleEl.className = "text-lg font-bold text-blue-300 uppercase"; } 
+    else { container.className = "bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg mb-4 transition-colors"; titleEl.className = "text-lg font-bold text-white"; }
+
+    rwdEl.innerText = `💰 ${globalProgression[`questRwd${qNum}`]} G`; document.getElementById(`quest-${qNum}-text`).innerText = `${prog} / ${goal}`; document.getElementById(`quest-${qNum}-bar`).style.width = `${(prog / goal) * 100}%`;
+    
+    let btn = document.getElementById(`btn-claim-q${qNum}`);
+    if(btn) {
+        if(prog >= goal) { btn.disabled = false; btn.innerText = `CLAIM REWARD`; btn.className = 'w-full py-2 bg-yellow-500 text-black font-bold rounded animate-pulse transition active:scale-95 text-sm shadow-md'; } 
+        else { btn.disabled = true; btn.innerText = "In Progress"; btn.className = 'w-full py-2 bg-gray-600 text-gray-400 font-bold rounded transition text-sm shadow-inner'; }
+    }
+    updateQuestNotifyBadge();
+}
+
+function checkDailyQuestReset() {
+    let today = new Date().toDateString();
+    if(globalProgression.lastQuestDate !== today) {
+        globalProgression.questsCompletedToday = 0;
+        globalProgression.lastQuestDate = today;
+        generateQuest(1); generateQuest(2); generateQuest(3); generateQuest(4);
+    }
+}
+
+function showQuests() { 
+    checkDailyQuestReset();
+    document.getElementById('quest-daily-limit').innerText = `${globalProgression.questsCompletedToday}/10`;
+
+    // Sort quest slots: completed (claimable) quests first, then in-progress
+    let questOrder = [1, 2, 3, 4].sort((a, b) => {
+        let aComplete = globalProgression[`questProg${a}`] >= globalProgression[`questGoal${a}`];
+        let bComplete = globalProgression[`questProg${b}`] >= globalProgression[`questGoal${b}`];
+        if (aComplete && !bComplete) return -1;
+        if (!aComplete && bComplete) return 1;
+        return 0;
+    });
+
+    for(let idx = 0; idx < questOrder.length; idx++) {
+        let i = questOrder[idx];
+        const container = document.getElementById(`quest-container-${idx + 1}`);
+        if (!container) continue;
+        // Always rebuild to ensure correct order
+        if (globalProgression.questsCompletedToday >= 10) {
+            container.innerHTML = `<div class="text-center py-4 text-gray-500 font-bold bg-gray-900 rounded-xl">Come back tomorrow!</div>`;
+            continue;
+        }
+        container.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h3 id="quest-title-${i}" class="text-lg font-bold text-white">Quest</h3>
+                    <p id="quest-desc-${i}" class="text-xs text-gray-400">Desc</p>
+                </div>
+                <div id="quest-rwd-${i}" class="font-bold text-yellow-400 bg-black bg-opacity-40 px-2 py-1 rounded shadow-inner border border-gray-600">💰 0 G</div>
+            </div>
+            <div class="w-full bg-gray-900 h-5 rounded mt-2 mb-3 border border-gray-700 overflow-hidden relative shadow-inner">
+                <div id="quest-bar-${i}" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
+                <div id="quest-text-${i}" class="absolute top-0 left-0 w-full h-full flex items-center justify-center text-[10px] font-bold text-white drop-shadow-md">0 / 3</div>
+            </div>
+            <button id="btn-claim-q${i}-slot${idx+1}" onclick="claimQuest(${i})" class="w-full py-2 bg-gray-600 text-gray-400 font-bold rounded transition text-sm shadow-inner border border-gray-500" disabled>In Progress</button>
+        `;
+
+        let type = globalProgression[`questType${i}`];
+        let goal = globalProgression[`questGoal${i}`];
+        let qt = document.getElementById(`quest-title-${i}`);
+        let qd = document.getElementById(`quest-desc-${i}`);
+        if(qt && qd) {
+            if (type === 'hunting') { qt.innerText = 'Wilderness Hunter'; qd.innerText = `Slay ${goal} beasts in the Wilderness.`; }
+            if (type === 'pillage') { qt.innerText = 'Village Pillager'; qd.innerText = `Defeat ${goal} foes in Pillage Village.`; }
+            if (type === 'workshop') { qt.innerText = 'Workshop Raider'; qd.innerText = `Destroy ${goal} constructs in the Workshop.`; }
+            if (type === 'dungeon') { qt.innerText = 'Dungeon Delver'; qd.innerText = `Destroy ${goal} aliens in the Dungeon Portal.`; }
+        }
+        // Update progress bar via the new IDs
+        let prog = globalProgression[`questProg${i}`];
+        let rwd = globalProgression[`questRwd${i}`];
+        let rwdEl = document.getElementById(`quest-rwd-${i}`);
+        if (rwdEl) rwdEl.innerText = `💰 ${rwd} G`;
+        let barEl = document.getElementById(`quest-bar-${i}`);
+        let txtEl = document.getElementById(`quest-text-${i}`);
+        let btnEl = document.getElementById(`btn-claim-q${i}-slot${idx+1}`);
+        if (barEl) barEl.style.width = `${Math.min(100, Math.floor((prog / goal) * 100))}%`;
+        if (txtEl) txtEl.innerText = `${Math.min(prog, goal)} / ${goal}`;
+        if (btnEl) {
+            if (prog >= goal) {
+                btnEl.disabled = false;
+                btnEl.className = 'w-full py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded transition text-sm shadow-lg border border-green-400 animate-pulse';
+                btnEl.innerText = '✅ CLAIM REWARD';
+            } else {
+                btnEl.disabled = true;
+                btnEl.className = 'w-full py-2 bg-gray-600 text-gray-400 font-bold rounded transition text-sm shadow-inner border border-gray-500';
+                btnEl.innerText = 'In Progress';
+            }
+        }
+    }
+    
+    updateQuestNotifyBadge();
+    switchScreen('screen-quests'); 
+}
+
+function claimQuest(qNum) {
+    let prog = globalProgression[`questProg${qNum}`]; let goal = globalProgression[`questGoal${qNum}`]; let rwd = globalProgression[`questRwd${qNum}`];
+    if(prog >= goal && globalProgression.questsCompletedToday < 10) { 
+        globalProgression.gold += rwd; 
+        globalProgression.questsCompletedToday++;
+        generateQuest(qNum); playSound('win'); saveGame(); showQuests(); 
+    }
+    updateQuestNotifyBadge();
+}
+
+function updateQuestNotifyBadge() {
+    let badge = document.getElementById('quest-notify-badge');
+    if (!badge) return;
+    let hasClaimable = false;
+    for (let i = 1; i <= 4; i++) {
+        let prog = globalProgression[`questProg${i}`];
+        let goal = globalProgression[`questGoal${i}`];
+        if (prog >= goal && globalProgression.questsCompletedToday < 10) {
+            hasClaimable = true;
+            break;
+        }
+    }
+    badge.style.display = hasClaimable ? 'flex' : 'none';
+}
+
+// --- DUNGEONS ---
+function showDungeons() {
+    document.getElementById('dungeon-gold-display').innerText = globalProgression.gold; document.getElementById('dungeon-tickets-display').innerText = globalProgression.tickets || 0;
+    let buyBtn = document.getElementById('btn-buy-ticket-dungeon');
+    if(buyBtn) { buyBtn.disabled = globalProgression.gold < 100; if(globalProgression.gold < 100) buyBtn.classList.add('opacity-50'); else buyBtn.classList.remove('opacity-50'); }
+    const list = document.getElementById('dungeon-list'); list.innerHTML = '';
+    
+    // Show max 6 dungeons: up to 5 unlocked + 1 locked (next tier)
+    // Sliding window: once 6th tier unlocks, tier 1 disappears; always 6 shown max
+    let maxShow = globalProgression.dungeonTier + 1; // next locked tier
+    let minShow = Math.max(1, maxShow - 5); // at most 6 total
+    
+    for(let i = minShow; i <= maxShow; i++) {
+        let isLocked = i > globalProgression.dungeonTier;
+        let btn = document.createElement('button');
+        btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-red-900 hover:border-red-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
+        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} XP Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
+        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonRoom = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
+    }
+    switchScreen('screen-dungeons');
+}
+
+// --- GRAVEYARD ---
+function showGraveyard() {
+    document.getElementById('graveyard-gold-display').innerText = globalProgression.gold;
+    const list = document.getElementById('graveyard-list'); list.innerHTML = '';
+    
+    let bosses = Object.values(globalProgression.killedBosses || {});
+    const today = new Date().toDateString();
+    
+    if(bosses.length === 0) {
+        list.innerHTML = `<div class="text-center text-gray-500 py-6 bg-gray-900 rounded-xl">No bosses have been defeated yet.</div>`;
+    } else {
+        bosses.forEach(b => {
+            let btn = document.createElement('div');
+            btn.className = `bg-gray-800 border-2 border-gray-700 p-4 rounded-xl flex justify-between items-center shadow-md mb-2`;
+            let canFight = globalProgression.gold >= 20;
+            let revivedToday = (globalProgression.graveyardRevivalDates || {})[b.name] === today;
+            let canRevive = canFight && !revivedToday;
+            let statusText = revivedToday ? '<span class="text-xs text-gray-500 ml-1">(Revived today)</span>' : '';
+            
+            btn.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl filter grayscale drop-shadow-lg">${b.avatar}</span>
+                    <div>
+                        <div class="font-bold text-gray-300">${b.name}</div>
+                        <div class="text-xs text-gray-500">Defeated Boss${statusText}</div>
+                    </div>
+                </div>
+                <button onclick="fightGraveyardBoss('${b.name}')" class="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-4 py-2 rounded font-bold transition active:scale-95 border border-indigo-700 shadow flex items-center gap-1 ${canRevive ? '' : 'opacity-50 cursor-not-allowed'}" ${canRevive ? '' : 'disabled'}>
+                    <span>Resurrect</span><span class="text-yellow-400 text-xs">💰20</span>
+                </button>
+            `;
+            list.appendChild(btn);
+        });
+    }
+    switchScreen('screen-graveyard');
+}
+
+function fightGraveyardBoss(bossName) {
+    const today = new Date().toDateString();
+    if(!globalProgression.graveyardRevivalDates) globalProgression.graveyardRevivalDates = {};
+    if(globalProgression.graveyardRevivalDates[bossName] === today) {
+        playSound('lose');
+        return; // Already revived today
+    }
+    if(globalProgression.gold >= 20) {
+        globalProgression.gold -= 20;
+        globalProgression.graveyardRevivalDates[bossName] = today;
+        playSound('click');
+        currentMode = 'graveyard';
+        activeGraveyardBoss = bossName;
+        startBattle(true);
+    } else {
+        playSound('lose');
+    }
+}
+
+function startBattleMode(mode) {
+    if(consumeEnergy(1)){ currentMode = mode; startBattle(true); } 
+}
+
+// --- TRAINING GROUND ---
+function showTrainingGround() {
+    switchScreen('screen-training-ground');
+}
+
+function startTraining() {
+    currentMode = 'training';
+    startBattle(true);
+}
