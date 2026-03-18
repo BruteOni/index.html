@@ -231,7 +231,7 @@ const CLASSES = {
         skills: [
             // Index 0-2: always unlocked
             { name: 'Hug', type: 'attack', mult: 1, cd: 0, color: 'bg-gray-700', desc: 'Base damage' },
-            { name: 'Deadly Kiss', type: 'attack', mult: 1, self_effect: { regenPct: 0.05, regenTurns: 5, healingBuff: 0.10, healingBuffTurns: 3 }, cd: 4, color: 'bg-pink-600', desc: 'Base damage + Heal 5% HP/turn (5t) + Healing Increase +10% (3t)' },
+            { name: 'Deadly Kiss', type: 'attack', mult: 1, self_effect: { regenPct: 0.05, regenTurns: 3, healingBuff: 0.10, healingBuffTurns: 3 }, cd: 5, color: 'bg-pink-600', desc: 'Base damage + Heal 5% HP/turn (3t) + Healing Increase +10% (3t)' },
             { name: 'Hot Water', type: 'attack', mult: 1, effect: { burnStacks: 1, burnTurns: 3 }, self_effect: { healPct: 0.05, healingBuff: 0.10, healingBuffTurns: 3 }, cd: 6, color: 'bg-orange-600', desc: 'Base damage + 1 Burn stack + Heal 5% HP + Healing Increase (3t)' },
             // Index 3-5: Divine Path
             { name: 'Dizzy', type: 'attack', mult: 2.0, effect: { poisonStacks: 2, poisonTurns: 2 }, self_effect: { healPct: 0.05 }, cd: 5, color: 'bg-purple-700', desc: 'Base damage +100% + 2 Poison stacks + Heal 5% HP' },

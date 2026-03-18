@@ -2762,7 +2762,7 @@ function showDungeons() {
         let isLocked = i > globalProgression.dungeonTier;
         let btn = document.createElement('button');
         btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-red-900 hover:border-red-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
-        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
+        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} XP Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
         if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonRoom = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
     }
     switchScreen('screen-dungeons');
@@ -3031,7 +3031,7 @@ function generateEnemies() {
         
         if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
             // Dungeon difficulty: Tier N = max(1, (N-1)*2.5) multiplier relative to Tier 1
-            let dungeonDiffMult = activeDungeonTier === 1 ? 1 : (activeDungeonTier - 1) * 2.5;
+            let dungeonDiffMult = Math.pow(1.5, activeDungeonTier - 1);
             e.lvl = activeDungeonTier * 5; 
             let dBoss = BOSS_TEMPLATES['dungeon'][Math.floor(Math.random() * BOSS_TEMPLATES['dungeon'].length)];
             e.name = dBoss.name; e.avatar = dBoss.avatar;
@@ -3067,7 +3067,7 @@ function generateEnemies() {
             let hpMult = (RARITY_HP_MULTS[e.rarity] || 1) * t.hpMult;
             let dmgMult = (RARITY_DMG_MULTS[e.rarity] || 1) * t.dmgMult;
             let defMult = (RARITY_DEF_MULTS[e.rarity] || 1);
-            let dungeonDiffMult = currentMode === 'dungeon' ? (activeDungeonTier === 1 ? 1.5 : (activeDungeonTier - 1) * 2.5 * 1.5) : 1;
+            let dungeonDiffMult = currentMode === 'dungeon' ? Math.pow(1.5, activeDungeonTier) : 1;
             e.maxHp = Math.max(1, Math.floor(bracketStats.hp * hpMult * dungeonDiffMult));
             e.baseDmg = Math.max(1, Math.floor(bracketStats.dmg * dmgMult * dungeonDiffMult));
             e.def = Math.max(0, Math.floor(bracketStats.def * defMult));
@@ -3393,7 +3393,7 @@ function useConsumable(key) {
 
 function updateCombatUI() {
     document.getElementById('ui-level').innerText = `Level ${player.lvl}`;
-    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `Tier ${activeDungeonTier} (Rm ${activeDungeonRoom})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : 'Quest Marathon';
+    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `XP Dungeon T${activeDungeonTier} (Rm ${activeDungeonRoom})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : 'Quest Marathon';
     
     if(currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop') {
         modeText += ` (${globalProgression.storyModeProgress[currentMode] + 1}/10)`;
@@ -4795,9 +4795,9 @@ function endBattle(playerWon) {
                 
                 let dRwd = rollEquipment('rare'); globalProgression.equipInventory.push(dRwd); globalProgression.newItems[dRwd.type.startsWith('ring') ? 'ring' : dRwd.type] = true; 
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border-2 rarity-rare text-blue-300 font-bold shadow-[0_0_10px_rgba(59,130,246,0.3)]">Dungeon Clear: 1 Gear (${dRwd.icon})</div>`;
-                // Award 400 gold for dungeon completion
-                globalProgression.gold += 400;
-                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-600 text-yellow-300 font-bold shadow-md">+400 💰 Gold</div>`;
+                // Award 50 gold for dungeon completion
+                globalProgression.gold += 50;
+                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-600 text-yellow-300 font-bold shadow-md">+50 💰 Gold</div>`;
 
                 if(activeDungeonTier === globalProgression.dungeonTier) globalProgression.dungeonTier++; 
             } else { desc.innerText = "Room cleared. Proceed deeper."; btnNext.innerText = "Next Room"; btnNext.classList.remove('hidden'); }
@@ -4852,7 +4852,7 @@ function endBattle(playerWon) {
         if(currentMode !== 'quest' && currentMode !== 'training') {
             let goldPerKill = 2 + Math.floor(player.lvl / 5);
             endGold = enemies.filter(e => e.currentHp <= 0).length * goldPerKill;
-            if(currentMode === 'dungeon') endGold *= 2;
+            if(currentMode === 'dungeon') endGold = Math.floor(endGold * 0.5);
             if(currentMode === 'invasion') endGold *= 3;
             globalProgression.gold += endGold;
         }
