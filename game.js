@@ -819,8 +819,6 @@ function confirmNewGameYes() {
     ['warrior', 'mage', 'paladin', 'ninja', 'cleric', 'archer'].forEach(cls => {
         localStorage.removeItem('EternalAscensionClassSave_' + cls);
     });
-    // Clear the mage intro video flag so it plays again for new games
-    localStorage.removeItem('mageIntroVideoPlayed');
     showClassSelect();
 }
 
@@ -837,34 +835,66 @@ let pendingNewGame = false;
 
 function showGenderSelect(classId) {
     pendingClassId = classId;
-    if (classId === 'mage' && pendingNewGame &&
-        !localStorage.getItem('EternalAscensionClassSave_mage') &&
-        !localStorage.getItem('mageIntroVideoPlayed')) {
-        const video = document.getElementById('mage-intro-video');
+    // Map class IDs to video filenames
+    const classVideoMap = {
+        warrior: 'Videos/Warrior.mp4',
+        mage: 'Videos/Mage.mp4',
+        paladin: 'Videos/Paladin.mp4',
+        ninja: 'Videos/Ninja.mp4'
+    };
+    const videoFile = classVideoMap[classId];
+    if (videoFile) {
+        const video = document.getElementById('class-intro-video');
         if (video) {
-            const src = document.getElementById('mage-intro-video-src');
-            if (src) src.src = 'Mage.mp4';
+            const src = document.getElementById('class-intro-video-src');
+            if (src) src.src = videoFile;
+            video.muted = false;
             video.load();
             video.play().catch(err => console.warn('Autoplay blocked:', err));
-            video.onended = onMageVideoEnd;
+            video.onended = onClassVideoEnd;
         }
-        switchScreen('screen-mage-intro-video');
+        switchScreen('screen-class-intro-video');
         return;
     }
+    // For classes without videos (cleric, archer), go straight to gender/avatar select
+    populateAvatarGrid();
     switchScreen('screen-gender-select');
 }
 
-function onMageVideoEnd() {
-    localStorage.setItem('mageIntroVideoPlayed', 'true');
-    const video = document.getElementById('mage-intro-video');
+function onClassVideoEnd() {
+    const video = document.getElementById('class-intro-video');
     if (video) {
         video.pause();
-        const src = document.getElementById('mage-intro-video-src');
+        const src = document.getElementById('class-intro-video-src');
         if (src) src.src = '';
         video.load();
         video.onended = null;
     }
+    populateAvatarGrid();
     switchScreen('screen-gender-select');
+}
+
+function populateAvatarGrid() {
+    const classId = pendingClassId;
+    const className = classId.charAt(0).toUpperCase() + classId.slice(1);
+
+    const maleGrid = document.getElementById('avatar-grid-male');
+    const femaleGrid = document.getElementById('avatar-grid-female');
+
+    if (maleGrid) {
+        const malePath = `Images/${className}Male.png`;
+        maleGrid.innerHTML = `
+            <button onclick="selectAvatar('${malePath}','male')" class="p-2 rounded-xl bg-gray-800 border border-gray-700 hover:border-blue-400 active:scale-95 transition flex items-center justify-center">
+                <img src="${malePath}" alt="${className} Male" style="width:80px;height:80px;object-fit:contain;">
+            </button>`;
+    }
+    if (femaleGrid) {
+        const femalePath = `Images/${className}Female.png`;
+        femaleGrid.innerHTML = `
+            <button onclick="selectAvatar('${femalePath}','female')" class="p-2 rounded-xl bg-gray-800 border border-gray-700 hover:border-pink-400 active:scale-95 transition flex items-center justify-center">
+                <img src="${femalePath}" alt="${className} Female" style="width:80px;height:80px;object-fit:contain;">
+            </button>`;
+    }
 }
 
 // selectAvatar: called when a player picks an emoji from the avatar grid
@@ -1542,6 +1572,6 @@ window.confirmNewGameYes = confirmNewGameYes;
 window.loadGameAndContinue = loadGameAndContinue;
 window.selectGenderAndStart = selectGenderAndStart;
 window.showGenderSelect = showGenderSelect;
-window.onMageVideoEnd = onMageVideoEnd;
+window.onClassVideoEnd = onClassVideoEnd;
 console.log("Game.js loaded successfully");
 

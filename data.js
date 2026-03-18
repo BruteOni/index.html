@@ -264,12 +264,12 @@ const CLASSES = {
 
 // Gender-specific avatars per class
 const CLASS_GENDER_AVATARS = {
-    warrior: { male: '🤺', female: '💂‍♀️' },
-    mage:    { male: '🧙‍♂️', female: '🧙‍♀️' },
-    paladin: { male: '🛡️', female: '⚔️' },
-    ninja:   { male: '🥷', female: '🥷' },
-    cleric:  { male: '🧑‍⚕️', female: '👩‍⚕️' },
-    archer:  { male: '🏹', female: '🎯' }
+    warrior: { male: 'Images/WarriorMale.png', female: 'Images/WarriorFemale.png' },
+    mage:    { male: 'Images/MageMale.png', female: 'Images/MageFemale.png' },
+    paladin: { male: 'Images/PaladinMale.png', female: 'Images/PaladinFemale.png' },
+    ninja:   { male: 'Images/NinjaMale.png', female: 'Images/NinjaFemale.png' },
+    cleric:  { male: 'Images/ClericMale.png', female: 'Images/ClericFemale.png' },
+    archer:  { male: 'Images/ArcherMale.png', female: 'Images/ArcherFemale.png' }
 };
 
 // Specific Enemy Pools per mode

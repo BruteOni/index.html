@@ -268,7 +268,7 @@ body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: w
     box-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
 }
 
-/* Mage Intro Video Screen */
+/* Class Intro Video Screen */
 .btn-skip-video {
     background: rgba(0,0,0,0.6);
     border: 1px solid rgba(255,255,255,0.3);
