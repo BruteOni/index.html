@@ -837,40 +837,31 @@ let pendingNewGame = false;
 
 function showGenderSelect(classId) {
     pendingClassId = classId;
-    if (classId === 'mage' && pendingNewGame) {
+    if (classId === 'mage' && pendingNewGame &&
+        !localStorage.getItem('EternalAscensionClassSave_mage') &&
+        !localStorage.getItem('mageIntroVideoPlayed')) {
         const video = document.getElementById('mage-intro-video');
         if (video) {
             const src = document.getElementById('mage-intro-video-src');
-            if (src) src.src = 'assets/mage-intro.mp4';
+            if (src) src.src = 'mage.mp4';
             video.load();
-        }
-        switchScreen('screen-mage-intro-video');
-        // Attach ended listener to auto-advance
-        if (video) {
             video.onended = onMageVideoEnd;
         }
+        switchScreen('screen-mage-intro-video');
         return;
     }
     switchScreen('screen-gender-select');
 }
 
-function playMageVideo() {
-    const video = document.getElementById('mage-intro-video');
-    const playBtn = document.getElementById('mage-video-play-btn');
-    if (video) {
-        video.play().then(() => {
-            if (playBtn) playBtn.style.display = 'none';
-        }).catch(err => {
-            console.warn('Video autoplay blocked:', err);
-        });
-    }
-}
-
 function onMageVideoEnd() {
+    localStorage.setItem('mageIntroVideoPlayed', 'true');
     const video = document.getElementById('mage-intro-video');
     if (video) {
         video.pause();
-        video.src = '';
+        const src = document.getElementById('mage-intro-video-src');
+        if (src) src.src = '';
+        video.load();
+        video.onended = null;
     }
     switchScreen('screen-gender-select');
 }
@@ -1551,6 +1542,5 @@ window.loadGameAndContinue = loadGameAndContinue;
 window.selectGenderAndStart = selectGenderAndStart;
 window.showGenderSelect = showGenderSelect;
 window.onMageVideoEnd = onMageVideoEnd;
-window.playMageVideo = playMageVideo;
 console.log("Game.js loaded successfully");
 
