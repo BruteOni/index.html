@@ -3065,13 +3065,11 @@ function generateEnemies() {
         let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, def: 0, rarity: 'common', isBoss: false };
         
         if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
-            // Dungeon difficulty: Tier N = max(1, (N-1)*2.5) multiplier relative to Tier 1
-            let dungeonDiffMult = Math.pow(1.5, activeDungeonTier - 1);
             e.lvl = activeDungeonTier * 5; 
             let dBoss = BOSS_TEMPLATES['dungeon'][Math.floor(Math.random() * BOSS_TEMPLATES['dungeon'].length)];
             e.name = dBoss.name; e.avatar = dBoss.avatar;
-            e.maxHp = Math.floor(150 * dungeonDiffMult * dBoss.hpMult * 1.5); 
-            e.baseDmg = Math.max(1, Math.floor(e.lvl * 3 * dBoss.dmgMult * 1.5 * dungeonDiffMult));
+            e.maxHp = Math.max(1, Math.floor(25 * dBoss.hpMult * (1 + (e.lvl - 1) * 0.4) * 3));
+            e.baseDmg = Math.max(1, Math.floor(e.lvl * 2 * dBoss.dmgMult * (1 + (e.lvl - 1) * 0.01)));
             e.rarity = 'boss'; e.isBoss = true;
             e.templateMults = { hpMult: dBoss.hpMult, dmgMult: dBoss.dmgMult };
         } else if (isBossFight) {
@@ -3102,7 +3100,7 @@ function generateEnemies() {
             let hpMult = (RARITY_HP_MULTS[e.rarity] || 1) * t.hpMult;
             let dmgMult = (RARITY_DMG_MULTS[e.rarity] || 1) * t.dmgMult;
             let defMult = (RARITY_DEF_MULTS[e.rarity] || 1);
-            let dungeonDiffMult = currentMode === 'dungeon' ? Math.pow(1.5, activeDungeonTier) : 1;
+            let dungeonDiffMult = 1;
             e.maxHp = Math.max(1, Math.floor(bracketStats.hp * hpMult * dungeonDiffMult));
             e.baseDmg = Math.max(1, Math.floor(bracketStats.dmg * dmgMult * dungeonDiffMult));
             e.def = Math.max(0, Math.floor(bracketStats.def * defMult));

@@ -810,6 +810,17 @@ function closeConfirmNewGame() {
 function confirmNewGameYes() {
     closeConfirmNewGame();
     pendingNewGame = true;
+    // Wipe ALL save data so no stale class saves persist
+    localStorage.removeItem('EternalAscensionSaveDataV1');
+    localStorage.removeItem('fogFighterSaveDataV22');
+    localStorage.removeItem('fogFighterSaveDataV21');
+    localStorage.removeItem('fogFighterSaveDataV20');
+    // Remove all per-class saves
+    ['warrior', 'mage', 'paladin', 'ninja', 'cleric', 'archer'].forEach(cls => {
+        localStorage.removeItem('EternalAscensionClassSave_' + cls);
+    });
+    // Clear the mage intro video flag so it plays again for new games
+    localStorage.removeItem('mageIntroVideoPlayed');
     showClassSelect();
 }
 
@@ -826,9 +837,7 @@ let pendingNewGame = false;
 
 function showGenderSelect(classId) {
     pendingClassId = classId;
-    if (classId === 'mage' && pendingNewGame &&
-        !localStorage.getItem('EternalAscensionClassSave_mage') &&
-        !localStorage.getItem('mageIntroVideoPlayed')) {
+    if (classId === 'mage' && pendingNewGame) {
         const video = document.getElementById('mage-intro-video');
         if (video) {
             const src = document.getElementById('mage-intro-video-src');
@@ -858,7 +867,6 @@ function playMageVideo() {
 }
 
 function onMageVideoEnd() {
-    localStorage.setItem('mageIntroVideoPlayed', 'true');
     const video = document.getElementById('mage-intro-video');
     if (video) {
         video.pause();
