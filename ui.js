@@ -352,6 +352,26 @@ function renderBonusStatsHtml(bonusStats) {
         return `+${pct}% ${bs.label}`;
     }).join(' | ') + '</div>';
 }
+function renderSetBonusHtml(item) {
+    if(!item || !item.setBonus) return '';
+    let classId = player ? (player.classId || 'warrior') : 'warrior';
+    let classSets = typeof SET_BONUS_DEFS !== 'undefined' ? SET_BONUS_DEFS[classId] : null;
+    if(!classSets) return '';
+    let setDef = classSets[item.setBonus.setKey];
+    if(!setDef) return '';
+    // Count equipped pieces of this set
+    let equipped = globalProgression.equipped || {};
+    let count = Object.values(equipped).filter(e => e && e.setBonus && e.setBonus.setKey === item.setBonus.setKey).length;
+    let activeTier = 0;
+    [4, 8, 12, 14].forEach(t => { if(count >= t) activeTier = t; });
+    let html = `<div class="text-[10px] mt-0.5 ${setDef.color} font-bold">💎 Set: ${setDef.name} (${count} equipped)</div>`;
+    Object.entries(setDef.bonuses).forEach(([tier, desc]) => {
+        let tierNum = parseInt(tier);
+        let isActive = activeTier >= tierNum;
+        html += `<div class="text-[9px] ${isActive ? setDef.color + ' set-bonus-active font-bold' : 'text-gray-500'}">${tierNum}pc: ${desc}</div>`;
+    });
+    return html;
+}
 function openEquipModal(slot) {
     activeEquipSlot = slot;
     let baseSlotType = slot.startsWith('ring') ? 'ring' : slot;
@@ -368,7 +388,7 @@ function openEquipModal(slot) {
         let eqCard = document.createElement('div');
         eqCard.className = `bg-gray-800 border-2 rarity-${currentEq.rarity} p-3 rounded-lg flex justify-between items-center mb-2`;
         let enchTxt = currentEq.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${currentEq.enchanted})</span>` : '';
-        let bonusTxt = renderBonusStatsHtml(currentEq.bonusStats);
+        let bonusTxt = renderBonusStatsHtml(currentEq.bonusStats) + renderSetBonusHtml(currentEq);
         eqCard.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl">${currentEq.icon}</span><div><div class="font-bold text-white">${currentEq.name} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${currentEq.rarity}</span></div>${currentEq.type === 'weapon' && currentEq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(currentEq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button onclick="unequipCurrent()" class="bg-red-900 hover:bg-red-800 text-red-200 px-3 py-2 rounded text-xs font-bold transition active:scale-95 border border-red-700">Unequip</button>`;
         eqSection.appendChild(eqCard);
     } else {
@@ -392,7 +412,7 @@ function openEquipModal(slot) {
             
             let upgradeBadge = isUpgrade ? `<span class="absolute -top-2 -left-2 bg-green-600 text-white text-[10px] px-1 rounded shadow border border-green-400 font-bold tracking-widest">UPGRADE</span>` : '';
             let enchTxt = item.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${item.enchanted})</span>` : '';
-            let bonusTxt = renderBonusStatsHtml(item.bonusStats);
+            let bonusTxt = renderBonusStatsHtml(item.bonusStats) + renderSetBonusHtml(item);
             
             btn.innerHTML = `${upgradeBadge}<div class="flex items-center gap-2"><span class="text-2xl">${item.icon || '📦'}</span><div><div class="font-bold text-white">${item.name} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${item.rarity}</span></div>${item.type === 'weapon' && item.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(item.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button class="bg-blue-800 hover:bg-blue-700 text-blue-200 px-4 py-2 rounded text-xs font-bold border border-blue-600 transition active:scale-95">Equip</button>`;
             btn.onclick = (e) => { if(e.target.tagName !== 'BUTTON') return; equipItem(item.id); }; 
@@ -1059,6 +1079,8 @@ function rollEnhancement() {
 function showEnhancementPopup(enh) {
     let def = ENHANCEMENT_DEFS[enh.type];
     let rarityColor = ENHANCEMENT_RARITY_COLORS[enh.rarity];
+    let existing = document.getElementById('enhancement-popup');
+    if(existing) existing.remove();
     let popup = document.createElement('div');
     popup.id = 'enhancement-popup';
     popup.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -1069,7 +1091,7 @@ function showEnhancementPopup(enh) {
             <div class="text-2xl font-black ${rarityColor} mb-1">${def.name}</div>
             <div class="text-sm font-bold ${rarityColor} uppercase tracking-widest mb-3">${enh.rarity}</div>
             <div class="text-sm text-gray-300 bg-gray-800 rounded-xl p-3 mb-4">${def.desc(enh.rarity)}</div>
-            <button onclick="document.getElementById('enhancement-popup').remove()" class="w-full bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition active:scale-95">
+            <button onclick="document.getElementById('enhancement-popup').remove(); if(typeof showSkillTree === 'function') showSkillTree();" class="w-full bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition active:scale-95">
                 Awesome!
             </button>
         </div>
@@ -1091,7 +1113,7 @@ function showSkillUnlockPopup(skillIdx) {
             <div class="text-xs text-yellow-400 uppercase tracking-widest mb-1">New Skill Unlocked!</div>
             <div class="text-2xl font-black ${skill.color || 'text-white'} mb-3">${skill.name}</div>
             <div class="text-sm text-gray-300 bg-gray-800 rounded-xl p-3 mb-4">${skill.desc}</div>
-            <button onclick="document.getElementById('skill-unlock-popup').remove()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl transition active:scale-95">
+            <button onclick="document.getElementById('skill-unlock-popup').remove(); if(typeof showSkillTree === 'function') showSkillTree();" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl transition active:scale-95">
                 Awesome!
             </button>
         </div>
@@ -1325,7 +1347,7 @@ function showInventory() {
     let inv = globalProgression.inventory;
     const matList = document.getElementById('inv-materials-list'); matList.innerHTML = '';
     let hasMats = false;
-    ['ench_common', 'ench_rare', 'ench_epic', 'ench_legendary', 'herb_red', 'herb_blue', 'fish_1', 'fish_2', 'fish_3', 'fish_4', 'fish_5', 'fish_6', 'soul_pebbles', 'titan_shard'].forEach(key => {
+    ['ench_common', 'ench_rare', 'ench_epic', 'ench_legendary', 'herb_red', 'herb_blue', 'fish_1', 'fish_2', 'fish_3', 'fish_4', 'fish_5', 'fish_6', 'soul_pebbles', 'titan_shard', 'magic_stone'].forEach(key => {
         if(inv[key] > 0) { hasMats = true; matList.innerHTML += `<div class="bag-item p-3 rounded-xl flex justify-between items-center shadow-inner"><span class="text-lg">${MAT_ICONS[key]} ${MAT_NAMES[key]}</span> <span class="text-yellow-400 font-bold">${inv[key]}</span></div>`; }
     });
     document.getElementById('inv-mats-header').style.display = hasMats ? 'block' : 'none';
@@ -1805,23 +1827,156 @@ function enhanceWeapon(itemId) {
     showWeaponSmith();
 }
 
-// --- INVASION ---
+// --- MAGICAL ENHANCER ---
+function showMagicalEnhancer() {
+    let p = globalProgression;
+    document.getElementById('me-gold-display').innerText = p.gold;
+    document.getElementById('me-stones-display').innerText = p.inventory.magic_stone || 0;
+    
+    let list = document.getElementById('me-item-list');
+    list.innerHTML = '';
+    document.getElementById('me-status').innerText = '';
+
+    let classId = player.classId || 'warrior';
+    let classSets = SET_BONUS_DEFS[classId];
+    if(!classSets) { list.innerHTML = '<p class="text-gray-500 text-center">No set bonuses available for your class.</p>'; switchScreen('screen-magical-enhancer'); return; }
+
+    // Gather all mythical items: equipped + inventory
+    let mythicItems = [];
+    let equippedSlots = p.equipped || {};
+    Object.entries(equippedSlots).forEach(([slot, item]) => {
+        if(item && item.rarity === 'mythic') {
+            mythicItems.push({ item, slot, isEquipped: true });
+        }
+    });
+    (p.equipInventory || []).forEach((item, idx) => {
+        if(item && item.rarity === 'mythic') {
+            mythicItems.push({ item, idx, isEquipped: false });
+        }
+    });
+
+    if(mythicItems.length === 0) {
+        list.innerHTML = '<p class="text-gray-500 text-center py-4">No Mythical equipment found. Mythical gear drops from Mythic Bosses.</p>';
+        switchScreen('screen-magical-enhancer');
+        return;
+    }
+
+    // Count equipped set pieces per set name
+    let equippedSetCounts = {};
+    Object.values(equippedSlots).forEach(item => {
+        if(item && item.setBonus) {
+            equippedSetCounts[item.setBonus.setKey] = (equippedSetCounts[item.setBonus.setKey] || 0) + 1;
+        }
+    });
+
+    // Display each mythic item
+    mythicItems.forEach(({ item, slot, idx, isEquipped }) => {
+        let card = document.createElement('div');
+        card.className = 'bg-gray-800 border border-blue-600 rounded-xl p-3 shadow-md';
+
+        let alreadyEnhanced = !!item.setBonus;
+        let setKey = item.setBonus ? item.setBonus.setKey : null;
+        let setDef = setKey ? classSets[setKey] : null;
+        let equippedCount = setKey ? (equippedSetCounts[setKey] || 0) : 0;
+
+        // Get active tier
+        let activeTier = 0;
+        if(alreadyEnhanced) {
+            [4, 8, 12, 14].forEach(t => { if(equippedCount >= t) activeTier = t; });
+        }
+
+        let header = `<div class="flex items-center gap-2 mb-2">
+            <span class="text-2xl">${item.icon || '⚔️'}</span>
+            <div class="flex-1">
+                <div class="font-black text-white text-sm drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">${item.name}</div>
+                <div class="text-xs text-gray-400">${item.type} ${isEquipped ? '(Equipped)' : '(Inventory)'}</div>
+            </div>
+        </div>`;
+
+        if(alreadyEnhanced && setDef) {
+            // Show existing set bonus
+            let bonusHtml = Object.entries(setDef.bonuses).map(([tier, desc]) => {
+                let tierNum = parseInt(tier);
+                let isActive = activeTier >= tierNum;
+                let colorClass = isActive ? setDef.color + ' set-bonus-active' : 'text-gray-500';
+                return `<div class="text-xs ${colorClass} ${isActive ? 'font-bold' : ''}">${tierNum}-piece: ${desc}</div>`;
+            }).join('');
+            card.innerHTML = header + `
+                <div class="text-xs ${setDef.color} font-bold mb-1">✨ Set: ${setDef.name} (${equippedCount} equipped)</div>
+                <div class="bg-gray-900 rounded-lg p-2 space-y-1">${bonusHtml}</div>
+                <div class="text-xs text-gray-500 mt-2 italic">Already enhanced</div>`;
+        } else {
+            // Show enhance options
+            let canAfford = (p.gold >= 10000) && ((p.inventory.magic_stone || 0) >= 50);
+            let setOptions = Object.entries(classSets).map(([sk, sd]) => {
+                let optBtn = `<button onclick="enhanceWithSet('${isEquipped ? 'equip_' + slot : 'inv_' + idx}', '${sk}')"
+                    class="text-left w-full rounded-lg p-2 mt-1 border ${sd.borderColor} bg-gray-900 hover:bg-gray-700 transition ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}"
+                    ${canAfford ? '' : 'disabled'}>
+                    <div class="font-bold ${sd.color} text-sm">${sd.name}</div>
+                    <div class="text-xs text-gray-400 mt-1">4pc: ${sd.bonuses[4]}</div>
+                    <div class="text-xs text-gray-400">8pc: ${sd.bonuses[8]}</div>
+                    <div class="text-xs text-gray-400">12pc: ${sd.bonuses[12]}</div>
+                    <div class="text-xs text-gray-400">14pc: ${sd.bonuses[14]}</div>
+                </button>`;
+                return optBtn;
+            }).join('');
+            card.innerHTML = header + `
+                <div class="text-xs text-gray-400 mb-2">Choose a Set Bonus <span class="text-blue-300">(50 💎 + 10,000 💰)</span>:</div>
+                ${setOptions}`;
+        }
+        list.appendChild(card);
+    });
+
+    switchScreen('screen-magical-enhancer');
+}
+
+function enhanceWithSet(itemRef, setKey) {
+    let p = globalProgression;
+    if((p.inventory.magic_stone || 0) < 50) { document.getElementById('me-status').innerText = '❌ Need 50 Magic Stones!'; return; }
+    if(p.gold < 10000) { document.getElementById('me-status').innerText = '❌ Need 10,000 Gold!'; return; }
+
+    let classId = player.classId || 'warrior';
+    let classSets = SET_BONUS_DEFS[classId];
+    let setDef = classSets[setKey];
+    if(!setDef) { document.getElementById('me-status').innerText = '❌ Invalid set!'; return; }
+
+    let item = null;
+    if(typeof itemRef === 'string' && itemRef.startsWith('equip_')) {
+        let slot = itemRef.replace('equip_', '');
+        item = p.equipped[slot];
+    } else if(typeof itemRef === 'string' && itemRef.startsWith('inv_')) {
+        let idx = parseInt(itemRef.replace('inv_', ''));
+        item = p.equipInventory[idx];
+    }
+
+    if(!item) { document.getElementById('me-status').innerText = '❌ Item not found!'; return; }
+    if(item.setBonus) { document.getElementById('me-status').innerText = '❌ Already enhanced!'; return; }
+
+    p.inventory.magic_stone -= 50;
+    p.gold -= 10000;
+    item.setBonus = { setKey, setName: setDef.name };
+
+    playSound('win');
+    saveGame();
+    document.getElementById('me-status').innerText = `✨ ${item.name} enhanced with ${setDef.name} set!`;
+    showMagicalEnhancer();
+}
 function showInvasion() {
     document.getElementById('invasion-gold-display').innerText = globalProgression.gold;
-    document.getElementById('invasion-tickets-display').innerText = globalProgression.tickets || 0;
+    let energyEl = document.getElementById('invasion-energy-display');
+    if(energyEl) energyEl.innerText = globalProgression.energy || 0;
     switchScreen('screen-invasion');
 }
 
 function startInvasion() {
-    if((globalProgression.tickets || 0) <= 0) {
+    if(!consumeEnergy(1)) {
         playSound('lose');
-        alert('You need a Dungeon Ticket to start the Invasion!');
+        alert('You need at least 1 energy to enter the Invasion!');
         return;
     }
-    globalProgression.tickets--;
     invasionTotalKills = 0;
     invasionSpawned = 0;
-    invasionKillGoal = 10;
+    invasionKillGoal = 0; // 0 = unlimited (continuous until player leaves or energy runs out)
     invasionMaxOnScreen = 4;
     currentMode = 'invasion';
     saveGame();
@@ -1850,6 +2005,25 @@ function regenPetBattleEnergy() {
     }
 }
 
+const MAX_PET_FAVORITES = 3;
+
+function togglePetFavorite(petId) {
+    if(!globalProgression.petFavorites) globalProgression.petFavorites = [];
+    let favs = globalProgression.petFavorites;
+    let idx = favs.indexOf(petId);
+    if(idx !== -1) {
+        favs.splice(idx, 1);
+    } else {
+        if(favs.length >= MAX_PET_FAVORITES) {
+            alert(`You can only have ${MAX_PET_FAVORITES} favorite pets! Remove one first.`);
+            return;
+        }
+        favs.push(petId);
+    }
+    saveGame();
+    showPetBattle();
+}
+
 function showPetBattle() {
     regenPetBattleEnergy();
     document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
@@ -1866,18 +2040,38 @@ function showPetBattle() {
     ownedList.innerHTML = '';
 
     let owned = globalProgression.petsOwned || [];
+    let favs = globalProgression.petFavorites || [];
+
     if(owned.length === 0) {
         noMsg.classList.remove('hidden');
     } else {
         noMsg.classList.add('hidden');
-        owned.forEach(petId => {
+        // Sort: favorites first, then others
+        let sortedOwned = [...owned].sort((a, b) => {
+            let aFav = favs.includes(a) ? 0 : 1;
+            let bFav = favs.includes(b) ? 0 : 1;
+            return aFav - bFav;
+        });
+        sortedOwned.forEach(petId => {
             let pet = PET_DATA.find(p => p.id === petId);
             if(!pet) return;
+            let isFav = favs.includes(petId);
+            let wrapper = document.createElement('div');
+            wrapper.className = `relative bg-gray-800 rounded-xl p-2 flex flex-col items-center transition border-2 ${isFav ? 'border-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'border-pink-700'}`;
+            // Favorite star button
+            let starBtn = document.createElement('button');
+            starBtn.className = `absolute top-1 right-1 text-sm leading-none z-10`;
+            starBtn.innerHTML = isFav ? '⭐' : '☆';
+            starBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+            starBtn.onclick = (e) => { e.stopPropagation(); togglePetFavorite(petId); };
+            wrapper.appendChild(starBtn);
+            // Pet button
             let btn = document.createElement('button');
-            btn.className = 'bg-gray-800 border border-pink-700 hover:border-pink-400 rounded-xl p-2 flex flex-col items-center transition active:scale-95';
-            btn.innerHTML = `<span class="text-3xl">${pet.emoji}</span><span class="text-xs text-pink-300 font-bold mt-1">${pet.name}</span>`;
+            btn.className = 'flex flex-col items-center w-full active:scale-95';
+            btn.innerHTML = `<span class="text-3xl">${pet.emoji}</span><span class="text-xs text-pink-300 font-bold mt-1">${pet.name}</span>${isFav ? '<span class="text-[9px] text-yellow-400">★ Favorite</span>' : ''}`;
             btn.onclick = () => startPetBattle(petId);
-            ownedList.appendChild(btn);
+            wrapper.appendChild(btn);
+            ownedList.appendChild(wrapper);
         });
     }
     switchScreen('screen-pet-battle');
@@ -2758,23 +2952,29 @@ function generateEnemies() {
     }
 
     if (currentMode === 'invasion') {
-        // Spawn up to invasionMaxOnScreen enemies (max 4), but only if total spawned < 10
-        let spawnCount = Math.min(invasionMaxOnScreen, invasionKillGoal - invasionSpawned);
-        let pool = [...ENEMIES_DUNGEON, ...ENEMIES_PILLAGE];
-        for(let i = 0; i < spawnCount; i++) {
-            let t = pool[Math.floor(Math.random() * pool.length)];
-            let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, rarity: 'epic', isBoss: false };
-            let invasionLevel = Math.max(100, Math.min(player.lvl, 500));
+        // Invasion: always spawn up to invasionMaxOnScreen boss-type enemies
+        // Level scales 100–500 based on player level
+        let invasionLevel = Math.max(100, Math.min(player.lvl, 500));
+        let allBossTemplates = [
+            ...BOSS_TEMPLATES['hunting'], ...BOSS_TEMPLATES['pillage'],
+            ...BOSS_TEMPLATES['workshop'], ...BOSS_TEMPLATES['dungeon'],
+            ...BOSS_TEMPLATES['island_defense']
+        ];
+        for(let i = 0; i < invasionMaxOnScreen; i++) {
+            let t = allBossTemplates[Math.floor(Math.random() * allBossTemplates.length)];
+            let e = { shield: 0, healBlock: 0, defReduction: 0, bleedStacks: 0, bleedTurns: 0, burnStacks: 0, burnTurns: 0, poisonStacks: 0, poisonTurns: 0, skipChance: 0, skipTurns: 0, dmgTakenMult: 1, dmgTakenTurns: 0, dodgeTurns: 0, rarity: 'boss', isBoss: true };
             e.lvl = invasionLevel;
             e.name = 'Invader ' + t.name; e.avatar = t.avatar;
             e.maxHp = Math.max(1, Math.floor(25 * t.hpMult * (1 + (invasionLevel - 1) * 0.4) * 5));
             e.baseDmg = Math.max(1, Math.floor(invasionLevel * 5 * (1 + (invasionLevel - 1) * 0.01)));
+            e.templateMults = { hpMult: t.hpMult, dmgMult: t.dmgMult };
             assignEnemySkills(e);
             e.currentHp = e.maxHp;
             enemies.push(e);
             invasionSpawned++;
         }
         activeTargetIndex = 0;
+        playBossMusic();
         return;
     }
 
@@ -2901,9 +3101,15 @@ function getEnemySkillsText(e) {
 }
 
 function startBattle(isNewEncounter = false) {
+    // Do not start battle if player HP is 0 (dead) — they must heal first
+    if (isNewEncounter && player.currentHp <= 0) {
+        alert('You need at least 1 HP to start a battle. Use a potion or rest to recover.');
+        returnToTown();
+        return;
+    }
     combatActive = true; generateEnemies();
     if (isNewEncounter) { 
-        if(!(player.currentHp > 0)) player.currentHp = player.maxHp;
+        // Do NOT replenish HP — player enters with their current HP
         player.regenBuffs = []; player.activeBuffs = []; 
         player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;
         // Reset skill cooldowns at the start of each new battle (Way of Heavens is global and persists)
@@ -4433,63 +4639,38 @@ function endBattle(playerWon) {
             }
         });
 
-        globalProgression.gold += killCount; globalProgression.kills += killCount;
+        globalProgression.kills += killCount;
+        if(currentMode !== 'invasion') globalProgression.gold += killCount;
         // Track highest gold held
         { let ps = ensureProgressStats(); if (globalProgression.gold > (ps.highestGold || 0)) ps.highestGold = globalProgression.gold; }
         if(currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop' || currentMode === 'island_defense') {
             globalProgression.storyModeProgress[currentMode]++;
         }
 
-        rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-700 text-yellow-400 font-bold shadow-md">+${killCount} Gold</div>`;
+        if(currentMode !== 'invasion') {
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-700 text-yellow-400 font-bold shadow-md">+${killCount} Gold</div>`;
+        }
         rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-red-700 text-red-400 font-bold shadow-md">+${killCount} Kills</div>`;
 
         // --- INVASION MODE ---
         if(currentMode === 'invasion') {
             invasionTotalKills += killCount;
-            // Per-kill rewards: 30 gold + 1 random usable item
-            let invasionGoldGain = killCount * 30;
+            // Per-kill rewards: scaled gold + 1 Magic Stone per kill
+            let invasionGoldGain = Math.floor(killCount * (10 + player.lvl * 2));
             globalProgression.gold += invasionGoldGain;
-            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-orange-700 text-orange-400 font-bold shadow-md">⚔️ +${invasionGoldGain} Invasion Gold</div>`;
-            for(let k = 0; k < killCount; k++) {
-                let randomUsableKey = BURGLAR_ITEM_POOL[Math.floor(Math.random() * BURGLAR_ITEM_POOL.length)];
-                if(!globalProgression.usableItems) globalProgression.usableItems = {};
-                globalProgression.usableItems[randomUsableKey] = (globalProgression.usableItems[randomUsableKey] || 0) + 1;
-                let usableItem = USABLE_ITEMS[randomUsableKey];
-                rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-red-700 text-red-300 font-bold shadow-md text-xs">+1 ${usableItem.icon} ${usableItem.name}</div>`;
-            }
-            
-            // Check invasion completion
-            if(invasionTotalKills >= invasionKillGoal) {
-                globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 1;
-                rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 border-purple-600 text-purple-300 font-bold shadow-md">🎉 INVASION COMPLETE! +1 Soul Pebble</div>`;
-                // Invasion completion bonuses: 1 legendary gear, 5 legendary cores, 0.5% mythic gear
-                let invasionGear = rollEquipment('legendary');
-                globalProgression.equipInventory.push(invasionGear);
-                globalProgression.newItems[invasionGear.type.startsWith('ring') ? 'ring' : invasionGear.type] = true;
-                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border-2 rarity-legendary text-yellow-300 font-bold shadow-md">⚔️ INVASION REWARD: 1 Legendary Gear (${invasionGear.icon})</div>`;
-                globalProgression.inventory.ench_legendary = (globalProgression.inventory.ench_legendary || 0) + 5;
-                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-600 text-yellow-300 font-bold shadow-md">⚔️ INVASION REWARD: +5 Legendary Cores</div>`;
-                if(Math.random() < 0.005) {
-                    let mythicGear = rollEquipment('mythic');
-                    globalProgression.equipInventory.push(mythicGear);
-                    globalProgression.newItems[mythicGear.type.startsWith('ring') ? 'ring' : mythicGear.type] = true;
-                    rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 rarity-mythic text-pink-300 font-bold shadow-md anim-mythic-gear">✨ MYTHIC DROP: ${mythicGear.icon} ${mythicGear.name}!</div>`;
-                }
-                // End screen - invasion done
-                title.innerText = "INVASION COMPLETE!"; title.className = "text-4xl font-bold mb-2 text-orange-400 drop-shadow-lg";
-                desc.innerText = `All 10 invaders defeated! Invasion complete.`;
-                btnNext.classList.add('hidden');
+            globalProgression.inventory.magic_stone = (globalProgression.inventory.magic_stone || 0) + killCount;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-orange-700 text-orange-400 font-bold shadow-md">⚔️ +${invasionGoldGain} Gold</div>`;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-600 text-blue-300 font-bold shadow-md">💎 +${killCount} Magic Stone${killCount > 1 ? 's' : ''}</div>`;
+
+            // Invasion is continuous — check if player has energy to continue
+            let hasEnergy = (globalProgression.energy || 0) >= 1;
+            title.innerText = "WAVE CLEARED!"; title.className = "text-4xl font-bold mb-2 text-orange-400 drop-shadow-lg";
+            desc.innerText = `Invaders defeated: ${invasionTotalKills}. ${hasEnergy ? 'Fight on!' : 'No energy left!'}`;
+            if(hasEnergy) {
+                btnNext.innerText = `Next Wave (⚡1) — ${invasionTotalKills} kills`;
+                btnNext.classList.remove('hidden');
             } else {
-                // More enemies remain - continue
-                let remaining = invasionKillGoal - invasionTotalKills;
-                let moreToSpawn = Math.min(invasionMaxOnScreen, invasionKillGoal - invasionSpawned);
-                desc.innerText = `Enemies defeated: ${invasionTotalKills}/${invasionKillGoal}. ${remaining} remain!`;
-                if(moreToSpawn > 0) {
-                    btnNext.innerText = `Next Wave (${invasionTotalKills}/${invasionKillGoal})`;
-                    btnNext.classList.remove('hidden');
-                } else {
-                    btnNext.classList.add('hidden');
-                }
+                btnNext.classList.add('hidden');
             }
             rwdCont.classList.remove('hidden');
             xpCont.classList.remove('hidden');
@@ -4582,8 +4763,8 @@ function endBattle(playerWon) {
 
         } // end else (non-invasion per-enemy drops)
 
-        // 5% pet drop chance from any game mode
-        if(Math.random() < 0.05) {
+        // 5% pet drop chance from any game mode except invasion
+        if(currentMode !== 'invasion' && Math.random() < 0.05) {
             let allPetIds = PET_DATA.map(p => p.id);
             if(!globalProgression.petsOwned) globalProgression.petsOwned = [];
             let ownedPets = globalProgression.petsOwned;
@@ -4746,10 +4927,12 @@ function handleEndNext() {
         }
         else { returnToTown(); }
     } else if (currentMode === 'invasion') {
-        if(invasionTotalKills < invasionKillGoal && invasionSpawned < invasionKillGoal) {
-            startBattle(false); // spawn next wave
+        // Invasion is continuous — check energy before starting next wave
+        if(consumeEnergy(1)) {
+            startBattle(true);
         } else {
-            showPortal();
+            alert('You ran out of energy! Rest to recover.');
+            returnToTown();
         }
     } else {
         if(!consumeEnergy(1)) { returnToTown(); return; }

@@ -349,7 +349,30 @@
                     <span class="font-bold text-yellow-400 text-sm">Weapon Smith</span>
                     <span class="text-[10px] text-gray-400 mt-1 text-center">Enhance weapons with Titan Shards</span>
                 </button>
+                <button onclick="showMagicalEnhancer()" class="bg-gray-800 hover:bg-gray-700 border border-blue-600 p-5 rounded-xl flex flex-col items-center transition active:scale-95 shadow-lg col-span-2">
+                    <span class="text-4xl mb-2">💎</span>
+                    <span class="font-bold text-blue-400 text-sm">Magical Enhancer</span>
+                    <span class="text-[10px] text-gray-400 mt-1 text-center">Add Set Bonuses to Mythical gear with Magic Stones</span>
+                </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MAGICAL ENHANCER SCREEN -->
+    <div id="screen-magical-enhancer" class="screen py-8" style="overflow-y:auto;">
+        <div class="w-full max-w-xl px-4 flex flex-col pb-8">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="showMerchants()" class="btn-back self-start text-blue-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button>
+                <div class="flex gap-2">
+                    <div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-yellow-700 shadow-md">💰 <span id="me-gold-display">0</span></div>
+                    <div class="text-sm font-bold text-blue-300 bg-gray-800 px-3 py-1 rounded-full border border-blue-700 shadow-md">💎 <span id="me-stones-display">0</span></div>
+                </div>
+            </div>
+            <h2 class="text-3xl font-bold mb-1 text-blue-400 text-center tracking-widest drop-shadow-md">💎 MAGICAL ENHANCER</h2>
+            <p class="text-xs text-gray-400 text-center mb-4">Add powerful Set Bonuses to your Mythical equipment.<br><span class="text-blue-300">Cost: 50 💎 Magic Stones + 10,000 💰 Gold per piece.</span></p>
+            <p class="text-xs text-gray-500 text-center mb-4">Equip 4+ pieces of the same set to activate bonuses. 4/8/12/14 pieces unlock stronger tiers.</p>
+            <div id="me-item-list" class="flex flex-col gap-3"></div>
+            <div id="me-status" class="text-center text-blue-400 font-bold mt-4 min-h-6"></div>
         </div>
     </div>
 
@@ -1126,19 +1149,16 @@
                 <button onclick="showPortal()" class="btn-back text-orange-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Portal</button>
                 <div class="flex gap-2">
                     <div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-yellow-700 shadow-md">💰 <span id="invasion-gold-display">0</span></div>
-                    <div class="text-sm font-bold text-blue-300 bg-gray-800 px-3 py-1 rounded-full border border-blue-800 shadow-md">🎫 <span id="invasion-tickets-display">0</span></div>
+                    <div class="text-sm font-bold text-blue-400 bg-gray-800 px-3 py-1 rounded-full border border-blue-700 shadow-md">⚡ <span id="invasion-energy-display">0</span></div>
                 </div>
             </div>
             <h2 class="text-3xl font-bold mb-2 text-orange-400 text-center tracking-widest drop-shadow-md">⚔️ INVASION</h2>
             <p class="text-gray-400 mb-4 text-sm text-center bg-gray-900 py-2 rounded-lg border border-orange-900">
-                Face enemies scaling from level 100–500 (based on your level) in waves. Costs 1 🎫.<br>
-                <span class="text-yellow-400">30 Gold + 1 Usable item per kill.</span> <span class="text-purple-400">1 Soul Pebble on completion!</span>
+                Face level 100–500 boss enemies (scales to your level). Costs <span class="text-blue-400">1 ⚡ Energy</span> per wave.<br>
+                <span class="text-blue-300">💎 Magic Stones + Gold per kill.</span> <span class="text-gray-400">Battle continues until you leave or run out of energy.</span>
             </p>
             <div class="bg-gray-800 border border-orange-800 rounded-xl p-4 mb-6 shadow-inner">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-orange-300 flex items-center gap-2"><span class="text-2xl">🎫</span> Dungeon Ticket Required</h3>
-                    <button onclick="buyTicket('invasion')" class="bg-purple-700 hover:bg-purple-600 px-3 py-1 rounded font-bold text-sm transition active:scale-95">BUY 💰100</button>
-                </div>
+                <div class="text-center mb-3 text-orange-300 font-bold">Level 100–500 Content · All Boss Enemies</div>
                 <button onclick="startInvasion()" class="w-full bg-orange-700 hover:bg-orange-600 text-white font-black py-4 rounded-xl text-xl transition active:scale-95 shadow-lg border-2 border-orange-400">
                     ⚔️ BEGIN INVASION
                 </button>

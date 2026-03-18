@@ -455,6 +455,11 @@ function saveGame() {
     const data = JSON.stringify({ global: globalProgression, pState: player });
     const checksum = btoa(data.length.toString());
     localStorage.setItem('EternalAscensionSaveDataV1', data + "|" + checksum);
+    // Also save to class-specific key so each class has its own independent save
+    if (player && player.classId) {
+        const classKey = 'EternalAscensionClassSave_' + player.classId;
+        localStorage.setItem(classKey, data + "|" + checksum);
+    }
 }
 function applyDefaults(target, defaults) {
     for (const key of Object.keys(defaults)) {
@@ -498,7 +503,7 @@ function loadGameAndContinue() {
             wellLastHealDate: '', wellXpBattles: 0, wellDropBattles: 0, wellLastXpDate: '', wellLastDropDate: '', wellLastEnergyDate: '', wellLastEnergy50Date: '', wellLastEnergy100Date: '',
             lastHpRegenTime: Date.now(), enemyKillCounts: {}, claimedCodexMilestones: {},
             totalExpEarned: 0, cooldowns: { herbs: 0, mine: 0, fish: 0, enchants: 0 },
-            inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0 },
+        inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 },
             equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null },
             newItems: {}, shopGear: [], shopLastRefresh: 0,
             attributes: { hp: 1, tenacity: 1, agility: 1, willpower: 1, resistance: 1, reflexes: 1, fury: 1, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 },
@@ -508,6 +513,7 @@ function loadGameAndContinue() {
             discoveredEnemies: {}, claimedCodexRewards: {}, killedBosses: {}, discoveredMythicBosses: [],
             skillTreeEnhancements: [],
             classBaseAttributes: null,
+            petFavorites: [],
             saveVersion: 2
         };
         const defaultPlayer = {
@@ -600,6 +606,8 @@ function loadGameAndContinue() {
         if(globalProgression.petWinLoss === undefined) globalProgression.petWinLoss = {};
         if(globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = 10;
         if(globalProgression.petBattleLastEnergyTime === undefined) globalProgression.petBattleLastEnergyTime = Date.now();
+        if(globalProgression.petFavorites === undefined) globalProgression.petFavorites = [];
+        if(globalProgression.inventory.magic_stone === undefined) globalProgression.inventory.magic_stone = 0;
         // Migrate progressStats for existing saves
         if (!player.progressStats) player.progressStats = {};
         let ps = player.progressStats;
@@ -857,22 +865,30 @@ function selectGenderAndStart(gender, chosenAvatar) {
         let finalAvatar = chosenAvatar || (CLASS_GENDER_AVATARS[pendingClassId] ? CLASS_GENDER_AVATARS[pendingClassId][gender] : (gender === 'female' ? '👩' : '🧑'));
 
         if (!isNewGame && classSave) {
-            // Load existing class-specific save, preserve globalProgression
-            const data = JSON.parse(classSave);
+            // Load existing class-specific save — restore both globalProgression and player
+            const savedJson = classSave.includes('|') ? classSave.split('|')[0] : classSave;
+            const data = JSON.parse(savedJson);
+            globalProgression = data.global;
             player = data.pState;
+            // Apply defaults for any missing fields (same as loadGameAndContinue)
+            applyDefaults(globalProgression, { petFavorites: [] });
+            if(!globalProgression.inventory) globalProgression.inventory = {};
+            if(globalProgression.inventory.magic_stone === undefined) globalProgression.inventory.magic_stone = 0;
+            applyDefaults(player, { nodeEnhancements: {} });
             player.classId = pendingClassId;
             player.data = CLASSES[player.classId];
             globalProgression.gender = gender;
             player.data = { ...player.data, avatar: finalAvatar };
             setAvatarDisplay('hub-avatar', player.data.avatar);
         } else if (!isNewGame) {
-            // Switching to a new class with no prior save: init player, keep globalProgression
+            // Switching to a new class with no prior save: start a fresh game for that class
+            startGame(pendingClassId);
             globalProgression.gender = gender;
-            globalProgression.attributes = getClassBaseAttributes(pendingClassId);
-            player = createFreshPlayer(pendingClassId);
             player.data = { ...player.data, avatar: finalAvatar };
-            player.maxHp = calculateMaxHp();
-            player.currentHp = player.maxHp;
+            setAvatarDisplay('hub-avatar', player.data.avatar);
+            saveGame();
+            showHub();
+            return;
         } else {
             // Explicit new game: full reset
             startGame(pendingClassId);
@@ -1011,7 +1027,7 @@ window.startGame = function(classId = 'warrior') {
         wellLastHealDate: '', wellXpBattles: 0, wellDropBattles: 0, wellLastXpDate: '', wellLastDropDate: '', wellLastEnergyDate: '', wellLastEnergy50Date: '', wellLastEnergy100Date: '',
         lastHpRegenTime: Date.now(), enemyKillCounts: {}, claimedCodexMilestones: {},
         totalExpEarned: 0, cooldowns: { herbs: 0, mine: 0, fish: 0, enchants: 0 },
-        inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0 },
+        inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 },
         usableItems: {},
         equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null }, newItems: {},
         attributes: getClassBaseAttributes(classId),
@@ -1025,6 +1041,7 @@ window.startGame = function(classId = 'warrior') {
         discoveredPets: {}, claimedPetRewards: {}, ultimatePetRewardClaimed: false,
         petWinLoss: {},
         petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
+        petFavorites: [],
         saveVersion: 2
     };
     player = createFreshPlayer(classId);

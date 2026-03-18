@@ -17,9 +17,9 @@ const CONSUMABLES = {
 const RECIPES_ALCHEMIST = [{ id: 'pot_i1', herb: 'herb_red', herbAmt: 1, gold: 5 }, { id: 'pot_i2', herb: 'herb_red', herbAmt: 3, gold: 15 }, { id: 'pot_i3', herb: 'herb_red', herbAmt: 10, gold: 40 }, { id: 'pot_r1', herb: 'herb_blue', herbAmt: 1, gold: 5 }, { id: 'pot_r2', herb: 'herb_blue', herbAmt: 3, gold: 15 }, { id: 'pot_r3', herb: 'herb_blue', herbAmt: 10, gold: 40 }];
 const RECIPES_CHEF = [{ id: 'food_d1', fish: 'fish_1', fishAmt: 2, gold: 5 }, { id: 'food_d2', fish: 'fish_3', fishAmt: 2, gold: 15 }, { id: 'food_d3', fish: 'fish_5', fishAmt: 2, gold: 40 }, { id: 'food_df1', fish: 'fish_2', fishAmt: 2, gold: 5 }, { id: 'food_df2', fish: 'fish_4', fishAmt: 2, gold: 15 }, { id: 'food_df3', fish: 'fish_6', fishAmt: 2, gold: 40 }];
 
-const MAT_PRICES = { ench_common: 5, ench_rare: 15, ench_epic: 40, ench_legendary: 100, herb_red: 5, herb_blue: 5, fish_1: 3, fish_2: 3, fish_3: 6, fish_4: 6, fish_5: 10, fish_6: 15, soul_pebbles: 40, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0 };
-const MAT_ICONS = { ench_common: '⚪', ench_rare: '🔵', ench_epic: '🟣', ench_legendary: '🟡', herb_red: '🌺', herb_blue: '💠', fish_1: '🐟', fish_2: '🐠', fish_3: '🐡', fish_4: '🦈', fish_5: '🦑', fish_6: '🦀', soul_pebbles: '🔮', titan_shard: '🔱' };
-const MAT_NAMES = { ench_common: 'Normal Core', ench_rare: 'Rare Core', ench_epic: 'Epic Core', ench_legendary: 'Legendary Core', herb_red: 'Crimson Herb', herb_blue: 'Azure Herb', fish_1: 'Salmon', fish_2: 'Trout', fish_3: 'Bass', fish_4: 'Tuna', fish_5: 'Pike', fish_6: 'Carp', soul_pebbles: 'Soul Pebble', titan_shard: 'Titan Shard' };
+const MAT_PRICES = { ench_common: 5, ench_rare: 15, ench_epic: 40, ench_legendary: 100, herb_red: 5, herb_blue: 5, fish_1: 3, fish_2: 3, fish_3: 6, fish_4: 6, fish_5: 10, fish_6: 15, soul_pebbles: 40, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 };
+const MAT_ICONS = { ench_common: '⚪', ench_rare: '🔵', ench_epic: '🟣', ench_legendary: '🟡', herb_red: '🌺', herb_blue: '💠', fish_1: '🐟', fish_2: '🐠', fish_3: '🐡', fish_4: '🦈', fish_5: '🦑', fish_6: '🦀', soul_pebbles: '🔮', titan_shard: '🔱', magic_stone: '💎' };
+const MAT_NAMES = { ench_common: 'Normal Core', ench_rare: 'Rare Core', ench_epic: 'Epic Core', ench_legendary: 'Legendary Core', herb_red: 'Crimson Herb', herb_blue: 'Azure Herb', fish_1: 'Salmon', fish_2: 'Trout', fish_3: 'Bass', fish_4: 'Tuna', fish_5: 'Pike', fish_6: 'Carp', soul_pebbles: 'Soul Pebble', titan_shard: 'Titan Shard', magic_stone: 'Magic Stone' };
 // Populate MAT_ICONS & NAMES with consumables
 Object.values(CONSUMABLES).forEach(c => {
     if(!MAT_ICONS[c.id]) MAT_ICONS[c.id] = c.icon;
@@ -335,3 +335,152 @@ const BOSS_TEMPLATES = {
     ]
 };
 
+
+// --- SET BONUS DEFINITIONS ---
+// Each class has two set options (one per skill path). Pieces 4/8/12/14 unlock progressively stronger bonuses.
+const SET_BONUS_DEFS = {
+    warrior: {
+        warlord: {
+            name: 'Warlord',
+            color: 'text-red-400',
+            borderColor: 'border-red-500',
+            bonuses: {
+                4:  '+15% damage when attacking bleeding targets',
+                8:  'Whirlwind hits apply 4 Bleed stacks instead of 2',
+                12: 'Eruption cooldown reduced to 4 · Bleed stacks deal double damage',
+                14: '+10% flat damage increase'
+            }
+        },
+        iron_fortress: {
+            name: 'Iron Fortress',
+            color: 'text-blue-400',
+            borderColor: 'border-blue-500',
+            bonuses: {
+                4:  'Block chance +10% passively each turn',
+                8:  'Stomp blocks for 2 turns instead of 1',
+                12: 'Knockout no longer reduces own DEF · Soul Remover hits ignore enemy armor',
+                14: '+20% HP increase'
+            }
+        }
+    },
+    mage: {
+        inferno: {
+            name: 'Inferno',
+            color: 'text-orange-400',
+            borderColor: 'border-orange-500',
+            bonuses: {
+                4:  'Combustion AOE hits for 20% base dmg to all enemies',
+                8:  'Combustion triggers every 2nd fire skill instead of 3rd',
+                12: 'Combustion AOE hits for 40% base dmg · every Combustion gives +20% dmg for 1 turn · Fire Lazer and Fireball cooldown -1',
+                14: '+5% AOE damage increase'
+            }
+        },
+        glacier: {
+            name: 'Glacier',
+            color: 'text-cyan-400',
+            borderColor: 'border-cyan-500',
+            bonuses: {
+                4:  'All ice skill stuns last +1 extra turn',
+                8:  'Ice Shower fully freezes 1 enemy for 2 turns (cannot act at all)',
+                12: 'Ice Fists hits twice · Ice Shield cooldown reduced to 4 · stunned enemies take +25% more damage',
+                14: '2% HP damage per hit in any skill'
+            }
+        }
+    },
+    paladin: {
+        avenger: {
+            name: 'Avenger',
+            color: 'text-yellow-400',
+            borderColor: 'border-yellow-500',
+            bonuses: {
+                4:  'Every heal received also deals 15% of healed amount as damage to target',
+                8:  'Thirsty heals 45% instead of 25% · DEF bonus increased to +50%',
+                12: 'Lose Control reflects 300% instead of 150% · Hammered stuns all enemies hit · all heals deal 25% as damage',
+                14: '+50% reflect damage increase'
+            }
+        },
+        unbreakable: {
+            name: 'Unbreakable',
+            color: 'text-emerald-400',
+            borderColor: 'border-emerald-500',
+            bonuses: {
+                4:  'All reflect skills last +1 extra turn',
+                8:  'Iron Shield reflects 150% instead of 100%',
+                12: 'All incoming damage reduced by extra 15% · Shield Explosion cooldown reduced to 3 · when HP drops below 25%, reflect activates automatically (once per battle)',
+                14: '+20% crit chance'
+            }
+        }
+    },
+    ninja: {
+        shadow: {
+            name: 'Shadow',
+            color: 'text-violet-400',
+            borderColor: 'border-violet-500',
+            bonuses: {
+                4:  'Backhand Slap DEF reduction stacks ×5 instead of ×3',
+                8:  'Face Kick applies DEF -20% on hit (1 turn)',
+                12: 'Huge Shuriken cooldown reduced to 5 · all DEF reduction effects last 2 turns instead of 1 · Throw DEF reduction stacks with Backhand Slap',
+                14: '+10% DEF increase'
+            }
+        },
+        venom_lord: {
+            name: 'Venom Lord',
+            color: 'text-lime-400',
+            borderColor: 'border-lime-500',
+            bonuses: {
+                4:  'Poison reduces healing by 80% instead of 50%',
+                8:  'Kunai Swarm applies 2 Poison instead of 1 · Poison Shuriken applies 2 Poison instead of 1',
+                12: 'Shuriken Rain hits 5 times instead of 3 · all skills have 20% chance to apply 1 Poison on hit · poisoned enemies take +10% dmg',
+                14: '+10% damage increase'
+            }
+        }
+    },
+    cleric: {
+        divine_light: {
+            name: 'Divine Light',
+            color: 'text-pink-400',
+            borderColor: 'border-pink-500',
+            bonuses: {
+                4:  'Heal skill restores 85% instead of 70%',
+                8:  'Deadly Kiss regen ticks heal +50% more · regen duration extended to 7 turns',
+                12: 'Poke drains 20% HP instead of 10% · all healing received +25% · Heal cooldown reduced to 5',
+                14: '+15% damage increase'
+            }
+        },
+        plague_bringer: {
+            name: 'Plague Bringer',
+            color: 'text-green-400',
+            borderColor: 'border-green-500',
+            bonuses: {
+                4:  'Infection cooldown reduced to 2',
+                8:  'Each debuff stack on enemy gives +8% dmg bonus instead of +5%',
+                12: 'Infection applies every debuff twice · enemies with 3+ debuff types take 30% more damage · Poke deals bonus 5% HP per debuff type on target',
+                14: 'When healed, deal base damage to enemies'
+            }
+        }
+    },
+    archer: {
+        precision: {
+            name: 'Precision',
+            color: 'text-sky-400',
+            borderColor: 'border-sky-500',
+            bonuses: {
+                4:  'Crits deal +5% dmg vs bleeding enemies',
+                8:  'Bear Trap stun lasts 3 turns · Bleed Arrow applies 5 stacks',
+                12: 'Arrow Rain applies 1 Bleed to ALL enemies · crits deal +30% dmg · Bear Trap cooldown reduced to 5',
+                14: '+10% crit chance'
+            }
+        },
+        toxic_quiver: {
+            name: 'Toxic Quiver',
+            color: 'text-amber-400',
+            borderColor: 'border-amber-500',
+            bonuses: {
+                4:  'Poison Arrow applies 3 stacks',
+                8:  'Each Poison stack causes target to take +5% more damage',
+                12: 'Laser Arrow DEF reduction increased to -40% · Arrow Rain applies 2 Poison to ALL · Fire Arrow becomes Venom Arrow',
+                14: 'Poisoned targets take 6% more damage'
+            }
+        }
+    }
+};
