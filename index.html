@@ -161,21 +161,18 @@
     </div>
 
     <!-- 1c. MAGE INTRO VIDEO SCREEN -->
-    <div id="screen-mage-intro-video" class="screen" style="background: radial-gradient(ellipse at center, #1a0a2e 0%, #0d0d1a 100%); display:none; align-items:center; justify-content:center; flex-direction:column;">
+    <div id="screen-mage-intro-video" class="screen" style="background: radial-gradient(ellipse at center, #1a0a2e 0%, #0d0d1a 100%); align-items:center; justify-content:center; flex-direction:column;">
         <div style="width:90%; max-width:800px; display:flex; flex-direction:column; align-items:center; gap:1rem;">
             <div style="position:relative; width:100%; padding-top:56.25%; border-radius:12px; overflow:hidden; box-shadow:0 0 40px rgba(138,43,226,0.5);">
                 <video id="mage-intro-video"
                     style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;"
                     playsinline
+                    autoplay
                     controls
                     preload="metadata">
                     <source id="mage-intro-video-src" src="" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
-                <button id="mage-video-play-btn" onclick="playMageVideo()"
-                    style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:4rem; background:rgba(0,0,0,0.6); border:2px solid rgba(255,255,255,0.3); border-radius:50%; width:80px; height:80px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:white; z-index:10;">
-                    ▶
-                </button>
             </div>
             <button onclick="onMageVideoEnd()" class="btn-skip-video">⏭ Skip Video</button>
         </div>
