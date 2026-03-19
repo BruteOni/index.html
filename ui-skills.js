@@ -148,7 +148,6 @@ function showSkillMenu() {
         let nodeInfo = getSkillMenuNodeInfo(i);
         let isUnlocked = i < progress;
         let isNext = i === progress;
-        let isLocked = i > progress;
 
         let card = document.createElement('div');
         card.id = `skill-menu-node-${i}`;

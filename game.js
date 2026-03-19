@@ -96,6 +96,7 @@ function playOscillator(oscType, startFreq, endFreq, startGain, duration, now, o
     }
     osc.start(t);
     osc.stop(t + duration);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
 }
 
 function playSound(type) {
@@ -122,6 +123,7 @@ function playSound(type) {
         noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
         noiseOsc.start(now);
         noiseOsc.stop(now + 0.15);
+        noiseOsc.onended = () => { noiseOsc.disconnect(); noiseGain.disconnect(); };
         // Second noise layer (triangle) for thickness/density
         const triOsc = audioCtx.createOscillator();
         const triGain = audioCtx.createGain();
@@ -136,6 +138,7 @@ function playSound(type) {
         triGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         triOsc.start(now);
         triOsc.stop(now + 0.12);
+        triOsc.onended = () => { triOsc.disconnect(); triGain.disconnect(); };
         // High-pitched descending sweep
         playOscillator('sine', 2500, 150, 0.05, 0.18, now);
         // Low thump for weight
@@ -154,6 +157,7 @@ function playSound(type) {
             gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
             osc.start(t);
             osc.stop(t + 0.25);
+            osc.onended = () => { osc.disconnect(); gain.disconnect(); };
         });
     } else if (type === 'shield' || type === 'buff') {
         const osc = audioCtx.createOscillator();
@@ -176,6 +180,7 @@ function playSound(type) {
         lfo.start(now);
         osc.stop(now + 0.3);
         lfo.stop(now + 0.3);
+        osc.onended = () => { osc.disconnect(); gain.disconnect(); lfo.disconnect(); lfoGain.disconnect(); };
     } else if (type === 'win') {
         [[523.25, 0], [659.25, 0.1], [783.99, 0.2], [1046.5, 0.3], [1318.5, 0.4]].forEach(([freq, delay]) => {
             playOscillator('triangle', freq, null, 0.05, 0.25, now, { offset: delay });
@@ -203,6 +208,7 @@ function playSound(type) {
         crunchG.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
         crunch.start(now);
         crunch.stop(now + 0.14);
+        crunch.onended = () => { crunch.disconnect(); crunchG.disconnect(); };
         playOscillator('sawtooth', 400, 100, 0.05, 0.1, now);
     } else if (type === 'pb_shield') {
         // Resonant metallic "ting!" - high ping with long decay
@@ -227,6 +233,7 @@ function playSound(type) {
         riseG.gain.linearRampToValueAtTime(0.0, now + 0.5);
         rise.start(now);
         rise.stop(now + 0.5);
+        rise.onended = () => { rise.disconnect(); riseG.disconnect(); };
         const shimmer = audioCtx.createOscillator();
         const shimmerG = audioCtx.createGain();
         shimmer.type = 'triangle';
@@ -239,6 +246,7 @@ function playSound(type) {
         shimmerG.gain.linearRampToValueAtTime(0.0, now + 0.5);
         shimmer.start(now);
         shimmer.stop(now + 0.5);
+        shimmer.onended = () => { shimmer.disconnect(); shimmerG.disconnect(); };
     } else if (type === 'pb_big_hit') {
         // Extra punchy multi-layer: deep sub + metallic crash + high shriek
         playOscillator('sine', 60, 25, 0.15, 0.22, now, { freqDur: 0.2 });
@@ -255,6 +263,7 @@ function playSound(type) {
         shriekG.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
         shriek.start(now);
         shriek.stop(now + 0.18);
+        shriek.onended = () => { shriek.disconnect(); shriekG.disconnect(); };
     } else if (type === 'pb_whiff') {
         // Soft "pff" miss: gentle noise puff
         playOscillator('triangle', 500, 150, 0.03, 0.14, now, { freqDur: 0.12 });
@@ -536,11 +545,24 @@ function saveGame() {
     if (typeof clampAttributes === 'function') clampAttributes();
     const data = JSON.stringify({ global: globalProgression, pState: player });
     const checksum = btoa(data.length.toString());
-    localStorage.setItem('EternalAscensionSaveDataV1', data + "|" + checksum);
+    const saveString = data + "|" + checksum;
+    try {
+        const existing = localStorage.getItem('EternalAscensionSaveDataV1');
+        if (existing) {
+            localStorage.setItem('EternalAscensionSaveBackup', existing);
+        }
+        localStorage.setItem('EternalAscensionSaveDataV1', saveString);
+    } catch(e) {
+        console.error('saveGame: localStorage write failed:', e);
+    }
     // Also save to class-specific key so each class has its own independent save
     if (player && player.classId) {
         const classKey = 'EternalAscensionClassSave_' + player.classId;
-        localStorage.setItem(classKey, data + "|" + checksum);
+        try {
+            localStorage.setItem(classKey, saveString);
+        } catch(e) {
+            console.error('saveGame: class save write failed:', e);
+        }
     }
     // Persist saved enemies so they survive page reloads
     try {
@@ -1604,6 +1626,9 @@ function gambleGold(amount) {
         playSound('lose');
         return;
     }
+    // Deduct gold IMMEDIATELY to prevent double-spend
+    globalProgression.gold -= amount;
+    { let ps = ensureProgressStats(); ps.goldSpent += amount; }
     // Disable gamble buttons during animation
     document.querySelectorAll('[onclick^="gambleGold"]').forEach(b => b.disabled = true);
     // Show gamble animation overlay
@@ -1616,8 +1641,6 @@ function gambleGold(amount) {
         let ol = document.getElementById('gamble-overlay');
         if(ol) ol.remove();
         document.querySelectorAll('[onclick^="gambleGold"]').forEach(b => b.disabled = false);
-        globalProgression.gold -= amount;
-        { let ps = ensureProgressStats(); ps.goldSpent += amount; }
         if(Math.random() < 0.5) {
             globalProgression.gold += (amount * 2);
             log.innerHTML = `<span class="text-yellow-400 font-bold">You won the gamble! +${amount}G</span>`;
