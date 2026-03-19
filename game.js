@@ -18,9 +18,10 @@ function setAvatarDisplay(elementId, avatar) {
         const img = document.createElement('img');
         img.src = avatar;
         img.alt = 'Avatar';
-        img.style.width = '96px';
-        img.style.height = '96px';
-        img.className = 'object-contain inline-block';
+        const isHubAvatar = elementId === 'hub-avatar';
+        img.style.width = isHubAvatar ? '100%' : '96px';
+        img.style.height = isHubAvatar ? '100%' : '96px';
+        img.className = isHubAvatar ? 'object-contain' : 'object-contain inline-block';
         el.innerHTML = '';
         el.style.display = 'flex';
         el.style.alignItems = 'center';
