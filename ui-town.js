@@ -1259,8 +1259,7 @@ function buyBlackMarketTier(tierIndex) {
     let cost = costs[tierIndex];
     if (excessSP < cost) { playSound('lose'); return; }
 
-    if (!p.blackMarketSpentSP) p.blackMarketSpentSP = 0;
-    p.blackMarketSpentSP += cost;
+    p.blackMarketSpentSP = (p.blackMarketSpentSP || 0) + cost;
     p.blackMarketTiers[tierIndex] = true;
 
     if (tierIndex === 0) {

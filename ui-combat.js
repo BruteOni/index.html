@@ -551,7 +551,7 @@ function useUsableItem(key) {
             target.currentHp = Math.max(0, target.currentHp - dmg);
             addLog(`💣 Bomb! Dealt ${dmg} damage to ${target.name}!`, 'text-orange-400');
             showFloatText('enemies-container', `-${dmg}`, 'text-orange-400');
-            showDamageNumber(`enemy-card-${activeTargetIndex}`, dmg, false);
+            showDamageNumber(`enemy-card-${activeTargetIndex}`, dmg, 'enemy-damage');
             playSound('hit');
             break;
         }
@@ -567,7 +567,7 @@ function useUsableItem(key) {
             target.bleedStacks = (target.bleedStacks || 0) + 2;
             target.bleedTurns = Math.max(target.bleedTurns || 0, 3);
             addLog(`🔪 Knife! ${dmg} damage + 2 bleed to ${target.name}!`, 'text-red-400');
-            showDamageNumber(`enemy-card-${activeTargetIndex}`, dmg, false);
+            showDamageNumber(`enemy-card-${activeTargetIndex}`, dmg, 'enemy-damage');
             playSound('hit');
             break;
         }
@@ -606,7 +606,7 @@ function useUsableItem(key) {
                     let selfDmg = Math.floor(e.baseDmg || 10);
                     e.currentHp = Math.max(0, e.currentHp - selfDmg);
                     addLog(`🎭 ${e.name} attacks itself for ${selfDmg}!`, 'text-yellow-400');
-                    showDamageNumber(`enemy-card-${i}`, selfDmg, false);
+                    showDamageNumber(`enemy-card-${i}`, selfDmg, 'enemy-damage');
                 }
             });
             playSound('hit');
@@ -618,7 +618,7 @@ function useUsableItem(key) {
                     let dmg = Math.floor(e.maxHp * 0.10);
                     e.currentHp = Math.max(0, e.currentHp - dmg);
                     addLog(`💩 Mud Butt! ${dmg} damage to ${e.name}!`, 'text-pink-400');
-                    showDamageNumber(`enemy-card-${i}`, dmg, false);
+                    showDamageNumber(`enemy-card-${i}`, dmg, 'enemy-damage');
                 }
             });
             playSound('hit');
@@ -873,7 +873,7 @@ function renderSkills() {
     grid.appendChild(makeSkillBtn(4, true, false));
 
     // Auto-skip when all skills are on cooldown
-    if (combatActive && isPlayerTurn && !isAutoBattle && !(player.stunned > 0)) {
+    if (combatActive && isPlayerTurn && !isAutoBattle && player.stunned <= 0) {
         let slotCount = (globalProgression.blackMarketTiers && globalProgression.blackMarketTiers[1]) ? 6 : 5;
         let allOnCooldown = player.equippedSkills.slice(0, slotCount).every(sIdx => {
             if (sIdx === null || sIdx === undefined || sIdx === 'woh') return true;
@@ -1980,10 +1980,12 @@ function endBattle(playerWon) {
             const INV_CONSUMABLE_POOL = ['pot_i1','pot_i2','pot_i3','pot_r1','pot_r2','pot_r3','food_d1','food_d2','food_d3','food_df1','food_df2','food_df3'];
             const INV_MATERIAL_POOL = ['herb_red','herb_blue','fish_1','fish_2','fish_3','fish_4','fish_5','fish_6','ench_common','ench_rare','soul_pebbles'];
             const INV_USABLE_POOL = (typeof BURGLAR_ITEM_POOL !== 'undefined') ? BURGLAR_ITEM_POOL : [];
+            const INVASION_DROP_RATE = 0.4;
+            const INVASION_GEAR_DROP_CHANCE = 0.10;
             for (let ki = 0; ki < killCount; ki++) {
-                if (rollWithDropRate(0.4)) {
+                if (rollWithDropRate(INVASION_DROP_RATE)) {
                     // 10% of drops become gear
-                    if (Math.random() < 0.10) {
+                    if (Math.random() < INVASION_GEAR_DROP_CHANCE) {
                         let gear = rollEquipment('common');
                         if (gear) {
                             globalProgression.equipInventory.push(gear);

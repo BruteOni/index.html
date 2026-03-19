@@ -1007,7 +1007,7 @@ function showGenderSelect(classId) {
                 console.warn('Autoplay blocked:', err);
                 onClassVideoEnd();
             });
-            video.addEventListener('pause', () => { if (!video.ended) video.play().catch(() => {}); }, { once: false });
+            video.addEventListener('pause', () => { if (!video.ended) video.play().catch(() => {}); });
             video.onended = onClassVideoEnd;
         }
         switchScreen('screen-class-intro-video');
