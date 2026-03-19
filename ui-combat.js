@@ -747,12 +747,7 @@ function renderSkills() {
     const container = document.getElementById('skills-container');
     const descDisplay = document.getElementById('skill-description-display');
     const defaultDesc = 'Tap a skill to see what it does';
-    const wohDesc = 'Unleash the power of the heavens upon all enemies. Deals Base Damage + 20% of each enemy\'s max HP and inflicts Bleed, Burn, and Poison. 10-turn global cooldown.';
     container.innerHTML = '';
-
-    let wohSlotIndex = player.equippedSkills.indexOf('woh');
-    let wohFound = wohSlotIndex !== -1;
-    let wohUnlocked = (globalProgression.skillTreeEnhancements || []).find(e => e.type === 'wayOfHeavens');
 
     // Create skills grid wrapper
     const grid = document.createElement('div');
@@ -814,23 +809,6 @@ function renderSkills() {
     grid.appendChild(makeSkillBtn(2, true, false));
     grid.appendChild(makeSkillBtn(3, true, false));
     grid.appendChild(makeSkillBtn(4, true, false));
-
-    // Way of the Heavens (skill 6) — always full-width at bottom if unlocked (equipped or not)
-    if (wohFound || wohUnlocked) {
-        let cd = player.wayOfHeavensCooldown || 0;
-        let wohBtn = document.createElement('button');
-        wohBtn.className = `skill skill-6 skill-btn w-full mt-1 p-3 rounded-lg font-bold text-black bg-yellow-400 hover:bg-yellow-300 shadow-lg active:scale-95 flex items-center justify-center gap-2 text-sm`;
-        wohBtn.disabled = cd > 0 || !isPlayerTurn || isAutoBattle || !combatActive || player.stunned > 0;
-        wohBtn.innerHTML = `☀️ Way of the Heavens ${cd > 0 ? `(CD:${cd})` : ''}`;
-        wohBtn.onmouseenter = () => { if (descDisplay) descDisplay.innerText = wohDesc; };
-        wohBtn.onmouseleave = () => { if (descDisplay) descDisplay.innerText = defaultDesc; };
-        wohBtn.onclick = () => {
-            if (descDisplay) descDisplay.innerText = wohDesc;
-            if (wohFound) usePlayerSkill(wohSlotIndex);
-            else useWayOfHeavens();
-        };
-        grid.appendChild(wohBtn);
-    }
 }
 
 function addLog(msg, colorClass = "text-gray-300") {
@@ -895,19 +873,10 @@ function processAutoTurn() {
         let sIdx = player.equippedSkills[i];
         // Skip silenced slots
         if(player.silencedSlots && player.silencedSlots[i] > 0) continue;
-        if(sIdx === 'woh') {
-            // Use a high mult so auto-battle always prioritises WoH when off cooldown
-            if(!((player.wayOfHeavensCooldown || 0) > 0)) { available.push({ i: i, skill: { type: 'attack', mult: 999 }, slotPriority: 1 }); }
-        } else if(sIdx !== null && sIdx !== undefined && !(player.skillCooldowns[sIdx] > 0)) {
+        if(sIdx !== null && sIdx !== undefined && sIdx !== 'woh' && !(player.skillCooldowns[sIdx] > 0)) {
             // Slot 0 is the basic hit - give it lower priority (slotPriority 0 = low, 1 = normal)
             available.push({ i: i, skill: player.data.skills[sIdx], slotPriority: i === 0 ? 0 : 1 });
         }
-    }
-    // Check standalone Way of the Heavens (6th dedicated slot — unlocked but not equipped in slots 0-4)
-    let wohEnh = (globalProgression.skillTreeEnhancements || []).find(e => e.type === 'wayOfHeavens');
-    let wohInSlot = player.equippedSkills.includes('woh');
-    if (wohEnh && !wohInSlot && !((player.wayOfHeavensCooldown || 0) > 0)) {
-        available.push({ i: 'woh6', skill: { type: 'attack', mult: 999 }, isStandaloneWoh: true, slotPriority: 1 });
     }
     if(available.length === 0) {
         isPlayerTurn = false;
@@ -927,7 +896,7 @@ function processAutoTurn() {
     else if(buffSkill && Math.random() < 0.3) chosen = buffSkill;
     else { let attacks = workingSet.filter(x => x.skill.type === 'attack').sort((a,b) => (b.skill.mult * (b.skill.hits || 1)) - (a.skill.mult * (a.skill.hits || 1))); if(attacks.length > 0) chosen = attacks[0]; }
     if (!chosen) { isPlayerTurn = false; setTimeout(() => executeEnemyTurns(0), 500); return; }
-    if (chosen.isStandaloneWoh) { useWayOfHeavens(); } else { usePlayerSkill(chosen.i); }
+    usePlayerSkill(chosen.i);
 }
 
 function processRegenAndBuffs() {
@@ -1009,7 +978,6 @@ function processRegenAndBuffs() {
 
     // Decrement enhancement cooldowns
     if((player.rageActive || 0) > 0) player.rageActive--;
-    if((player.wayOfHeavensCooldown || 0) > 0) player.wayOfHeavensCooldown--;
 }
 
 function usePlayerSkill(slotIndex) {
@@ -1020,9 +988,7 @@ function usePlayerSkill(slotIndex) {
         return;
     }
     let skillIdx = player.equippedSkills[slotIndex];
-    if(skillIdx === null || skillIdx === undefined) return;
-    // Handle Way of the Heavens equipped in a slot
-    if(skillIdx === 'woh') { useWayOfHeavens(); return; }
+    if(skillIdx === null || skillIdx === undefined || skillIdx === 'woh') return;
     let skill = player.data.skills[skillIdx]; 
     if (player.skillCooldowns[skillIdx] > 0) return;
 
@@ -1950,6 +1916,15 @@ function endBattle(playerWon) {
             }
 
             if (currentMode === 'hunting') {
+                // Guaranteed drop for mythic/legendary/epic rarity enemies
+                if (e.guaranteedDrop) {
+                    let gEquip = rollEquipment(e.guaranteedDrop);
+                    globalProgression.equipInventory.push(gEquip);
+                    globalProgression.newItems[gEquip.type.startsWith('ring') ? 'ring' : gEquip.type] = true;
+                    let gLabel = e.guaranteedDrop === 'mythic' ? '✨ MYTHIC DROP' : e.guaranteedDrop === 'legendary' ? '⭐ LEGENDARY DROP' : '💎 ' + e.guaranteedDrop.toUpperCase() + ' DROP';
+                    rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 rarity-${gEquip.rarity} text-pink-300 font-bold shadow-md">${gLabel}: ${gEquip.icon} ${gEquip.name}!</div>`;
+                    return;
+                }
                 let herb = Math.random() < 0.5 ? 'herb_red' : 'herb_blue';
                 globalProgression.inventory[herb]++;
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-700 text-green-400 font-bold shadow-md">+1 ${MAT_ICONS[herb]}</div>`;
@@ -1965,6 +1940,15 @@ function endBattle(playerWon) {
                 }
             }
             else if (currentMode === 'island_defense') {
+                // Guaranteed drop for mythic/legendary/epic rarity enemies
+                if (e.guaranteedDrop) {
+                    let gEquip = rollEquipment(e.guaranteedDrop);
+                    globalProgression.equipInventory.push(gEquip);
+                    globalProgression.newItems[gEquip.type.startsWith('ring') ? 'ring' : gEquip.type] = true;
+                    let gLabel = e.guaranteedDrop === 'mythic' ? '✨ MYTHIC DROP' : e.guaranteedDrop === 'legendary' ? '⭐ LEGENDARY DROP' : '💎 ' + e.guaranteedDrop.toUpperCase() + ' DROP';
+                    rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 rarity-${gEquip.rarity} text-pink-300 font-bold shadow-md">${gLabel}: ${gEquip.icon} ${gEquip.name}!</div>`;
+                    return;
+                }
                 let fishTypes = [1,2,3,4,5,6];
                 let pick = fishTypes[Math.floor(Math.random()*fishTypes.length)];
                 globalProgression.inventory[`fish_${pick}`] = (globalProgression.inventory[`fish_${pick}`] || 0) + 1;
@@ -2020,9 +2004,10 @@ function endBattle(playerWon) {
                     let bRoll = Math.random();
                     if(bRoll < 0.40) eTier = 'ench_legendary'; else if(bRoll < 0.60) eTier = 'ench_epic'; else if (bRoll < 0.70) eTier = 'ench_rare';
                 } else {
-                    if (e.rarity === 'rare') eTier = 'ench_rare';
-                    else if (e.rarity === 'epic') eTier = 'ench_epic';
+                    if (e.rarity === 'mythic') eTier = 'ench_legendary';
                     else if (e.rarity === 'legendary') eTier = 'ench_legendary';
+                    else if (e.rarity === 'epic') eTier = 'ench_epic';
+                    else if (e.rarity === 'rare') eTier = 'ench_rare';
                     else if (rollWithDropRate(0.50)) eTier = 'ench_common';
                     else shouldDrop = false;
                 }
@@ -2135,7 +2120,7 @@ function endBattle(playerWon) {
                 endXpBar.style.width = '100%';
                 setTimeout(() => {
                     playSound('win');
-                    player.lvl++; player.xp -= xpNeeded; player.statPoints += 5; 
+                    player.lvl++; player.xp -= xpNeeded; player.statPoints += 2; 
                     player.skillPoints++; spTxt.classList.remove('hidden');
                     player.maxHp = calculateMaxHp(); player.currentHp = player.maxHp;
                     lvlUp.classList.remove('hidden'); endXpBar.style.transition = 'none'; endXpBar.style.width = '0%';

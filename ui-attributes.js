@@ -154,7 +154,7 @@ function getTotalSpentPoints() {
 }
 
 function getMaxAttributePoints() {
-    return player.lvl * 5;
+    return player.lvl * 2;
 }
 
 function clampAttributes() {

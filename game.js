@@ -751,6 +751,21 @@ function loadGameAndContinue() {
             if (typeof clampAttributes === 'function') {
                 clampAttributes();
             }
+
+            // --- Way of the Heavens removal migration ---
+            // Strip WoH from skillTreeEnhancements
+            if (globalProgression.skillTreeEnhancements) {
+                globalProgression.skillTreeEnhancements = globalProgression.skillTreeEnhancements.filter(e => e.type !== 'wayOfHeavens');
+            }
+            // Remove 'woh' from equippedSkills slots
+            if (player.equippedSkills) {
+                player.equippedSkills = player.equippedSkills.map(s => s === 'woh' ? null : s);
+            }
+            // Reset WoH cooldown
+            player.wayOfHeavensCooldown = 0;
+            // Reset infinite atk (removed feature)
+            player.skillMenuInfiniteAtk = 0;
+
             showHub();
         }
     } catch (err) {
@@ -890,7 +905,7 @@ function getClassBaseAttributes(classId) {
 
 // Returns the per-class attribute caps
 function getClassAttrCap(classId, attrId) {
-    return 100; // Universal cap of 100 for all attributes, all classes
+    return 200; // Universal cap of 200 for all attributes, all classes
 }
 
 function switchScreen(screenId) {
@@ -1330,6 +1345,34 @@ function showCodex() {
     const list = document.getElementById('codex-list'); list.innerHTML = '';
     let allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
     
+    // Mythic bosses section — render FIRST, sort so unclaimed (claimable) bosses appear first
+    let discoveredMythicBosses = (globalProgression.discoveredMythicBosses || []).slice().sort((a, b) => {
+        let aClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[a];
+        let bClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[b];
+        if (!aClaimed && bClaimed) return -1;
+        if (aClaimed && !bClaimed) return 1;
+        return 0;
+    });
+    if(discoveredMythicBosses.length > 0) {
+        list.innerHTML += `<div class="col-span-full text-center text-white font-black text-sm mt-3 mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">✨ MYTHIC ENCOUNTERS ✨</div>`;
+        discoveredMythicBosses.forEach(bossName => {
+            let kills = (globalProgression.enemyKillCounts || {})[bossName] || 0;
+            let isClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[bossName];
+            let html = `<div class="bg-gray-900 border-2 border-white rounded-lg p-3 flex flex-col items-center shadow-md relative" style="box-shadow:0 0 20px rgba(255,255,255,0.6),0 0 40px rgba(200,200,255,0.3);">`;
+            html += `<div class="text-4xl mb-1">✨</div>`;
+            html += `<div class="font-black text-sm text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)]">${bossName}</div>`;
+            html += `<div class="text-[10px] text-gray-300 mb-1">⚠️ MYTHIC BOSS</div>`;
+            html += `<div class="text-[10px] text-pink-300 mb-1">Kills: ${kills}</div>`;
+            if(!isClaimed) {
+                html += `<button onclick="claimCodexReward('${bossName}')" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 100G</button>`;
+            } else {
+                html += `<div class="text-xs text-gray-500 italic mt-auto">Claimed ✓</div>`;
+            }
+            html += `</div>`;
+            list.innerHTML += html;
+        });
+    }
+
     // Filter unique by base name
     let uniqueEnemies = [];
     let seenNames = new Set();
@@ -1372,34 +1415,6 @@ function showCodex() {
         html += `</div>`;
         list.innerHTML += html;
     });
-
-    // Mythic bosses section — sort so unclaimed (claimable) bosses appear first
-    let discoveredMythicBosses = (globalProgression.discoveredMythicBosses || []).slice().sort((a, b) => {
-        let aClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[a];
-        let bClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[b];
-        if (!aClaimed && bClaimed) return -1;
-        if (aClaimed && !bClaimed) return 1;
-        return 0;
-    });
-    if(discoveredMythicBosses.length > 0) {
-        list.innerHTML += `<div class="col-span-full text-center text-white font-black text-sm mt-3 mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">✨ MYTHIC ENCOUNTERS ✨</div>`;
-        discoveredMythicBosses.forEach(bossName => {
-            let kills = (globalProgression.enemyKillCounts || {})[bossName] || 0;
-            let isClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[bossName];
-            let html = `<div class="bg-gray-900 border-2 border-white rounded-lg p-3 flex flex-col items-center shadow-md relative" style="box-shadow:0 0 20px rgba(255,255,255,0.6),0 0 40px rgba(200,200,255,0.3);">`;
-            html += `<div class="text-4xl mb-1">✨</div>`;
-            html += `<div class="font-black text-sm text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)]">${bossName}</div>`;
-            html += `<div class="text-[10px] text-gray-300 mb-1">⚠️ MYTHIC BOSS</div>`;
-            html += `<div class="text-[10px] text-pink-300 mb-1">Kills: ${kills}</div>`;
-            if(!isClaimed) {
-                html += `<button onclick="claimCodexReward('${bossName}')" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 100G</button>`;
-            } else {
-                html += `<div class="text-xs text-gray-500 italic mt-auto">Claimed ✓</div>`;
-            }
-            html += `</div>`;
-            list.innerHTML += html;
-        });
-    }
 
     switchScreen('screen-codex');
 }
@@ -1661,7 +1676,7 @@ function checkLevelUp() {
         if (player.xp < xpNeeded) break;
         player.lvl++;
         player.xp -= xpNeeded;
-        player.statPoints += 5;
+        player.statPoints += 2;
         player.skillPoints++;
         levelsGained++;
     }
