@@ -1,5 +1,4 @@
 // --- ATTRIBUTE CONSTANTS ---
-const WILLPOWER_CAP = 50;
 
 function showAttributes() {
     clampAttributes();

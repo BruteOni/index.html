@@ -80,7 +80,7 @@ function showMagicalEnhancer() {
             // Show enhance options
             let canAfford = (p.gold >= 10000) && ((p.inventory.magic_stone || 0) >= 50);
             let setOptions = Object.entries(classSets).map(([sk, sd]) => {
-                let optBtn = `<button onclick="enhanceWithSet('${isEquipped ? 'equip_' + slot : 'inv_' + idx}', '${sk}')"
+                let optBtn = `<button onclick="enhanceWithSet('${isEquipped ? 'equip_' + slot : 'inv_id_' + item.id}', '${sk}')"
                     class="text-left w-full rounded-lg p-2 mt-1 border ${sd.borderColor} bg-gray-900 hover:bg-gray-700 transition ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}"
                     ${canAfford ? '' : 'disabled'}>
                     <div class="font-bold ${sd.color} text-sm">${sd.name}</div>
@@ -115,7 +115,11 @@ function enhanceWithSet(itemRef, setKey) {
     if(typeof itemRef === 'string' && itemRef.startsWith('equip_')) {
         let slot = itemRef.replace('equip_', '');
         item = p.equipped[slot];
+    } else if(typeof itemRef === 'string' && itemRef.startsWith('inv_id_')) {
+        let itemId = itemRef.replace('inv_id_', '');
+        item = p.equipInventory.find(i => i && i.id === itemId);
     } else if(typeof itemRef === 'string' && itemRef.startsWith('inv_')) {
+        // Legacy fallback for old-style index refs
         let idx = parseInt(itemRef.replace('inv_', ''));
         item = p.equipInventory[idx];
     }
@@ -189,6 +193,13 @@ function closeProgressMenu() {
 function showExport() {
     saveGame();
     let saveData = localStorage.getItem('EternalAscensionSaveDataV1') || localStorage.getItem('fogFighterSaveDataV22') || localStorage.getItem('fogFighterSaveDataV21') || localStorage.getItem('fogFighterSaveDataV20');
+    if (!saveData) {
+        document.getElementById('sl-modal-title').innerText = "Export Save Data";
+        document.getElementById('sl-modal-desc').innerText = "No save data found.";
+        document.getElementById('sl-modal-text').value = "";
+        document.getElementById('modal-save-load').style.display = 'flex';
+        return;
+    }
     let encoded = btoa(unescape(encodeURIComponent(saveData)));
     
     document.getElementById('sl-modal-title').innerText = "Export Save Data";
@@ -199,12 +210,28 @@ function showExport() {
     btn.innerText = "Copy to Clipboard";
     btn.className = "w-full bg-blue-700 hover:bg-blue-600 text-white font-bold py-3 rounded transition active:scale-95 border border-blue-500";
     btn.onclick = () => {
-        let ta = document.getElementById('sl-modal-text');
-        ta.select();
-        document.execCommand('copy');
-        btn.innerText = "Copied!";
-        playSound('click');
-        setTimeout(() => btn.innerText = "Copy to Clipboard", 2000);
+        let text = document.getElementById('sl-modal-text').value;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.innerText = "Copied!";
+                playSound('click');
+                setTimeout(() => btn.innerText = "Copy to Clipboard", 2000);
+            }).catch(() => {
+                let ta = document.getElementById('sl-modal-text');
+                ta.select();
+                try { document.execCommand('copy'); } catch(e) {}
+                btn.innerText = "Copied!";
+                playSound('click');
+                setTimeout(() => btn.innerText = "Copy to Clipboard", 2000);
+            });
+        } else {
+            let ta = document.getElementById('sl-modal-text');
+            ta.select();
+            try { document.execCommand('copy'); } catch(e) {}
+            btn.innerText = "Copied!";
+            playSound('click');
+            setTimeout(() => btn.innerText = "Copy to Clipboard", 2000);
+        }
     };
     document.getElementById('modal-save-load').style.display = 'flex';
 }
