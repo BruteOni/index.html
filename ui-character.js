@@ -111,7 +111,14 @@ function showCharacter() {
     const pClass = document.getElementById('char-class-name');
     if (pClass) pClass.textContent = player.data.name;
     const pAv = document.getElementById('char-avatar-display');
-    if (pAv) setAvatarDisplay('char-avatar-display', player.data.avatar);
+    if (pAv) {
+        setAvatarDisplay('char-avatar-display', player.data.avatar);
+        if ((globalProgression.blackMarketTier || 0) >= 1) {
+            pAv.classList.add('bm-avatar-glow');
+        } else {
+            pAv.classList.remove('bm-avatar-glow');
+        }
+    }
 
     EQUIP_SLOTS.forEach(slot => {
         const el = document.getElementById(`slot-${slot}`);

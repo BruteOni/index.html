@@ -2011,10 +2011,10 @@ function endBattle(playerWon) {
             // Invasion: each enemy has a chance to drop one random item from the full item pool
             enemies.forEach(() => {
                 if (!rollWithDropRate(0.35)) return; // 35% base chance to drop anything
-                // Build full item pool: consumables, materials, usables, gear
+                // Pool distribution: 35% consumable, 20% material, 15% usable, 30% gear
                 let poolRoll = Math.random();
                 if (poolRoll < 0.35) {
-                    // Consumable drop
+                    // Consumable drop (35%)
                     let consumableIds = Object.keys(CONSUMABLES);
                     let picked = consumableIds[Math.floor(Math.random() * consumableIds.length)];
                     if ((globalProgression.inventory[picked] || 0) < INVENTORY_STACK_CAP) {
@@ -2023,13 +2023,13 @@ function endBattle(playerWon) {
                         rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-green-600 text-green-300 font-bold text-xs shadow-md">+1 ${c.icon} ${c.name}</div>`;
                     }
                 } else if (poolRoll < 0.55) {
-                    // Material drop
+                    // Material drop (20%)
                     let matPool = ['herb_red','herb_blue','fish_1','fish_2','fish_3','fish_4','fish_5','fish_6','soul_pebbles','ench_common','ench_rare','ench_epic','ench_legendary','titan_shard','magic_stone'];
                     let picked = matPool[Math.floor(Math.random() * matPool.length)];
                     globalProgression.inventory[picked] = (globalProgression.inventory[picked] || 0) + 1;
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-blue-600 text-blue-300 font-bold text-xs shadow-md">+1 ${MAT_ICONS[picked] || '📦'} ${MAT_NAMES[picked] || picked}</div>`;
                 } else if (poolRoll < 0.70) {
-                    // Usable item drop
+                    // Usable item drop (15%)
                     let usablePool = Object.keys(USABLE_ITEMS);
                     let picked = usablePool[Math.floor(Math.random() * usablePool.length)];
                     let uItem = USABLE_ITEMS[picked];
@@ -2037,9 +2037,14 @@ function endBattle(playerWon) {
                     globalProgression.usableItems[picked] = (globalProgression.usableItems[picked] || 0) + 1;
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-yellow-600 text-yellow-300 font-bold text-xs shadow-md">+1 ${uItem.icon} ${uItem.name}</div>`;
                 } else {
-                    // Gear drop
+                    // Gear drop (30%) — rare table matches game rarity weights
                     let rRoll = Math.random();
-                    let rarity = rRoll < 0.005 ? 'mythic' : rRoll < 0.01 ? 'legendary' : rRoll < 0.05 ? 'epic' : rRoll < 0.20 ? 'rare' : 'common';
+                    let rarity;
+                    if (rRoll < 0.005) rarity = 'mythic';
+                    else if (rRoll < 0.01) rarity = 'legendary';
+                    else if (rRoll < 0.05) rarity = 'epic';
+                    else if (rRoll < 0.20) rarity = 'rare';
+                    else rarity = 'common';
                     let newEquip = rollEquipment(rarity);
                     globalProgression.equipInventory.push(newEquip);
                     globalProgression.newItems[newEquip.type.startsWith('ring') ? 'ring' : newEquip.type] = true;

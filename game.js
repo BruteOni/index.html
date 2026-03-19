@@ -1017,7 +1017,10 @@ function showGenderSelect(classId) {
                 console.warn('Autoplay blocked:', err);
                 // Try muted as fallback to allow video to play
                 video.muted = true;
-                video.play().catch(() => onClassVideoEnd());
+                video.play().catch(muteErr => {
+                    console.warn('Muted autoplay also blocked, skipping video:', muteErr);
+                    onClassVideoEnd();
+                });
             });
             video.onended = onClassVideoEnd;
         }
@@ -1164,6 +1167,15 @@ function showHub() {
         document.getElementById('hub-lvl').innerText = player.lvl;
         document.getElementById('hub-class').innerText = player.data.name;
         setAvatarDisplay('hub-avatar', player.data.avatar);
+        // Apply Black Market Tier 1 avatar glow
+        let hubAvatar = document.getElementById('hub-avatar');
+        if (hubAvatar) {
+            if ((globalProgression.blackMarketTier || 0) >= 1) {
+                hubAvatar.classList.add('bm-avatar-glow');
+            } else {
+                hubAvatar.classList.remove('bm-avatar-glow');
+            }
+        }
         document.getElementById('hub-level-up-noti').classList.toggle('hidden', player.statPoints <= 0);
     } catch(e) { console.error('showHub: basic stats update failed', e); }
 

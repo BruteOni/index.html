@@ -322,7 +322,7 @@ function showBlackMarket() {
     if (!list) return;
     list.innerHTML = '';
 
-    BLACK_MARKET_TIERS.forEach((t, idx) => {
+    BLACK_MARKET_TIERS.forEach((t) => {
         let isPurchased = currentTier >= t.tier;
         let isNext = currentTier === t.tier - 1;
         let isLocked = !isPurchased && !isNext;
