@@ -1940,14 +1940,34 @@ function endBattle(playerWon) {
                 let herb = Math.random() < 0.5 ? 'herb_red' : 'herb_blue';
                 globalProgression.inventory[herb]++;
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-700 text-green-400 font-bold shadow-md">+1 ${MAT_ICONS[herb]}</div>`;
+                // 20% chance to drop a random potion
+                if (Math.random() < 0.20) {
+                    let potionIds = ['pot_i1', 'pot_i2', 'pot_i3', 'pot_r1', 'pot_r2', 'pot_r3'];
+                    let droppedPot = potionIds[Math.floor(Math.random() * potionIds.length)];
+                    if ((globalProgression.inventory[droppedPot] || 0) < INVENTORY_STACK_CAP) {
+                        globalProgression.inventory[droppedPot] = (globalProgression.inventory[droppedPot] || 0) + 1;
+                        let potData = CONSUMABLES[droppedPot];
+                        rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-500 text-green-300 font-bold shadow-md">+1 ${potData.icon} ${potData.name}</div>`;
+                    }
+                }
             }
             else if (currentMode === 'island_defense') {
                 let fishTypes = [1,2,3,4,5,6];
                 let pick = fishTypes[Math.floor(Math.random()*fishTypes.length)];
                 globalProgression.inventory[`fish_${pick}`] = (globalProgression.inventory[`fish_${pick}`] || 0) + 1;
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-700 text-blue-400 font-bold shadow-md">+1 ${MAT_NAMES['fish_'+pick]}</div>`;
+                // 20% chance to drop a random food buff
+                if (Math.random() < 0.20) {
+                    let foodIds = ['food_d1', 'food_d2', 'food_d3', 'food_df1', 'food_df2', 'food_df3'];
+                    let droppedFood = foodIds[Math.floor(Math.random() * foodIds.length)];
+                    if ((globalProgression.inventory[droppedFood] || 0) < INVENTORY_STACK_CAP) {
+                        globalProgression.inventory[droppedFood] = (globalProgression.inventory[droppedFood] || 0) + 1;
+                        let foodData = CONSUMABLES[droppedFood];
+                        rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-500 text-blue-300 font-bold shadow-md">+1 ${foodData.icon} ${foodData.name}</div>`;
+                    }
+                }
             }
-            else if (currentMode === 'pillage' || currentMode === 'dungeon' || currentMode === 'graveyard') {
+            else if (currentMode === 'pillage' || currentMode === 'graveyard') {
                 let forceRarity = 'common';
                 let shouldDrop = true;
                 
@@ -2032,12 +2052,6 @@ function endBattle(playerWon) {
             if (activeDungeonRoom === 5) { 
                 desc.innerText = `You conquered Tier ${activeDungeonTier}!`; btnNext.classList.add('hidden'); 
                 
-                let dRwd = rollEquipment('rare'); globalProgression.equipInventory.push(dRwd); globalProgression.newItems[dRwd.type.startsWith('ring') ? 'ring' : dRwd.type] = true; 
-                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border-2 rarity-rare text-blue-300 font-bold shadow-[0_0_10px_rgba(59,130,246,0.3)]">Dungeon Clear: 1 Gear (${dRwd.icon})</div>`;
-                // Award 50 gold for dungeon completion
-                globalProgression.gold += 50;
-                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-600 text-yellow-300 font-bold shadow-md">+50 💰 Gold</div>`;
-
                 if(activeDungeonTier === globalProgression.dungeonTier) globalProgression.dungeonTier++; 
             } else { desc.innerText = "Room cleared. Proceed deeper."; btnNext.innerText = "Next Room"; btnNext.classList.remove('hidden'); }
         } else if (currentMode === 'graveyard') {
@@ -2076,8 +2090,8 @@ function endBattle(playerWon) {
         });
         
         if((globalProgression.wellXpBattles || 0) > 0) totalXp *= 2;
-        // Dungeons give 3x XP
-        if(currentMode === 'dungeon') totalXp *= 3;
+        // Dungeons give 2x XP
+        if(currentMode === 'dungeon') totalXp *= 2;
         // Apply XP Increase enhancements + XP Gain from accessories
         let xpMult = 1 + getEquipBonusStat('bonusXpGain');
         (globalProgression.skillTreeEnhancements || []).forEach(enh => {
@@ -2086,12 +2100,11 @@ function endBattle(playerWon) {
         totalXp = Math.floor(totalXp * xpMult);
         document.getElementById('end-xp-amount').innerText = totalXp; globalProgression.totalExpEarned += totalXp;
 
-        // Gold per kill (not in quest or training mode)
+        // Gold per kill (not in quest, training, or dungeon mode)
         let endGold = 0;
-        if(currentMode !== 'quest' && currentMode !== 'training') {
+        if(currentMode !== 'quest' && currentMode !== 'training' && currentMode !== 'dungeon') {
             let goldPerKill = 2 + Math.floor(player.lvl / 5);
             endGold = enemies.filter(e => e.currentHp <= 0).length * goldPerKill;
-            if(currentMode === 'dungeon') endGold = Math.floor(endGold * 0.5);
             if(currentMode === 'invasion') endGold *= 3;
             globalProgression.gold += endGold;
         }
