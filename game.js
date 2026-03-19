@@ -359,6 +359,8 @@ let globalProgression = {
     discoveredPets: {}, claimedPetRewards: {}, ultimatePetRewardClaimed: false,
     petWinLoss: {},
     petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
+    blackMarketTier: 0,
+    patchV1Applied: false,
     saveVersion: 2
 };
 const TREE_NODES = [];
@@ -390,7 +392,7 @@ let player = {
 };
 
 let enemies = []; let savedEnemies = {}; let activeTargetIndex = 0; let currentMode = 'none'; 
-const NON_PERSIST_MODES = ['quest', 'training', 'graveyard', 'invasion'];
+const NON_PERSIST_MODES = ['quest', 'training', 'graveyard', 'invasion', 'dungeon'];
 let activeDungeonTier = 1; let activeDungeonRoom = 1; 
 let isPlayerTurn = true; let combatLog = []; let isAutoBattle = false; let combatActive = false; let battleEnding = false;
 let activeGraveyardBoss = null;
@@ -645,6 +647,8 @@ function makeInitialGlobalProgression() {
         petWinLoss: {},
         petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
         petFavorites: [],
+        blackMarketTier: 0,
+        patchV1Applied: false,
         saveVersion: 2
     };
 }
@@ -765,6 +769,37 @@ function loadGameAndContinue() {
             player.wayOfHeavensCooldown = 0;
             // Reset infinite atk (removed feature)
             player.skillMenuInfiniteAtk = 0;
+
+            // --- Patch V1: one-time attribute + skill tree reset ---
+            if (!globalProgression.patchV1Applied) {
+                // Respec all attributes to base values and refund points
+                const patchAttrs = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','vampire','defense','happiness'];
+                let patchClassBase = getClassBaseAttributes(player.classId || 'warrior');
+                let patchRefund = 0;
+                patchAttrs.forEach(stat => {
+                    let cur = globalProgression.attributes[stat] || 0;
+                    let base = patchClassBase[stat] || 0;
+                    patchRefund += Math.max(0, cur - base);
+                    globalProgression.attributes[stat] = base;
+                });
+                // Reset skill tree
+                let skillTreeRefund = (player.skillMenuProgress || 0);
+                player.skillMenuProgress = 0;
+                player.skillMenuBonusDmgPct = 0;
+                player.skillMenuBonusDefPct = 0;
+                player.skillMenuBonusHpPct = 0;
+                player.skillMenuInfiniteAtk = 0;
+                player.skillMenuNodeChoices = [];
+                player.skillMenuLastStatChoice = null;
+                player.skillMenuConsecutiveSameCount = 0;
+                player.unlockedSkills = [0, 1, 2];
+                player.equippedSkills = [0, 1, 2, null, null];
+                // Recalculate stat points based on new formula
+                let newMaxBudget = Math.min(player.lvl || 0, 50) + Math.max(0, (player.lvl || 0) - 50) * 2;
+                player.statPoints = Math.max(0, newMaxBudget);
+                player.skillPoints = (player.skillPoints || 0) + skillTreeRefund;
+                globalProgression.patchV1Applied = true;
+            }
 
             showHub();
         }
@@ -900,7 +935,7 @@ function getClassBaseAttributes(classId) {
 
 // Returns the per-class attribute caps
 function getClassAttrCap(classId, attrId) {
-    return 200; // Universal cap of 200 for all attributes, all classes
+    return 100; // Universal cap of 100 for all attributes, all classes
 }
 
 function switchScreen(screenId) {
@@ -976,11 +1011,13 @@ function showGenderSelect(classId) {
         if (video) {
             const src = document.getElementById('class-intro-video-src');
             if (src) src.src = videoFile;
-            video.muted = true;
+            video.muted = false;
             video.load();
             video.play().catch(err => {
                 console.warn('Autoplay blocked:', err);
-                onClassVideoEnd();
+                // Try muted as fallback to allow video to play
+                video.muted = true;
+                video.play().catch(() => onClassVideoEnd());
             });
             video.onended = onClassVideoEnd;
         }
@@ -1133,7 +1170,8 @@ function showHub() {
     try {
         // Sync hero bar notification badges
         if(document.getElementById('hub-attr-noti-hero')) document.getElementById('hub-attr-noti-hero').classList.toggle('hidden', player.statPoints <= 0);
-        if(document.getElementById('hub-skill-noti-hero')) document.getElementById('hub-skill-noti-hero').classList.toggle('hidden', player.skillPoints <= 0);
+        let skillTreeMaxed = (player.skillMenuProgress || 0) >= SKILL_MENU_TOTAL;
+        if(document.getElementById('hub-skill-noti-hero')) document.getElementById('hub-skill-noti-hero').classList.toggle('hidden', player.skillPoints <= 0 || skillTreeMaxed);
         
         let hasUnequippedBetter = EQUIP_SLOTS.some(slot => hasBetterGear(slot));
         if(document.getElementById('hub-char-noti-hero')) document.getElementById('hub-char-noti-hero').classList.toggle('hidden', !hasUnequippedBetter);
@@ -1676,7 +1714,8 @@ function checkLevelUp() {
         if (player.xp < xpNeeded) break;
         player.lvl++;
         player.xp -= xpNeeded;
-        player.statPoints += 2;
+        // Levels 1-50 give 1 stat point each; levels above 50 give 2 stat points each
+        player.statPoints += (player.lvl <= 50 ? 1 : 2);
         player.skillPoints++;
         levelsGained++;
     }

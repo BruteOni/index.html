@@ -267,3 +267,112 @@ function buyTicket(source = 'shop') {
     if(globalProgression.gold >= 100) { globalProgression.gold -= 100; let ps = ensureProgressStats(); ps.goldSpent += 100; globalProgression.tickets = (globalProgression.tickets||0) + 1; playSound('win'); saveGame(); if(source === 'dungeon') showDungeons(); else if(source === 'invasion') showInvasion(); else showShop(); }
     else { playSound('lose'); }
 }
+
+// --- BLACK MARKET SHOP ---
+const BLACK_MARKET_TIERS = [
+    {
+        tier: 1, cost: 75,
+        title: 'Avatar Glow Border',
+        icon: '✨',
+        desc: 'A radiant border glow effect surrounds your avatar in battle. Equips automatically.',
+        color: 'border-yellow-400',
+        reward: 'avatarGlow'
+    },
+    {
+        tier: 2, cost: 100,
+        title: 'Sixth Skill Slot',
+        icon: '⚡',
+        desc: 'Unlock a 6th skill slot. Equip an additional skill for greater combat flexibility.',
+        color: 'border-purple-400',
+        reward: 'sixthSkill'
+    },
+    {
+        tier: 3, cost: 100,
+        title: 'Stun Retaliation',
+        icon: '💥',
+        desc: 'Passive: When you are stunned, deal 50% base damage to all enemies when the stun ends. Applies to all classes permanently.',
+        color: 'border-orange-400',
+        reward: 'stunRetaliation'
+    },
+    {
+        tier: 4, cost: 100,
+        title: 'Phantom Strike',
+        icon: '👻',
+        desc: 'Passive: When you miss an attack, deal 50% base damage as a phantom strike. Never truly miss.',
+        color: 'border-blue-400',
+        reward: 'phantomStrike'
+    },
+    {
+        tier: 5, cost: 100,
+        title: 'Cooldown Mastery',
+        icon: '⏱',
+        desc: 'Passive: All skill cooldowns reduced by 2 (minimum 0). Your skills come back faster.',
+        color: 'border-cyan-400',
+        reward: 'cdMastery'
+    }
+];
+
+function showBlackMarket() {
+    if (!globalProgression.blackMarketTier) globalProgression.blackMarketTier = 0;
+    const currentTier = globalProgression.blackMarketTier;
+    const spEl = document.getElementById('bm-sp-display');
+    if (spEl) spEl.innerText = player.skillPoints;
+
+    const list = document.getElementById('bm-tier-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    BLACK_MARKET_TIERS.forEach((t, idx) => {
+        let isPurchased = currentTier >= t.tier;
+        let isNext = currentTier === t.tier - 1;
+        let isLocked = !isPurchased && !isNext;
+        let canAfford = player.skillPoints >= t.cost;
+
+        let div = document.createElement('div');
+        div.className = `bg-gray-900 border-2 ${isPurchased ? 'border-green-500' : isNext ? t.color : 'border-gray-700'} rounded-xl p-4 flex flex-col gap-2 shadow-lg ${isLocked ? 'opacity-50' : ''}`;
+
+        let statusBadge = isPurchased
+            ? `<span class="text-green-400 font-bold text-sm">✅ Purchased</span>`
+            : isNext
+                ? `<span class="text-yellow-300 font-bold text-sm">🎯 Available — ${t.cost} SP</span>`
+                : `<span class="text-gray-500 font-bold text-sm">🔒 Locked (complete previous tier)</span>`;
+
+        div.innerHTML = `
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">${t.icon}</span>
+                <div class="flex-1">
+                    <div class="font-black text-white text-base">Tier ${t.tier}: ${t.title}</div>
+                    <div class="text-xs text-gray-300 mt-0.5">${t.desc}</div>
+                </div>
+                ${statusBadge}
+            </div>
+            ${isNext && !isPurchased ? `<button onclick="buyBlackMarketTier(${t.tier})" class="w-full bg-purple-700 hover:bg-purple-600 border border-purple-400 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}" ${canAfford ? '' : 'disabled'}>
+                Purchase — ${t.cost} Skill Points
+            </button>` : ''}
+        `;
+        list.appendChild(div);
+    });
+
+    switchScreen('screen-black-market');
+}
+
+function buyBlackMarketTier(tier) {
+    let t = BLACK_MARKET_TIERS[tier - 1];
+    if (!t) return;
+    if ((globalProgression.blackMarketTier || 0) !== tier - 1) return; // must be next tier
+    if (player.skillPoints < t.cost) { playSound('lose'); return; }
+
+    player.skillPoints -= t.cost;
+    globalProgression.blackMarketTier = tier;
+
+    // Apply immediate effects
+    if (t.reward === 'sixthSkill') {
+        // Ensure equippedSkills has 6 slots
+        while (player.equippedSkills.length < 6) player.equippedSkills.push(null);
+    }
+
+    playSound('win');
+    saveGame();
+    showBlackMarket();
+}
+

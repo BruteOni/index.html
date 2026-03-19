@@ -135,27 +135,41 @@ function showCharacter() {
 
     const skillSlots = document.getElementById('char-skill-slots');
     skillSlots.innerHTML = '';
-    for (let i = 0; i < 5; i++) {
+    // Determine how many skill slots to show (5 base, +1 if Black Market tier 2 unlocked)
+    let maxSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
+    // Ensure equippedSkills array is large enough
+    while (player.equippedSkills.length < maxSlots) player.equippedSkills.push(null);
+    for (let i = 0; i < maxSlots; i++) {
         const sIdx = player.equippedSkills[i];
         const btn = document.createElement('button');
-        if (sIdx === 'woh') {
+        if (i === 0) {
+            // Slot 0 is locked — always shows base skill, not clickable
+            const sInfo = sIdx !== null && sIdx !== undefined ? player.data.skills[sIdx] : null;
+            btn.className = `p-1 rounded-lg font-bold text-white shadow-lg flex flex-col items-center justify-center ${SLOT_FIXED_COLORS[0] || 'bg-gray-700'} h-12 w-full text-[10px] truncate leading-tight relative`;
+            btn.innerHTML = (sInfo ? sInfo.name : 'Base') + '<span class="absolute top-0.5 right-0.5 text-[8px] text-yellow-300">🔒</span>';
+            btn.disabled = true;
+            btn.title = 'This slot is locked and cannot be changed';
+        } else if (sIdx === 'woh') {
             btn.className = `p-1 rounded-lg font-bold text-black shadow-lg active:scale-95 flex flex-col items-center justify-center bg-yellow-400 h-12 w-full text-[10px] truncate leading-tight`;
             btn.innerHTML = '☀️ WoH';
+            btn.onclick = () => openSkillModal(i);
         } else if (sIdx !== null && sIdx !== undefined) {
             const sInfo = player.data.skills[sIdx];
             if (!sInfo) {
-                // Stale or out-of-bounds skill index — render as empty slot
                 btn.className = `p-1 rounded-lg font-bold text-gray-500 bg-gray-800 border-2 border-dashed border-gray-600 active:scale-95 flex items-center justify-center h-12 w-full text-xl`;
                 btn.innerHTML = '+';
+                btn.onclick = () => openSkillModal(i);
             } else {
-                btn.className = `p-1 rounded-lg font-bold text-white shadow-lg active:scale-95 flex flex-col items-center justify-center ${SLOT_FIXED_COLORS[i]} h-12 w-full text-[10px] truncate leading-tight`;
+                let slotColor = SLOT_FIXED_COLORS[i] || (i === 5 ? 'bg-purple-700' : 'bg-green-700');
+                btn.className = `p-1 rounded-lg font-bold text-white shadow-lg active:scale-95 flex flex-col items-center justify-center ${slotColor} h-12 w-full text-[10px] truncate leading-tight`;
                 btn.textContent = sInfo.name;
+                btn.onclick = () => openSkillModal(i);
             }
         } else {
             btn.className = `p-1 rounded-lg font-bold text-gray-500 bg-gray-800 border-2 border-dashed border-gray-600 active:scale-95 flex items-center justify-center h-12 w-full text-xl`;
-            btn.innerHTML = '+';
+            btn.innerHTML = i === 5 ? '⚡' : '+';
+            btn.onclick = () => openSkillModal(i);
         }
-        btn.onclick = () => openSkillModal(i);
         skillSlots.appendChild(btn);
     }
 

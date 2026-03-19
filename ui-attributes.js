@@ -38,8 +38,8 @@ function showAttributes() {
         // +5 button disabled logic
         let plus5Disabled = (currentVal >= attrCap || player.statPoints < 5) ? 'disabled' : '';
 
-        // +100 button disabled logic
-        let plus100Disabled = (currentVal >= attrCap || player.statPoints < 100) ? 'disabled' : '';
+        // +50 button disabled logic
+        let plus50Disabled = (currentVal >= attrCap || player.statPoints < 50) ? 'disabled' : '';
 
         // - button: disabled if at class minimum (permanent base)
         let minusDisabled = currentVal <= minVal ? 'disabled' : '';
@@ -47,8 +47,8 @@ function showAttributes() {
         // -5 button: disabled if fewer than 5 levels above minimum
         let minus5Disabled = (currentVal - 5) < minVal ? 'disabled' : '';
 
-        // -100 button: disabled if fewer than 100 levels above minimum
-        let minus100Disabled = (currentVal - 100) < minVal ? 'disabled' : '';
+        // -50 button: disabled if fewer than 50 levels above minimum
+        let minus50Disabled = (currentVal - 50) < minVal ? 'disabled' : '';
 
         let capDisplay = ` / ${attrCap}`;
         let levelDisplay = `Lv. ${currentVal}${capDisplay}`;
@@ -64,12 +64,12 @@ function showAttributes() {
             </div>
             <div class="flex gap-2 w-full items-stretch">
                 <div class="flex flex-col gap-1 flex-1">
-                    <button onclick="deallocateAttribute('${a.id}',100)" class="w-full bg-red-800 hover:bg-red-700 py-1 rounded text-white font-bold transition active:scale-95 border border-red-600 text-xs disabled:opacity-50" ${minus100Disabled}>- 100</button>
+                    <button onclick="deallocateAttribute('${a.id}',50)" class="w-full bg-red-800 hover:bg-red-700 py-1 rounded text-white font-bold transition active:scale-95 border border-red-600 text-xs disabled:opacity-50" ${minus50Disabled}>- 50</button>
                     <button onclick="deallocateAttribute('${a.id}',5)" class="w-full bg-red-800 hover:bg-red-700 py-1 rounded text-white font-bold transition active:scale-95 border border-red-600 text-xs disabled:opacity-50" ${minus5Disabled}>- 5</button>
                     <button onclick="deallocateAttribute('${a.id}',1)" class="w-full bg-red-800 hover:bg-red-700 py-1 rounded text-white font-bold transition active:scale-95 border border-red-600 text-sm disabled:opacity-50" ${minusDisabled}>-</button>
                 </div>
                 <div class="flex flex-col gap-1 flex-1">
-                    <button onclick="allocateAttribute('${a.id}',100)" class="w-full bg-green-700 hover:bg-green-600 py-1 rounded text-white font-bold transition active:scale-95 border border-green-500 text-xs disabled:opacity-50" ${plus100Disabled}>+ 100</button>
+                    <button onclick="allocateAttribute('${a.id}',50)" class="w-full bg-green-700 hover:bg-green-600 py-1 rounded text-white font-bold transition active:scale-95 border border-green-500 text-xs disabled:opacity-50" ${plus50Disabled}>+ 50</button>
                     <button onclick="allocateAttribute('${a.id}',5)" class="w-full bg-green-700 hover:bg-green-600 py-1 rounded text-white font-bold transition active:scale-95 border border-green-500 text-xs disabled:opacity-50" ${plus5Disabled}>+ 5</button>
                     <button onclick="allocateAttribute('${a.id}',1)" class="w-full bg-green-700 hover:bg-green-600 py-1 rounded text-white font-bold transition active:scale-95 border border-green-500 text-sm disabled:opacity-50" ${plusDisabled}>+</button>
                 </div>
@@ -154,7 +154,8 @@ function getTotalSpentPoints() {
 }
 
 function getMaxAttributePoints() {
-    return player.lvl * 2;
+    // Levels 1-50 contribute 1 point each; levels above 50 contribute 2 points each
+    return Math.min(player.lvl, 50) + Math.max(0, player.lvl - 50) * 2;
 }
 
 function clampAttributes() {

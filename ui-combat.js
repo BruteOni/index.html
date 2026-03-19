@@ -114,7 +114,8 @@ function showDamageNumber(targetId, damage, isCrit) {
     const target = document.getElementById(targetId);
     if (!target) return;
     const floater = document.createElement('div');
-    floater.className = 'damage-number' + (isCrit ? ' crit' : '');
+    let isPlayerTarget = targetId === 'player-avatar-container';
+    floater.className = 'damage-number' + (isCrit ? ' crit' : '') + (isPlayerTarget && !isCrit ? ' player-dmg' : '');
     floater.innerText = isCrit ? `CRIT! -${damage}` : `-${damage}`;
     target.appendChild(floater);
     setTimeout(() => { if (floater.parentNode) floater.remove(); }, 1000);
@@ -683,6 +684,15 @@ function updateCombatUI() {
     if (ui.uiModeBadge) ui.uiModeBadge.innerText = modeText;
 
     if (ui.playerAvatar) setAvatarDisplay('combat-player-avatar', player.data.avatar);
+    // Black Market Tier 1: avatar glow border
+    let avatarContainer = document.getElementById('player-avatar-container');
+    if (avatarContainer) {
+        if ((globalProgression.blackMarketTier || 0) >= 1) {
+            avatarContainer.classList.add('bm-avatar-glow');
+        } else {
+            avatarContainer.classList.remove('bm-avatar-glow');
+        }
+    }
     if (ui.playerClass) ui.playerClass.innerText = `${player.data.name} Lv.${player.lvl}`;
     
     if (ui.hpText) ui.hpText.innerText = `${Math.ceil(Math.max(0, player.currentHp))}/${player.maxHp}`;
@@ -861,6 +871,42 @@ function renderSkills() {
     grid.appendChild(makeSkillBtn(2, true, false));
     grid.appendChild(makeSkillBtn(3, true, false));
     grid.appendChild(makeSkillBtn(4, true, false));
+
+    // 6th skill slot (Black Market Tier 2)
+    if ((globalProgression.blackMarketTier || 0) >= 2) {
+        grid.appendChild(makeSkillBtn(5, true, false));
+    }
+
+    // Skip Turn button: show when player is stunned or ALL equipped skills are on cooldown
+    let oldSkip = document.getElementById('btn-skip-turn');
+    if (oldSkip) oldSkip.remove();
+    if (isPlayerTurn && combatActive && !isAutoBattle) {
+        let maxSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
+        let allOnCooldown = true;
+        let anySkill = false;
+        for (let si = 0; si < maxSlots; si++) {
+            let sIdx = player.equippedSkills[si];
+            if (sIdx !== null && sIdx !== undefined && sIdx !== 'woh') {
+                anySkill = true;
+                let cd = player.skillCooldowns[sIdx] || 0;
+                let silenced = player.silencedSlots && player.silencedSlots[si] > 0;
+                if (cd <= 0 && !silenced) { allOnCooldown = false; break; }
+            }
+        }
+        let needsSkip = player.stunned > 0 || (anySkill && allOnCooldown);
+        if (needsSkip) {
+            let skipBtn = document.createElement('button');
+            skipBtn.id = 'btn-skip-turn';
+            skipBtn.className = 'w-full mt-2 bg-yellow-700 hover:bg-yellow-600 border border-yellow-500 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md';
+            skipBtn.innerHTML = player.stunned > 0 ? '⏭ Stunned — Skip Turn' : '⏭ Skip Turn (All Skills on CD)';
+            skipBtn.onclick = skipPlayerTurn;
+            container.appendChild(skipBtn);
+            // Auto-skip when stunned after short delay
+            if (player.stunned > 0 && !isAutoBattle) {
+                setTimeout(() => { if (isPlayerTurn && combatActive && player.stunned > 0 && !isAutoBattle) skipPlayerTurn(); }, 1500);
+            }
+        }
+    }
 }
 
 function addLog(msg, colorClass) {
@@ -874,6 +920,15 @@ function addLog(msg, colorClass) {
         logDiv.removeChild(logDiv.firstChild);
     }
     logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function skipPlayerTurn() {
+    if (!isPlayerTurn || !combatActive) return;
+    addLog('⏭ Turn skipped.', 'text-yellow-400');
+    isPlayerTurn = false;
+    let skipBtn = document.getElementById('btn-skip-turn');
+    if (skipBtn) skipBtn.remove();
+    setTimeout(() => executeEnemyTurns(0), 400);
 }
 
 function triggerAnim(elementId, animClass) {
@@ -929,7 +984,8 @@ function processAutoTurn() {
     }
 
     let available = [];
-    for(let i=0; i<5; i++) {
+    let maxSkillSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
+    for(let i=0; i<maxSkillSlots; i++) {
         let sIdx = player.equippedSkills[i];
         // Skip silenced slots
         if(player.silencedSlots && player.silencedSlots[i] > 0) continue;
@@ -1059,6 +1115,8 @@ function usePlayerSkill(slotIndex) {
     (globalProgression.skillTreeEnhancements || []).forEach(enh => {
         if(enh.type === 'skillCDReduc') cdReduc += ENHANCEMENT_DEFS.skillCDReduc.vals[enh.rarity] || 0;
     });
+    // Black Market Tier 5: -2 to all skill cooldowns
+    if ((globalProgression.blackMarketTier || 0) >= 5) cdReduc += 2;
     player.skillCooldowns[skillIdx] = Math.max(0, skill.cd + 1 - cdReduc);
 
     let baseDmg = getBaseDamage();
@@ -1134,6 +1192,13 @@ function usePlayerSkill(slotIndex) {
                     addLog(`Missed ${target.name}!`, "text-gray-500");
                     showFloatText(`enemy-card-${tIdx}`, `MISS`, 'text-gray-400');
                     if(target.dodgeTurns > 0) target.dodgeTurns--;
+                    // Black Market Tier 4: Phantom Strike — deal 50% base damage on miss
+                    if ((globalProgression.blackMarketTier || 0) >= 4 && target.currentHp > 0) {
+                        let phantomDmg = Math.max(1, Math.floor(getBaseDamage() * 0.5));
+                        target.currentHp = Math.max(0, target.currentHp - phantomDmg);
+                        _pendingDamageNumbers.push({ id: `enemy-card-${tIdx}`, dmg: phantomDmg, crit: false });
+                        addLog(`👻 Phantom Strike! ${phantomDmg} damage despite miss!`, 'text-blue-400 font-bold');
+                    }
                     return; 
                 }
                 
@@ -1833,6 +1898,17 @@ function startPlayerTurn() {
 
     if(player.stunned > 0) {
         player.stunned--; addLog(`You are Stunned!`, 'text-yellow-400 font-bold');
+        // Black Market Tier 3: stun retaliation — deal 50% base damage when stun ends
+        if ((globalProgression.blackMarketTier || 0) >= 3 && player.stunned === 0) {
+            let retaliationDmg = Math.max(1, Math.floor(getBaseDamage() * 0.5));
+            enemies.forEach((e, eIdx) => {
+                if (e.currentHp > 0) {
+                    e.currentHp = Math.max(0, e.currentHp - retaliationDmg);
+                    showFloatText(`enemy-card-${eIdx}`, `-${retaliationDmg} 💥`, 'text-orange-400');
+                }
+            });
+            addLog(`💥 Stun Retaliation! Dealt ${retaliationDmg} damage to all enemies!`, 'text-orange-400 font-bold');
+        }
         isPlayerTurn = false; setTimeout(() => executeEnemyTurns(0), 800); return;
     }
 
@@ -1931,6 +2007,45 @@ function endBattle(playerWon) {
             globalProgression.inventory.magic_stone = (globalProgression.inventory.magic_stone || 0) + killCount;
             rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-orange-700 text-orange-400 font-bold shadow-md">⚔️ +${invasionGoldGain} Gold</div>`;
             rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-600 text-blue-300 font-bold shadow-md">💎 +${killCount} Magic Stone${killCount > 1 ? 's' : ''}</div>`;
+
+            // Invasion: each enemy has a chance to drop one random item from the full item pool
+            enemies.forEach(() => {
+                if (!rollWithDropRate(0.35)) return; // 35% base chance to drop anything
+                // Build full item pool: consumables, materials, usables, gear
+                let poolRoll = Math.random();
+                if (poolRoll < 0.35) {
+                    // Consumable drop
+                    let consumableIds = Object.keys(CONSUMABLES);
+                    let picked = consumableIds[Math.floor(Math.random() * consumableIds.length)];
+                    if ((globalProgression.inventory[picked] || 0) < INVENTORY_STACK_CAP) {
+                        globalProgression.inventory[picked] = (globalProgression.inventory[picked] || 0) + 1;
+                        let c = CONSUMABLES[picked];
+                        rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-green-600 text-green-300 font-bold text-xs shadow-md">+1 ${c.icon} ${c.name}</div>`;
+                    }
+                } else if (poolRoll < 0.55) {
+                    // Material drop
+                    let matPool = ['herb_red','herb_blue','fish_1','fish_2','fish_3','fish_4','fish_5','fish_6','soul_pebbles','ench_common','ench_rare','ench_epic','ench_legendary','titan_shard','magic_stone'];
+                    let picked = matPool[Math.floor(Math.random() * matPool.length)];
+                    globalProgression.inventory[picked] = (globalProgression.inventory[picked] || 0) + 1;
+                    rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-blue-600 text-blue-300 font-bold text-xs shadow-md">+1 ${MAT_ICONS[picked] || '📦'} ${MAT_NAMES[picked] || picked}</div>`;
+                } else if (poolRoll < 0.70) {
+                    // Usable item drop
+                    let usablePool = Object.keys(USABLE_ITEMS);
+                    let picked = usablePool[Math.floor(Math.random() * usablePool.length)];
+                    let uItem = USABLE_ITEMS[picked];
+                    if (!globalProgression.usableItems) globalProgression.usableItems = {};
+                    globalProgression.usableItems[picked] = (globalProgression.usableItems[picked] || 0) + 1;
+                    rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-yellow-600 text-yellow-300 font-bold text-xs shadow-md">+1 ${uItem.icon} ${uItem.name}</div>`;
+                } else {
+                    // Gear drop
+                    let rRoll = Math.random();
+                    let rarity = rRoll < 0.005 ? 'mythic' : rRoll < 0.01 ? 'legendary' : rRoll < 0.05 ? 'epic' : rRoll < 0.20 ? 'rare' : 'common';
+                    let newEquip = rollEquipment(rarity);
+                    globalProgression.equipInventory.push(newEquip);
+                    globalProgression.newItems[newEquip.type.startsWith('ring') ? 'ring' : newEquip.type] = true;
+                    rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border-2 rarity-${newEquip.rarity} text-gray-300 font-bold text-xs shadow-md">⚔️ ${newEquip.icon} ${newEquip.name}</div>`;
+                }
+            });
 
             // Invasion is continuous — check if player has energy to continue
             let hasEnergy = (globalProgression.energy || 0) >= 1;

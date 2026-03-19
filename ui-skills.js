@@ -37,6 +37,8 @@ const ENHANCEMENT_DEFS = {
 let activeSkillSlot = null;
 function openSkillModal(slotIndex) {
     if (!player || !player.data) return;
+    // Slot 0 is permanently locked (base attack)
+    if (slotIndex === 0) return;
     activeSkillSlot = slotIndex;
     const list = document.getElementById('skill-modal-list'); list.innerHTML = '';
 
@@ -57,7 +59,7 @@ function openSkillModal(slotIndex) {
     document.getElementById('modal-skills').style.display = 'flex';
 }
 function unequipSkill() {
-    if(activeSkillSlot !== null) { player.equippedSkills[activeSkillSlot] = null; playSound('click'); saveGame(); closeSkillModal(); }
+    if(activeSkillSlot !== null && activeSkillSlot !== 0) { player.equippedSkills[activeSkillSlot] = null; playSound('click'); saveGame(); closeSkillModal(); }
 }
 function closeSkillModal() { document.getElementById('modal-skills').style.display = 'none'; showCharacter(); }
 
@@ -117,11 +119,9 @@ function showSkillMenu() {
     let smsDmg = document.getElementById('sms-dmg');
     let smsDef = document.getElementById('sms-def');
     let smsHp = document.getElementById('sms-hp');
-    let smsAtk = document.getElementById('sms-atk');
     if (smsDmg) smsDmg.innerText = player.skillMenuBonusDmgPct;
     if (smsDef) smsDef.innerText = player.skillMenuBonusDefPct;
     if (smsHp) smsHp.innerText = player.skillMenuBonusHpPct;
-    if (smsAtk) smsAtk.innerText = player.skillMenuInfiniteAtk;
 
     let container = document.getElementById('skill-menu-nodes');
     if (!container) return;
@@ -233,6 +233,13 @@ function showSkillMenu() {
         let nextNode = document.getElementById(`skill-menu-node-${progress < SKILL_MENU_TOTAL ? progress : SKILL_MENU_TOTAL - 1}`);
         if (nextNode) nextNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
+
+    // Show Black Market button when tree is maxed (25 nodes done) and player has excess SP
+    let bmBtn = document.getElementById('btn-black-market-access');
+    if (bmBtn) {
+        let treeMaxed = (player.skillMenuProgress || 0) >= SKILL_MENU_TOTAL;
+        bmBtn.classList.toggle('hidden', !treeMaxed);
+    }
 }
 
 function unlockSkillMenuNode(choice) {
