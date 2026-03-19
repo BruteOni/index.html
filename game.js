@@ -563,12 +563,18 @@ function saveGame() {
             console.error('saveGame: class save write failed:', e);
         }
     }
-    // Persist saved enemies so they survive page reloads
+    // Persist saved enemies so they survive page reloads (both global and per-class)
     try {
         if (savedEnemies && typeof savedEnemies === 'object' && Object.keys(savedEnemies).length > 0) {
             localStorage.setItem('EternalAscensionSavedEnemies', JSON.stringify(savedEnemies));
+            if (player && player.classId) {
+                localStorage.setItem('EternalAscensionSavedEnemies_' + player.classId, JSON.stringify(savedEnemies));
+            }
         } else {
             localStorage.removeItem('EternalAscensionSavedEnemies');
+            if (player && player.classId) {
+                localStorage.removeItem('EternalAscensionSavedEnemies_' + player.classId);
+            }
         }
     } catch(e) { /* ignore storage errors */ }
 }
@@ -745,9 +751,11 @@ function loadGameAndContinue() {
                 player.data = { ...player.data, avatar: genderAvatars[globalProgression.gender] };
             }
 
-            // Restore saved enemies from previous session
+            // Restore saved enemies — prefer class-specific key, fall back to global
+            savedEnemies = {};
             try {
-                const seData = localStorage.getItem('EternalAscensionSavedEnemies');
+                const classSeKey = 'EternalAscensionSavedEnemies_' + player.classId;
+                const seData = localStorage.getItem(classSeKey) || localStorage.getItem('EternalAscensionSavedEnemies');
                 if (seData) {
                     const parsed = JSON.parse(seData);
                     if (parsed && typeof parsed === 'object') {
@@ -978,15 +986,17 @@ function closeConfirmNewGame() {
 function confirmNewGameYes() {
     closeConfirmNewGame();
     pendingNewGame = true;
+    savedEnemies = {};  // Clear in-memory enemies
     // Wipe ALL save data so no stale class saves persist
     localStorage.removeItem('EternalAscensionSaveDataV1');
     localStorage.removeItem('fogFighterSaveDataV22');
     localStorage.removeItem('fogFighterSaveDataV21');
     localStorage.removeItem('fogFighterSaveDataV20');
     localStorage.removeItem('EternalAscensionSavedEnemies');
-    // Remove all per-class saves
+    // Remove all per-class saves and per-class enemy data
     ['warrior', 'mage', 'paladin', 'ninja', 'cleric', 'archer'].forEach(cls => {
         localStorage.removeItem('EternalAscensionClassSave_' + cls);
+        localStorage.removeItem('EternalAscensionSavedEnemies_' + cls);
     });
     showClassSelect();
 }
@@ -994,6 +1004,15 @@ function confirmNewGameYes() {
 function changeClass() {
     const saveKey = 'EternalAscensionClassSave_' + player.classId;
     localStorage.setItem(saveKey, JSON.stringify({ global: globalProgression, pState: player }));
+    // Save current class's enemies to a class-specific key
+    if (savedEnemies && Object.keys(savedEnemies).length > 0) {
+        localStorage.setItem('EternalAscensionSavedEnemies_' + player.classId, JSON.stringify(savedEnemies));
+    } else {
+        localStorage.removeItem('EternalAscensionSavedEnemies_' + player.classId);
+    }
+    // Clear in-memory savedEnemies so the next class starts clean
+    savedEnemies = {};
+    localStorage.removeItem('EternalAscensionSavedEnemies');
     pendingNewGame = false;
     switchScreen('screen-class-select');
 }
@@ -1111,9 +1130,21 @@ function selectGenderAndStart(gender, chosenAvatar) {
             globalProgression.gender = gender;
             player.data = { ...player.data, avatar: finalAvatar };
             setAvatarDisplay('hub-avatar', player.data.avatar);
+            // Restore class-specific saved enemies
+            savedEnemies = {};
+            try {
+                const seData = localStorage.getItem('EternalAscensionSavedEnemies_' + pendingClassId);
+                if (seData) {
+                    const parsed = JSON.parse(seData);
+                    if (parsed && typeof parsed === 'object') {
+                        savedEnemies = parsed;
+                    }
+                }
+            } catch (e) { /* ignore */ }
         } else if (!isNewGame) {
             // Switching to a new class with no prior save: start a fresh game for that class
             startGame(pendingClassId);
+            savedEnemies = {};
             globalProgression.gender = gender;
             player.data = { ...player.data, avatar: finalAvatar };
             setAvatarDisplay('hub-avatar', player.data.avatar);
@@ -1123,6 +1154,7 @@ function selectGenderAndStart(gender, chosenAvatar) {
         } else {
             // Explicit new game: full reset
             startGame(pendingClassId);
+            savedEnemies = {};
             globalProgression.gender = gender;
             player.data = { ...player.data, avatar: finalAvatar };
             setAvatarDisplay('hub-avatar', player.data.avatar);
@@ -1266,6 +1298,7 @@ window.startGame = function(classId = 'warrior') {
     globalProgression.attributes = getClassBaseAttributes(classId);
     globalProgression.inventory.pot_i1 = 30;
     player = createFreshPlayer(classId);
+    savedEnemies = {};  // Fresh game = no persisted enemies
     player.maxHp = calculateMaxHp();
     player.currentHp = player.maxHp;
     // Grant one random starting pet
