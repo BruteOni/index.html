@@ -1,7 +1,7 @@
 // --- SKILL SLOT COLOR CONSTANTS ---
 const SLOT_FIXED_COLORS = ['bg-gray-700', 'bg-green-700', 'bg-green-700', 'bg-green-700', 'bg-green-700'];
 
-// Keep ENHANCEMENT_DEFS for backward compatibility (WoH still usable in old saves; hpBoost still read in calculateMaxHp)
+// Keep ENHANCEMENT_DEFS for backward compatibility (hpBoost still read in calculateMaxHp)
 const ENHANCEMENT_RARITIES = ['normal', 'rare', 'epic', 'legendary'];
 const ENHANCEMENT_RARITY_COLORS = { normal: 'text-white', rare: 'text-blue-500', epic: 'text-purple-500', legendary: 'text-orange-500' };
 const ENHANCEMENT_RARITY_BORDERS = { normal: 'border-gray-600', rare: 'border-blue-500', epic: 'border-purple-500', legendary: 'border-yellow-500' };
@@ -31,9 +31,6 @@ const ENHANCEMENT_DEFS = {
     skillCDReduc: { name: 'Skill CD Reduc', icon: '⏱️', type: 'passive', stackable: false,
         desc: (r) => `-1 Turn Cooldown for skills`,
         vals: { legendary: 1 } },
-    wayOfHeavens: { name: 'Way of the Heavens', icon: '☀️', type: 'active', stackable: false,
-        desc: (r) => `Strike ALL enemies for Base Damage + 20% HP + Bleed, Burn (5% HP/t), Poison. 10-turn global cooldown.`,
-        vals: { legendary: 0.30 } }
 };
 
 // --- SKILL MODAL UI (keep for equip system) ---
@@ -55,21 +52,6 @@ function openSkillModal(slotIndex) {
         };
         list.appendChild(btn);
     });
-
-    // Add Way of the Heavens as equippable skill for all classes if unlocked (backward compat)
-    let hasWoh = (globalProgression.skillTreeEnhancements || []).some(e => e.type === 'wayOfHeavens');
-    if(hasWoh) {
-        let isEquipped = player.equippedSkills.includes('woh');
-        let wohBtn = document.createElement('button');
-        wohBtn.className = `p-3 rounded-lg flex justify-between items-center text-left ${isEquipped ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-yellow-900 hover:bg-yellow-800 transition active:scale-95 border border-yellow-500'}`;
-        wohBtn.disabled = isEquipped;
-        wohBtn.innerHTML = `<div><div class="font-bold text-yellow-400">☀️ Way of the Heavens</div><div class="text-xs text-gray-300">Strike ALL enemies for Base Damage + 20% HP + Bleed, Burn, Poison.</div><div class="text-[10px] text-yellow-400">CD: 10 turns | Legendary</div></div> <div class="text-2xl">${isEquipped?'✅':''}</div>`;
-        if(!isEquipped) wohBtn.onclick = () => {
-            player.equippedSkills[activeSkillSlot] = 'woh';
-            playSound('click'); saveGame(); closeSkillModal();
-        };
-        list.appendChild(wohBtn);
-    }
 
     document.getElementById('modal-skills').style.display = 'flex';
 }
@@ -101,14 +83,13 @@ function showSkillUnlockPopup(skillIdx) {
     document.body.appendChild(popup);
 }
 
-// --- SKILL MENU (new 50-node linear system) ---
+// --- SKILL MENU (new 25-node linear system) ---
 
-// Skill unlock nodes (0-indexed): node indices 4, 9, 14, 19, 24, 29 (display nodes 5, 10, 15, 20, 25, 30) unlock skills 3-8
-const SKILL_MENU_SKILL_NODES = [4, 9, 14, 19, 24, 29];
-const SKILL_MENU_TOTAL = 50;
+// Skill unlock nodes (0-indexed): node indices 4, 9, 14, 19, 24 (display nodes 5, 10, 15, 20, 25) unlock skills 3-7
+const SKILL_MENU_SKILL_NODES = [4, 9, 14, 19, 24];
+const SKILL_MENU_TOTAL = 25;
 
 function getSkillMenuNodeInfo(index) {
-    if (index === SKILL_MENU_TOTAL - 1) return { type: 'infinite' };
     let skillPos = SKILL_MENU_SKILL_NODES.indexOf(index);
     if (skillPos !== -1) return { type: 'skill', skillIdx: 3 + skillPos };
     return { type: 'stat' };
@@ -123,6 +104,8 @@ function showSkillMenu() {
     if (player.skillMenuBonusHpPct === undefined) player.skillMenuBonusHpPct = 0;
     if (player.skillMenuInfiniteAtk === undefined) player.skillMenuInfiniteAtk = 0;
     if (!player.skillMenuNodeChoices) player.skillMenuNodeChoices = [];
+    if (player.skillMenuLastStatChoice === undefined) player.skillMenuLastStatChoice = null;
+    if (player.skillMenuConsecutiveSameCount === undefined) player.skillMenuConsecutiveSameCount = 0;
 
     // Update SP counter
     let spEl = document.getElementById('tree-sp');
@@ -143,6 +126,16 @@ function showSkillMenu() {
     container.innerHTML = '';
 
     let progress = player.skillMenuProgress || 0;
+    let lastStat = player.skillMenuLastStatChoice || null;
+    let sameCount = player.skillMenuConsecutiveSameCount || 0;
+
+    // Helper: get display value for a stat option on the next node
+    function getStatDisplayValue(statKey) {
+        if (statKey === lastStat) {
+            return Math.round(1 * Math.pow(0.5, sameCount) * 10000) / 10000;
+        }
+        return 1;
+    }
 
     for (let i = 0; i < SKILL_MENU_TOTAL; i++) {
         let nodeInfo = getSkillMenuNodeInfo(i);
@@ -153,24 +146,7 @@ function showSkillMenu() {
         card.id = `skill-menu-node-${i}`;
         card.style.transition = 'all 0.3s';
 
-        if (nodeInfo.type === 'infinite') {
-            // Node 50 - special repeatable
-            if (isNext || isUnlocked) {
-                card.className = 'w-full rounded-xl border-2 px-3 py-3 shadow-md bg-yellow-900 border-yellow-400 text-yellow-200';
-                card.innerHTML = `
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="font-black text-sm">Node 50 — ∞</span>
-                        <span class="text-xs font-bold text-yellow-400">Repeatable</span>
-                    </div>
-                    <div class="text-xs text-yellow-300 mb-2">Each SP spent gives <strong>+1% Attack</strong> permanently.<br>Times claimed: <strong>${player.skillMenuInfiniteAtk}</strong></div>
-                    <button onclick="unlockSkillMenuNode('infinite')" class="w-full bg-yellow-600 hover:bg-yellow-500 active:scale-95 font-bold text-sm py-2 rounded-lg transition border border-yellow-300 shadow">
-                        ✨ Spend SP (+1% ATK) — ${player.skillPoints} SP available
-                    </button>`;
-            } else {
-                card.className = 'w-full rounded-xl border-2 px-3 py-2 opacity-40 bg-gray-800 border-gray-600 text-gray-500';
-                card.innerHTML = `<div class="text-xs text-center font-bold">Node 50 — ∞ +1% ATK (Locked)</div>`;
-            }
-        } else if (nodeInfo.type === 'skill') {
+        if (nodeInfo.type === 'skill') {
             let skillName = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].name : '???';
             let skillDesc = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].desc : '';
             if (isUnlocked) {
@@ -205,9 +181,12 @@ function showSkillMenu() {
             // Stat choice node
             let choiceIcon = '', choiceLabel = '';
             let stored = player.skillMenuNodeChoices ? player.skillMenuNodeChoices[i] : null;
-            if (stored === 'dmg') { choiceIcon = '⚔️'; choiceLabel = '+1% DMG'; }
-            else if (stored === 'def') { choiceIcon = '🛡️'; choiceLabel = '+1% DEF'; }
-            else if (stored === 'hp') { choiceIcon = '❤️'; choiceLabel = '+1% HP'; }
+            // Handle both old string format and new object format
+            let storedStat = stored && typeof stored === 'object' ? stored.stat : stored;
+            let storedVal = stored && typeof stored === 'object' ? stored.value : 1;
+            if (storedStat === 'dmg') { choiceIcon = '⚔️'; choiceLabel = `+${storedVal}% DMG`; }
+            else if (storedStat === 'def') { choiceIcon = '🛡️'; choiceLabel = `+${storedVal}% DEF`; }
+            else if (storedStat === 'hp') { choiceIcon = '❤️'; choiceLabel = `+${storedVal}% HP`; }
 
             if (isUnlocked) {
                 card.className = 'w-full rounded-xl border-2 px-3 py-2 bg-gray-700 border-gray-500 text-gray-100 shadow';
@@ -222,17 +201,20 @@ function showSkillMenu() {
                 card.className = 'w-full rounded-xl border-2 px-3 py-3 shadow-lg bg-gray-700 border-yellow-400 text-white skill-menu-next-glow';
                 let hasPoints = player.skillPoints >= 1;
                 let btnClass = hasPoints ? 'hover:bg-opacity-80 active:scale-95 cursor-pointer' : 'opacity-50 cursor-not-allowed';
+                let dmgVal = getStatDisplayValue('dmg');
+                let defVal = getStatDisplayValue('def');
+                let hpVal = getStatDisplayValue('hp');
                 card.innerHTML = `
                     <div class="font-bold text-sm mb-2">Node ${i+1} — Choose your bonus (1 SP)</div>
                     <div class="grid grid-cols-3 gap-2">
                         <button onclick="unlockSkillMenuNode('dmg')" ${hasPoints?'':'disabled'} class="bg-orange-700 border border-orange-400 ${btnClass} font-bold text-xs py-2 rounded-lg transition text-orange-100 shadow flex flex-col items-center">
-                            <span class="text-lg">⚔️</span>+1% DMG
+                            <span class="text-lg">⚔️</span>+${dmgVal}% DMG
                         </button>
                         <button onclick="unlockSkillMenuNode('def')" ${hasPoints?'':'disabled'} class="bg-blue-700 border border-blue-400 ${btnClass} font-bold text-xs py-2 rounded-lg transition text-blue-100 shadow flex flex-col items-center">
-                            <span class="text-lg">🛡️</span>+1% DEF
+                            <span class="text-lg">🛡️</span>+${defVal}% DEF
                         </button>
                         <button onclick="unlockSkillMenuNode('hp')" ${hasPoints?'':'disabled'} class="bg-green-700 border border-green-400 ${btnClass} font-bold text-xs py-2 rounded-lg transition text-green-100 shadow flex flex-col items-center">
-                            <span class="text-lg">❤️</span>+1% HP
+                            <span class="text-lg">❤️</span>+${hpVal}% HP
                         </button>
                     </div>`;
             } else {
@@ -257,20 +239,6 @@ function unlockSkillMenuNode(choice) {
 
     let progress = player.skillMenuProgress || 0;
     let nodeInfo = getSkillMenuNodeInfo(progress);
-
-    // Handle infinite node (node 50, index 49) - also allow if already at 50
-    if (choice === 'infinite' || (progress >= SKILL_MENU_TOTAL - 1 && nodeInfo.type === 'infinite')) {
-        if (player.skillPoints < 1) return;
-        player.skillPoints--;
-        player.skillMenuInfiniteAtk = (player.skillMenuInfiniteAtk || 0) + 1;
-        player.maxHp = calculateMaxHp();
-        saveGame();
-        playSound('buff');
-        // Sparkle animation
-        _spawnSkillMenuSparkles(`skill-menu-node-${SKILL_MENU_TOTAL - 1}`);
-        showSkillMenu();
-        return;
-    }
 
     if (progress >= SKILL_MENU_TOTAL) return;
 
@@ -297,20 +265,41 @@ function unlockSkillMenuNode(choice) {
         return;
     }
 
-    // Stat choice
-    if (choice === 'dmg') {
-        player.skillMenuBonusDmgPct = (player.skillMenuBonusDmgPct || 0) + 1;
-    } else if (choice === 'def') {
-        player.skillMenuBonusDefPct = (player.skillMenuBonusDefPct || 0) + 1;
-    } else if (choice === 'hp') {
-        player.skillMenuBonusHpPct = (player.skillMenuBonusHpPct || 0) + 1;
+    // Stat choice with diminishing returns
+    if (player.skillMenuLastStatChoice === undefined) player.skillMenuLastStatChoice = null;
+    if (player.skillMenuConsecutiveSameCount === undefined) player.skillMenuConsecutiveSameCount = 0;
+
+    let lastStat = player.skillMenuLastStatChoice;
+    let sameCount = player.skillMenuConsecutiveSameCount;
+    let bonus;
+
+    if (choice === lastStat) {
+        // Same stat as last choice: apply penalty then increment count
+        bonus = 1 * Math.pow(0.5, sameCount);
+        player.skillMenuConsecutiveSameCount = sameCount + 1;
+    } else if (choice === 'dmg' || choice === 'def' || choice === 'hp') {
+        // Different stat: full 1% bonus, reset consecutive tracking
+        bonus = 1;
+        player.skillMenuConsecutiveSameCount = 1;
+        player.skillMenuLastStatChoice = choice;
     } else {
         // Invalid choice, refund
         player.skillPoints++;
         return;
     }
 
-    player.skillMenuNodeChoices[progress] = choice;
+    // Round to reasonable precision
+    bonus = Math.round(bonus * 10000) / 10000;
+
+    if (choice === 'dmg') {
+        player.skillMenuBonusDmgPct = Math.round(((player.skillMenuBonusDmgPct || 0) + bonus) * 10000) / 10000;
+    } else if (choice === 'def') {
+        player.skillMenuBonusDefPct = Math.round(((player.skillMenuBonusDefPct || 0) + bonus) * 10000) / 10000;
+    } else if (choice === 'hp') {
+        player.skillMenuBonusHpPct = Math.round(((player.skillMenuBonusHpPct || 0) + bonus) * 10000) / 10000;
+    }
+
+    player.skillMenuNodeChoices[progress] = { stat: choice, value: bonus };
     player.skillMenuProgress = progress + 1;
     player.maxHp = calculateMaxHp();
     saveGame();
@@ -321,7 +310,7 @@ function unlockSkillMenuNode(choice) {
 
 function resetSkillMenu() {
     if (!player) return;
-    let totalRefund = (player.skillMenuProgress || 0) + (player.skillMenuInfiniteAtk || 0);
+    let totalRefund = (player.skillMenuProgress || 0);
     let confirmed = confirm(`Reset Skill Menu?\nAll % bonuses and unlocked skills (after the first 3) will be reset.\nYou'll get back ${totalRefund} Skill Point${totalRefund !== 1 ? 's' : ''}.`);
     if (!confirmed) return;
 
@@ -332,6 +321,8 @@ function resetSkillMenu() {
     player.skillMenuBonusHpPct = 0;
     player.skillMenuInfiniteAtk = 0;
     player.skillMenuNodeChoices = [];
+    player.skillMenuLastStatChoice = null;
+    player.skillMenuConsecutiveSameCount = 0;
 
     // Reset unlocked skills to starting 3 only
     player.unlockedSkills = [0, 1, 2];
@@ -367,41 +358,4 @@ function _spawnSkillMenuSparkles(nodeId) {
 function showSkillTree() {
     switchScreen('screen-skilltree');
     showSkillMenu();
-}
-
-// Way of the Heavens — backward compat for existing saves
-function useWayOfHeavens() {
-    if(!combatActive || !isPlayerTurn) return;
-    let woh = (globalProgression.skillTreeEnhancements || []).find(e => e.type === 'wayOfHeavens');
-    if(!woh) return;
-    if((player.wayOfHeavensCooldown || 0) > 0) {
-        addLog(`Way of the Heavens: ${player.wayOfHeavensCooldown} turns remaining!`, 'text-gray-400');
-        return;
-    }
-    enemies.forEach((e, i) => {
-        if(e.currentHp <= 0) return;
-        let dmg = getBaseDamage() + Math.floor(e.maxHp * 0.20);
-        e.currentHp = Math.max(0, e.currentHp - dmg);
-        e.bleedStacks = (e.bleedStacks || 0) + 1;
-        e.bleedTurns = Math.max(e.bleedTurns || 0, 3);
-        e.burnTurns = Math.max(e.burnTurns || 0, 1);
-        e.poisonTurns = Math.max(e.poisonTurns || 0, 3);
-        showDamageNumber(`enemy-card-${i}`, dmg, false);
-    });
-    player.wayOfHeavensCooldown = 10;
-    addLog('Way of the Heavens! Strike all enemies for Base Damage + 20% HP + Bleed, Burn, Poison!', 'text-yellow-400');
-    playSound('win');
-    isPlayerTurn = false;
-    saveGame();
-    updateCombatUI(); renderSkills();
-    if (currentMode === 'training') {
-        if(!player.skillCooldowns) player.skillCooldowns = {};
-        Object.keys(player.skillCooldowns).forEach(k => player.skillCooldowns[k] = 0);
-        player.wayOfHeavensCooldown = 0;
-        enemies.forEach(e => { e.currentHp = e.maxHp; });
-        updateCombatUI(); renderSkills();
-        setTimeout(() => startPlayerTurn(), 500);
-    } else {
-        setTimeout(() => executeEnemyTurns(0), 800);
-    }
 }
