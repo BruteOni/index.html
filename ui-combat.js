@@ -36,10 +36,10 @@ function getEnemyBracketStats(level) {
     // Returns { baseHp, baseDmg, baseDef, perLevelMult } for the given level bracket
     let bracket;
     if (level <= 20)       bracket = { baseHp: 200,  baseDmg: 80,  baseDef: 10, mult: 1.0 };
-    else if (level <= 40)  bracket = { baseHp: 260,  baseDmg: 110, baseDef: 20, mult: 1.3 };
-    else if (level <= 60)  bracket = { baseHp: 340,  baseDmg: 150, baseDef: 35, mult: 1.7 };
-    else if (level <= 80)  bracket = { baseHp: 440,  baseDmg: 200, baseDef: 50, mult: 2.2 };
-    else                   bracket = { baseHp: 560,  baseDmg: 260, baseDef: 70, mult: 2.8 };
+    else if (level <= 40)  bracket = { baseHp: 240,  baseDmg: 95,  baseDef: 16, mult: 1.15 };
+    else if (level <= 60)  bracket = { baseHp: 290,  baseDmg: 115, baseDef: 26, mult: 1.35 };
+    else if (level <= 80)  bracket = { baseHp: 350,  baseDmg: 145, baseDef: 38, mult: 1.6 };
+    else                   bracket = { baseHp: 430,  baseDmg: 180, baseDef: 54, mult: 1.9 };
 
     // Level within the bracket (1-based)
     let bracketSize = 20;
@@ -50,7 +50,7 @@ function getEnemyBracketStats(level) {
         levelWithinBracket = level - 80; // continual scaling from level 80
     }
 
-    let scalingFactor = 1 + (levelWithinBracket - 1) * 0.05;
+    let scalingFactor = 1 + (levelWithinBracket - 1) * 0.03;
     return {
         hp:  Math.floor(bracket.baseHp  * bracket.mult * scalingFactor),
         dmg: Math.floor(bracket.baseDmg * bracket.mult * scalingFactor),
@@ -1032,6 +1032,9 @@ function usePlayerSkill(slotIndex) {
     try {
     // SET COOLDOWN IMMEDIATELY so no branch can skip it
     let cdReduc = Math.floor(getEquipBonusStat('bonusCdReduc'));
+    (globalProgression.skillTreeEnhancements || []).forEach(enh => {
+        if(enh.type === 'skillCDReduc') cdReduc += ENHANCEMENT_DEFS.skillCDReduc.vals[enh.rarity] || 0;
+    });
     player.skillCooldowns[skillIdx] = Math.max(0, skill.cd + 1 - cdReduc);
 
     let baseDmg = getBaseDamage();

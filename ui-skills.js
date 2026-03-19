@@ -537,8 +537,6 @@ function rollEnhancement() {
         }
     }
     
-    if(enhType !== 'wayOfHeavens' && enhType !== 'skillCDReduc' && enhType !== 'dropRate') rarity = 'normal';
-    
     return { type: enhType, rarity: rarity };
 }
 

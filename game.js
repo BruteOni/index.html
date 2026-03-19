@@ -797,6 +797,9 @@ function getClassAttrCap(classId, attrId) {
 }
 
 function switchScreen(screenId) {
+    if (typeof clampAttributes === 'function') {
+        try { clampAttributes(); player.maxHp = calculateMaxHp(); } catch(e) { console.error('switchScreen: clampAttributes failed', e); }
+    }
     document.querySelectorAll('.screen').forEach(s => {
         s.classList.remove('active-screen');
         s.classList.remove('hidden');
@@ -1000,6 +1003,7 @@ function toggleGender() {
 
 function showHub() {
     stopMusic();
+    try { clampAttributes(); } catch(e) { console.error('showHub: clampAttributes failed', e); }
     try { player.maxHp = calculateMaxHp(); if(player.currentHp > player.maxHp) player.currentHp = player.maxHp; } catch(e) { console.error('showHub: calculateMaxHp failed', e); }
     player.regenBuffs = []; player.activeBuffs = []; player.skillCooldowns = {};
     player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;

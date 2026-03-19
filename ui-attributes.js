@@ -185,6 +185,9 @@ function clampAttributes() {
             globalProgression.attributes[highest]--;
             excess--;
         }
+    } else if (totalUsed < maxPoints) {
+        // Restore missing points to unspent pool
+        player.statPoints = maxPoints - spent;
     }
 
     player.statPoints = Math.max(0, player.statPoints);

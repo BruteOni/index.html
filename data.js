@@ -152,9 +152,9 @@ const EQUIP_SLOTS = ['head', 'shoulders', 'chest', 'arms', 'waist', 'legs', 'boo
 const RARITIES = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 const RARITY_MULTS = { common: 1, rare: 2, epic: 5, legendary: 10, mythic: 30 };
 // Per-stat rarity multipliers for enemies
-const RARITY_HP_MULTS   = { normal: 1.0, common: 1.0, rare: 1.5, epic: 2.5, legendary: 4.0, mythic: 8.0 };
-const RARITY_DMG_MULTS  = { normal: 1.0, common: 1.0, rare: 1.2, epic: 1.5, legendary: 1.8, mythic: 2.2 };
-const RARITY_DEF_MULTS  = { normal: 1.0, common: 1.0, rare: 1.2, epic: 1.5, legendary: 2.0, mythic: 3.0 };
+const RARITY_HP_MULTS   = { normal: 1.0, common: 1.0, rare: 1.3, epic: 1.8, legendary: 2.5, mythic: 4.5 };
+const RARITY_DMG_MULTS  = { normal: 1.0, common: 1.0, rare: 1.1, epic: 1.3, legendary: 1.5, mythic: 1.8 };
+const RARITY_DEF_MULTS  = { normal: 1.0, common: 1.0, rare: 1.1, epic: 1.3, legendary: 1.6, mythic: 2.2 };
 
 // CLASSES & SKILLS
 const CLASSES = {
