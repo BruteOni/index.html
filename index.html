@@ -214,7 +214,7 @@
                         <span id="hub-char-noti-hero" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center animate-bounce font-bold shadow-lg">!</span>
                     </button>
                     <button onclick="showSkillTree();" class="flex-1 text-sm font-bold px-3 py-2 rounded-xl border border-purple-700 hover:bg-purple-900 transition active:scale-95 text-purple-400 flex items-center justify-center gap-1 relative" style="background: linear-gradient(135deg, #2e1065, #1a2540);">
-                        🌳 Skill Tree
+                        ⚔️ Skills
                         <span id="hub-skill-noti-hero" class="hidden absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse font-bold">!</span>
                     </button>
                 </div>
@@ -665,55 +665,20 @@
         <div class="w-full max-w-xl px-3 flex flex-col">
             <div class="flex justify-between items-center mb-3">
                 <button onclick="showHub()" class="btn-back text-purple-400 px-3 py-2 rounded-lg font-bold flex items-center gap-2 text-sm"><span>⬅️</span> Town</button>
-                <h2 class="text-2xl font-bold text-purple-400">SKILL TREE</h2>
+                <h2 class="text-2xl font-bold text-purple-400">SKILL MENU</h2>
                 <div class="bg-gray-800 px-3 py-1 rounded-full border border-purple-500 font-bold text-purple-300 shadow-md text-sm">SP: <span id="tree-sp">0</span></div>
             </div>
-            
-            <!-- Warrior Tree -->
-            <div id="tree-warrior" class="w-full hidden">
-                <div class="tree-class-header flex justify-between items-center mb-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700">
-                    <p class="text-xs text-gray-400">Unlock nodes to gain enhancements & skills. Progress shows when a node is ready.</p>
-                </div>
-                <!-- dual-path-container inserted by JS -->
+            <!-- Bonus summary bar -->
+            <div id="skill-menu-summary" class="w-full mb-3 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700 text-center text-xs font-bold flex justify-center gap-3 flex-wrap">
+                <span class="text-orange-400">⚔️ +<span id="sms-dmg">0</span>% DMG</span>
+                <span class="text-blue-400">🛡️ +<span id="sms-def">0</span>% DEF</span>
+                <span class="text-green-400">❤️ +<span id="sms-hp">0</span>% HP</span>
+                <span class="text-yellow-400">✨ +<span id="sms-atk">0</span> ATK</span>
             </div>
-            
-            <!-- Mage Tree -->
-            <div id="tree-mage" class="hidden w-full">
-                <div class="tree-class-header flex justify-between items-center mb-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700">
-                    <p class="text-xs text-gray-400">Unlock nodes to gain enhancements & skills. Glowing border = next node.</p>
-                </div>
-            </div>
-
-            <!-- Paladin Tree -->
-            <div id="tree-paladin" class="hidden w-full">
-                <div class="tree-class-header flex justify-between items-center mb-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700">
-                    <p class="text-xs text-gray-400">Unlock nodes to gain enhancements & skills. Glowing border = next node.</p>
-                </div>
-            </div>
-
-            <!-- Ninja Tree -->
-            <div id="tree-ninja" class="hidden w-full">
-                <div class="tree-class-header flex justify-between items-center mb-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700">
-                    <p class="text-xs text-gray-400">Unlock nodes to gain enhancements & skills. Glowing border = next node.</p>
-                </div>
-            </div>
-
-            <!-- Cleric Tree -->
-            <div id="tree-cleric" class="hidden w-full">
-                <div class="tree-class-header flex justify-between items-center mb-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700">
-                    <p class="text-xs text-gray-400">Unlock nodes to gain enhancements & skills. Glowing border = next node.</p>
-                </div>
-            </div>
-
-            <!-- Archer Tree -->
-            <div id="tree-archer" class="hidden w-full">
-                <div class="tree-class-header flex justify-between items-center mb-2 bg-gray-800 rounded-xl px-3 py-2 border border-gray-700">
-                    <p class="text-xs text-gray-400">Unlock nodes to gain enhancements & skills. Glowing border = next node.</p>
-                </div>
-            </div>
-
-            <div id="skill-tree-enhancements" class="w-full mt-2"></div>
-
+            <!-- Node list rendered by JS -->
+            <div id="skill-menu-nodes" class="w-full flex flex-col gap-2 overflow-y-auto" style="max-height:65vh;"></div>
+            <!-- Reset button -->
+            <button onclick="resetSkillMenu()" class="mt-4 w-full bg-red-900 hover:bg-red-800 border border-red-600 text-red-200 font-bold py-2 rounded-xl transition active:scale-95 shadow-md text-sm">🔄 Reset Skills</button>
         </div>
     </div>
 

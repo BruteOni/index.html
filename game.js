@@ -333,7 +333,8 @@ let player = {
     skillCooldowns: {}, regenBuffs: [], activeBuffs: [],
     stunned: 0, bleedStacks: 0, bleedTurns: 0, dodgeTurns: 0,
     wayOfHeavensCooldown: 0, rageUsed: false, rageActive: 0, divineShieldUsed: false, reflectUsed: false,
-    nodeEnhancements: {}
+    nodeEnhancements: {},
+    skillMenuProgress: 0, skillMenuBonusDmgPct: 0, skillMenuBonusDefPct: 0, skillMenuBonusHpPct: 0, skillMenuInfiniteAtk: 0
 };
 
 let enemies = []; let savedEnemies = {}; let activeTargetIndex = 0; let currentMode = 'none'; 
@@ -538,7 +539,7 @@ function loadGameAndContinue() {
             equippedUsables: [null, null, null, null, null, null, null],
             wayOfHeavensCooldown: 0, rageUsed: false, rageActive: 0, divineShieldUsed: false, reflectUsed: false,
             usedConsumableThisTurn: false, nodeEnhancements: {},
-            progressStats: {
+            skillMenuProgress: 0, skillMenuBonusDmgPct: 0, skillMenuBonusDefPct: 0, skillMenuBonusHpPct: 0, skillMenuInfiniteAtk: 0,
                 levelReached: 1, highestDmg: 0, mostDmgSurvived: 0,
                 longestWinStreak: 0, currentWinStreak: 0,
                 totalKills: 0, totalDeaths: 0, battlesWon: 0, battlesLost: 0,
@@ -640,6 +641,13 @@ function loadGameAndContinue() {
         if (ps.totalPlayTimeSeconds === undefined) ps.totalPlayTimeSeconds = 0;
         if (ps.potionsConsumed === undefined) ps.potionsConsumed = 0;
         ps.sessionStartTime = Date.now();
+
+        // Migrate skillMenu properties for existing saves
+        if(player.skillMenuProgress === undefined) player.skillMenuProgress = 0;
+        if(player.skillMenuBonusDmgPct === undefined) player.skillMenuBonusDmgPct = 0;
+        if(player.skillMenuBonusDefPct === undefined) player.skillMenuBonusDefPct = 0;
+        if(player.skillMenuBonusHpPct === undefined) player.skillMenuBonusHpPct = 0;
+        if(player.skillMenuInfiniteAtk === undefined) player.skillMenuInfiniteAtk = 0;
 
         if (globalProgression.lastQuestDate !== new Date().toDateString()) {
             globalProgression.questsCompletedToday = 0;
@@ -754,7 +762,7 @@ function calculateMaxHp() {
     if (typeof getEquipBonusStat === 'function') {
         hpBoostMult *= (1 + getEquipBonusStat('bonusHpPct'));
     }
-    return Math.floor(base * hpBoostMult);
+    return Math.floor(base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100));
 }
 
 function getBaseDamage() {
@@ -778,12 +786,14 @@ function getBaseDamage() {
     baseDmg += weaponEnhanceDmg;
     // Apply weapon enhance max bonus (+5% at level 100)
     if(weapon && weapon.weaponEnhanceMaxBonus) baseDmg = Math.floor(baseDmg * 1.05);
+    // Apply skill menu % bonus
+    baseDmg = Math.floor(baseDmg * (1 + ((player.skillMenuBonusDmgPct || 0) + (player.skillMenuInfiniteAtk || 0)) / 100));
     return baseDmg;
 }
 
 function getPlayerDef() {
     let a = globalProgression.attributes;
-    return 50 + (a.defense || 0) + player.treeBonusDef; // 50 base + defense attribute + tree bonus
+    return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100));
 }
 
 // Returns the permanent base attributes for each class (cannot go below these)
@@ -1082,6 +1092,7 @@ function createFreshPlayer(classId) {
         equippedUsables: ['pot_i1', null, null, null, null, null, null],
         wayOfHeavensCooldown: 0, rageUsed: false, rageActive: 0, divineShieldUsed: false, reflectUsed: false, usedConsumableThisTurn: false,
         nodeEnhancements: {},
+        skillMenuProgress: 0, skillMenuBonusDmgPct: 0, skillMenuBonusDefPct: 0, skillMenuBonusHpPct: 0, skillMenuInfiniteAtk: 0,
         progressStats: {
             levelReached: 1, highestDmg: 0, mostDmgSurvived: 0,
             longestWinStreak: 0, currentWinStreak: 0,
@@ -1579,7 +1590,7 @@ function checkLevelUp() {
         let xpNeeded = getXpForNextLevel(player.lvl);
         if(player.xp < xpNeeded) break;
         player.lvl++; player.xp -= xpNeeded; player.statPoints += 5;
-        if(player.lvl % 2 === 0) player.skillPoints++;
+        player.skillPoints++;
         levelsGained++;
     }
     if(levelsGained > 0) {
