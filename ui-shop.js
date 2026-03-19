@@ -48,6 +48,22 @@ function showEnchanter() {
             `;
             mergeContainer.appendChild(div);
         });
+
+        // Legendary Core → Soul Pebble Exchange
+        let legCores = globalProgression.inventory.ench_legendary || 0;
+        let pebbles = globalProgression.inventory.soul_pebbles || 0;
+        let canPebbleExchange = legCores >= 200;
+        let pebbleDiv = document.createElement('div');
+        pebbleDiv.className = 'mt-2 bg-gray-800 border border-purple-700 rounded-lg p-3 flex justify-between items-center';
+        pebbleDiv.innerHTML = `
+            <div>
+                <div class="text-sm font-bold text-purple-300">🔮 Legendary Core → Soul Pebble Exchange</div>
+                <div class="text-xs text-gray-400">200 Legendary Cores → 1 Soul Pebble</div>
+                <div class="text-xs text-gray-400 mt-1">Cores: <span class="text-yellow-300">${legCores}</span> &nbsp; Pebbles: <span class="text-purple-300">${pebbles}</span></div>
+            </div>
+            <button onclick="exchangeLegendaryCoresForPebble(showEnchanter)" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-3 py-2 rounded text-xs transition active:scale-95 shadow-md ${canPebbleExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canPebbleExchange ? '' : 'disabled'}>EXCHANGE</button>
+        `;
+        mergeContainer.appendChild(pebbleDiv);
     }
     
     switchScreen('screen-enchanter');
@@ -353,7 +369,74 @@ function showBlackMarket() {
         list.appendChild(div);
     });
 
+    // Soul Pebble Exchange section
+    const pebbleExchangeEl = document.getElementById('bm-pebble-exchange');
+    if (pebbleExchangeEl) {
+        let pebbleCount = globalProgression.inventory.soul_pebbles || 0;
+        let canExchange = pebbleCount >= 50;
+        pebbleExchangeEl.innerHTML = `
+            <div class="bg-gray-900 border-2 border-purple-700 rounded-xl p-4 flex flex-col gap-2 shadow-lg">
+                <h3 class="font-bold text-purple-300 text-center uppercase tracking-widest text-sm">🔮 Soul Pebble Exchange</h3>
+                <p class="text-xs text-gray-400 text-center">50 Soul Pebbles → 1% permanent bonus (random: Damage, Armor Pierce, HP, or Defense)</p>
+                <div class="text-center text-sm text-purple-200 font-bold">Soul Pebbles: <span class="text-purple-400">${pebbleCount}</span></div>
+                <button onclick="exchangeSoulPebbles()" class="w-full bg-purple-800 hover:bg-purple-700 border border-purple-500 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canExchange ? '' : 'disabled'}>
+                    Exchange 50 Soul Pebbles
+                </button>
+            </div>
+        `;
+    }
+
+    // Pebble bonus stats table
+    const pebbleStatsEl = document.getElementById('bm-pebble-stats');
+    if (pebbleStatsEl) {
+        let dmg = globalProgression.pebbleBonusDmg || 0;
+        let pierce = globalProgression.pebbleBonusArmorPierce || 0;
+        let hp = globalProgression.pebbleBonusHp || 0;
+        let def = globalProgression.pebbleBonusDef || 0;
+        pebbleStatsEl.innerHTML = `
+            <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg">
+                <h3 class="font-bold text-gray-300 text-center uppercase tracking-widest text-xs mb-3">Pebble Exchange Bonuses</h3>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="bg-gray-800 rounded-lg p-2 text-center"><span class="text-red-400">🗡️ Bonus Damage</span><br><span class="font-bold text-white">${dmg}%</span></div>
+                    <div class="bg-gray-800 rounded-lg p-2 text-center"><span class="text-yellow-300">🏹 Armor Pierce</span><br><span class="font-bold text-white">${pierce}%</span></div>
+                    <div class="bg-gray-800 rounded-lg p-2 text-center"><span class="text-green-400">❤️ Bonus HP</span><br><span class="font-bold text-white">${hp}%</span></div>
+                    <div class="bg-gray-800 rounded-lg p-2 text-center"><span class="text-blue-300">🛡️ Bonus Defense</span><br><span class="font-bold text-white">${def}%</span></div>
+                </div>
+            </div>
+        `;
+    }
+
     switchScreen('screen-black-market');
+}
+
+function exchangeSoulPebbles() {
+    if ((globalProgression.inventory.soul_pebbles || 0) < 50) { playSound('lose'); return; }
+    globalProgression.inventory.soul_pebbles -= 50;
+    const bonusTypes = ['dmg', 'armorPierce', 'hp', 'def'];
+    const chosen = bonusTypes[Math.floor(Math.random() * bonusTypes.length)];
+    const keyMap = { dmg: 'pebbleBonusDmg', armorPierce: 'pebbleBonusArmorPierce', hp: 'pebbleBonusHp', def: 'pebbleBonusDef' };
+    const labelMap = { dmg: '+1% DMG!', armorPierce: '+1% Pierce!', hp: '+1% HP!', def: '+1% DEF!' };
+    const colorMap = { dmg: 'text-red-400', armorPierce: 'text-yellow-300', hp: 'text-green-400', def: 'text-blue-300' };
+    const key = keyMap[chosen];
+    globalProgression[key] = (globalProgression[key] || 0) + 1;
+    // Show floating animation on the stats table
+    const statsEl = document.getElementById('bm-pebble-stats');
+    if (statsEl) {
+        statsEl.style.position = 'relative';
+        showFloatText('bm-pebble-stats', labelMap[chosen], colorMap[chosen]);
+    }
+    playSound('win');
+    saveGame();
+    showBlackMarket();
+}
+
+function exchangeLegendaryCoresForPebble(refreshFn) {
+    if ((globalProgression.inventory.ench_legendary || 0) < 200) { playSound('lose'); return; }
+    globalProgression.inventory.ench_legendary -= 200;
+    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 1;
+    playSound('win');
+    saveGame();
+    if (refreshFn) refreshFn();
 }
 
 function buyBlackMarketTier(tier) {

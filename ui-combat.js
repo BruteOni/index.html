@@ -1202,8 +1202,8 @@ function usePlayerSkill(slotIndex) {
                     return; 
                 }
                 
-                // Armor Pierce: reflexes 0.3% per point + bonusArmorPierce from accessories
-                let armorPierce = (a.reflexes || 0) * 0.003 + getEquipBonusStat('bonusArmorPierce');
+                // Armor Pierce: reflexes 0.3% per point + bonusArmorPierce from accessories + pebble exchange bonus
+                let armorPierce = (a.reflexes || 0) * 0.003 + getEquipBonusStat('bonusArmorPierce') + (globalProgression.pebbleBonusArmorPierce || 0) * 0.01;
                 let defDownDebuff = target.defReduction || 0;
                 let defMult = 1 + Math.min(0.95, armorPierce + defDownDebuff);
                 let hitDmg = Math.floor(scaledPower * defMult * (target.dmgTakenMult || 1));

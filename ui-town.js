@@ -81,6 +81,25 @@ function showWorkshop() {
             list.appendChild(card);
         });
     }
+
+    // Legendary Core → Soul Pebble Exchange
+    let legCores = globalProgression.inventory.ench_legendary || 0;
+    let pebbles = globalProgression.inventory.soul_pebbles || 0;
+    let canExchange = legCores >= 200;
+    let exchangeDiv = document.createElement('div');
+    exchangeDiv.className = 'mt-6 bg-gray-900 border border-purple-700 rounded-xl p-4 flex flex-col gap-2 shadow-lg';
+    exchangeDiv.innerHTML = `
+        <h3 class="font-bold text-purple-300 text-center uppercase tracking-widest text-sm mb-1">🔮 Legendary Core → Soul Pebble Exchange</h3>
+        <div class="flex justify-between text-xs text-gray-400 mb-1">
+            <span>Legendary Cores: <span class="text-yellow-300 font-bold">${legCores}</span></span>
+            <span>Soul Pebbles: <span class="text-purple-300 font-bold">${pebbles}</span></span>
+        </div>
+        <button onclick="exchangeLegendaryCoresForPebble(showWorkshop)" class="w-full bg-purple-800 hover:bg-purple-700 border border-purple-500 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canExchange ? '' : 'disabled'}>
+            Exchange 200 Legendary Cores → 1 Soul Pebble
+        </button>
+    `;
+    list.appendChild(exchangeDiv);
+
     switchScreen('screen-workshop');
 }
 
@@ -1138,7 +1157,7 @@ function showGraveyard() {
         bosses.forEach(b => {
             let btn = document.createElement('div');
             btn.className = `bg-gray-800 border-2 border-gray-700 p-4 rounded-xl flex justify-between items-center shadow-md mb-2`;
-            let canFight = globalProgression.gold >= 20;
+            let canFight = globalProgression.gold >= 500;
             let revivedToday = (globalProgression.graveyardRevivalDates || {})[b.name] === today;
             let canRevive = canFight && !revivedToday;
             let statusText = revivedToday ? '<span class="text-xs text-gray-500 ml-1">(Revived today)</span>' : '';
@@ -1152,7 +1171,7 @@ function showGraveyard() {
                     </div>
                 </div>
                 <button onclick="fightGraveyardBoss('${b.name}')" class="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-4 py-2 rounded font-bold transition active:scale-95 border border-indigo-700 shadow flex items-center gap-1 ${canRevive ? '' : 'opacity-50 cursor-not-allowed'}" ${canRevive ? '' : 'disabled'}>
-                    <span>Resurrect</span><span class="text-yellow-400 text-xs">💰20</span>
+                    <span>Resurrect</span><span class="text-yellow-400 text-xs">💰500</span>
                 </button>
             `;
             list.appendChild(btn);
@@ -1168,8 +1187,8 @@ function fightGraveyardBoss(bossName) {
         playSound('lose');
         return; // Already revived today
     }
-    if(globalProgression.gold >= 20) {
-        globalProgression.gold -= 20;
+    if(globalProgression.gold >= 500) {
+        globalProgression.gold -= 500;
         globalProgression.graveyardRevivalDates[bossName] = today;
         playSound('click');
         currentMode = 'graveyard';

@@ -301,7 +301,7 @@
                     <span class="font-bold text-yellow-400 text-sm">Weapon Smith</span>
                     <span class="text-[10px] text-gray-400 mt-1 text-center">Enhance weapons with Titan Shards</span>
                 </button>
-                <button onclick="showMagicalEnhancer()" class="bg-gray-800 hover:bg-gray-700 border border-blue-600 p-5 rounded-xl flex flex-col items-center transition active:scale-95 shadow-lg col-span-2">
+                <button onclick="showMagicalEnhancer()" class="bg-gray-800 hover:bg-gray-700 border border-blue-600 p-5 rounded-xl flex flex-col items-center transition active:scale-95 shadow-lg">
                     <span class="text-4xl mb-2">💎</span>
                     <span class="font-bold text-blue-400 text-sm">Magical Enhancer</span>
                     <span class="text-[10px] text-gray-400 mt-1 text-center">Add Set Bonuses to Mythical gear with Magic Stones</span>
@@ -867,7 +867,7 @@
                 <div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-gray-700 shadow-md">💰 <span id="graveyard-gold-display">0</span></div>
             </div>
             <h2 class="text-3xl font-bold mb-2 text-gray-400 text-center tracking-widest drop-shadow-md">GRAVEYARD</h2>
-            <p class="text-gray-500 mb-6 text-sm text-center bg-gray-900 py-2 rounded-lg border border-gray-800">Resurrect and fight defeated bosses for <span class="text-purple-400 font-bold">Soul Pebbles</span>. Costs 20G per fight.</p>
+            <p class="text-gray-500 mb-6 text-sm text-center bg-gray-900 py-2 rounded-lg border border-gray-800">Resurrect and fight defeated bosses for <span class="text-purple-400 font-bold">Soul Pebbles</span>. Costs 500G per fight.</p>
             
             <div id="graveyard-list" class="flex flex-col gap-3"></div>
         </div>
@@ -1065,7 +1065,6 @@
         <div class="w-full max-w-xl px-4 flex flex-col pb-8">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex gap-2">
-                    <button onclick="showSkillTree()" class="btn-back text-purple-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Skill Menu</button>
                     <button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button>
                 </div>
                 <div class="bg-gray-800 px-3 py-1 rounded-full border border-purple-500 font-bold text-purple-300 shadow-md text-sm">SP: <span id="bm-sp-display">0</span></div>
@@ -1076,6 +1075,8 @@
                 <span class="text-purple-300">Each tier unlocks the next. All bonuses are permanent.</span>
             </p>
             <div id="bm-tier-list" class="flex flex-col gap-3"></div>
+            <div id="bm-pebble-exchange" class="mt-4"></div>
+            <div id="bm-pebble-stats" class="mt-4"></div>
         </div>
     </div>
 

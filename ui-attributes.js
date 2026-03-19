@@ -24,22 +24,24 @@ function showAttributes() {
         { id: 'vampire',    name: 'Vampire',    desc: '+0.25% life received per hit per point', color: 'text-violet-400' },
     ];
 
+    let currentCost = getTotalSpentPoints() >= 50 ? 2 : 1;
+
     attrDefs.forEach(a => {
         let currentVal = globalProgression.attributes[a.id] !== undefined ? globalProgression.attributes[a.id] : 0;
         let classId = player.classId || 'warrior';
         let classBase = getClassBaseAttributes(classId);
         let minVal = classBase[a.id] !== undefined ? classBase[a.id] : 0;
         let attrCap = getClassAttrCap(classId, a.id);
-        let cost = 1;
+        let cost = currentCost;
 
         // + button: disabled if can't afford or at cap
         let plusDisabled = (player.statPoints < cost) || (currentVal >= attrCap) ? 'disabled' : '';
 
         // +5 button disabled logic
-        let plus5Disabled = (currentVal >= attrCap || player.statPoints < 5) ? 'disabled' : '';
+        let plus5Disabled = (currentVal >= attrCap || player.statPoints < 5 * cost) ? 'disabled' : '';
 
         // +50 button disabled logic
-        let plus50Disabled = (currentVal >= attrCap || player.statPoints < 50) ? 'disabled' : '';
+        let plus50Disabled = (currentVal >= attrCap || player.statPoints < 50 * cost) ? 'disabled' : '';
 
         // - button: disabled if at class minimum (permanent base)
         let minusDisabled = currentVal <= minVal ? 'disabled' : '';
@@ -59,7 +61,7 @@ function showAttributes() {
 
         btn.innerHTML = `
             <div class="w-full mb-2">
-                <div class="font-bold ${a.color} text-sm">${a.name} <span class="text-white ml-2 text-xs">${levelDisplay}</span>${baseNote}</div>
+                <div class="font-bold ${a.color} text-sm">${a.name} <span class="text-white ml-2 text-xs">${levelDisplay}</span>${baseNote} <span class="text-xs text-yellow-400 ml-1">Cost: ${cost} SP</span></div>
                 <div class="text-[10px] text-gray-400 leading-tight mt-0.5">${a.desc}</div>
             </div>
             <div class="flex gap-2 w-full items-stretch">
@@ -84,7 +86,7 @@ function showAttributes() {
 function allocateAttribute(id, count) {
     count = count || 1;
     let classId = player.classId || 'warrior';
-    let cost = 1;
+    let cost = getTotalSpentPoints() >= 50 ? 2 : 1;
     let attrCap = getClassAttrCap(classId, id);
 
     let classBase = getClassBaseAttributes(classId);
@@ -114,7 +116,8 @@ function deallocateAttribute(id, count) {
     let canRemove = Math.min(count, currentVal - minVal);
     if (canRemove <= 0) return;
 
-    player.statPoints += canRemove;
+    let cost = getTotalSpentPoints() >= 50 ? 2 : 1;
+    player.statPoints += canRemove * cost;
     globalProgression.attributes[id] = currentVal - canRemove;
 
     player.maxHp = calculateMaxHp(); player.currentHp = player.maxHp;

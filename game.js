@@ -648,6 +648,10 @@ function makeInitialGlobalProgression() {
         petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
         petFavorites: [],
         blackMarketTier: 0,
+        pebbleBonusDmg: 0,
+        pebbleBonusArmorPierce: 0,
+        pebbleBonusHp: 0,
+        pebbleBonusDef: 0,
         patchV1Applied: false,
         saveVersion: 2
     };
@@ -894,7 +898,7 @@ function calculateMaxHp() {
     if (typeof getEquipBonusStat === 'function') {
         hpBoostMult *= (1 + getEquipBonusStat('bonusHpPct'));
     }
-    return Math.floor(base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100));
+    return Math.floor(base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01));
 }
 
 function getBaseDamage() {
@@ -920,12 +924,14 @@ function getBaseDamage() {
     if(weapon && weapon.weaponEnhanceMaxBonus) baseDmg = Math.floor(baseDmg * 1.05);
     // Apply skill menu % bonus
     baseDmg = Math.floor(baseDmg * (1 + ((player.skillMenuBonusDmgPct || 0) + (player.skillMenuInfiniteAtk || 0)) / 100));
+    // Apply pebble exchange damage bonus
+    baseDmg = Math.floor(baseDmg * (1 + (globalProgression.pebbleBonusDmg || 0) * 0.01));
     return baseDmg;
 }
 
 function getPlayerDef() {
     let a = globalProgression.attributes;
-    return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100));
+    return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01));
 }
 
 // Returns the permanent base attributes for each class (cannot go below these)
