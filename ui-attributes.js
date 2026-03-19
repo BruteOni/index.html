@@ -1,4 +1,10 @@
 // --- ATTRIBUTE CONSTANTS ---
+const ATTRIBUTE_KEYS = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','vampire','defense','happiness'];
+
+function getPlayerClassBase() {
+    const classId = player.classId || 'warrior';
+    return { classId, classBase: getClassBaseAttributes(classId) };
+}
 
 function showAttributes() {
     clampAttributes();
@@ -24,15 +30,14 @@ function showAttributes() {
         { id: 'vampire',    name: 'Vampire',    desc: '+0.25% life received per hit per point', color: 'text-violet-400' },
     ];
 
-    let currentCost = getTotalSpentPoints() >= 50 ? 2 : 1;
+    const currentCost = getTotalSpentPoints() >= 50 ? 2 : 1;
 
     attrDefs.forEach(a => {
         let currentVal = globalProgression.attributes[a.id] !== undefined ? globalProgression.attributes[a.id] : 0;
-        let classId = player.classId || 'warrior';
-        let classBase = getClassBaseAttributes(classId);
+        const { classId, classBase } = getPlayerClassBase();
         let minVal = classBase[a.id] !== undefined ? classBase[a.id] : 0;
         let attrCap = getClassAttrCap(classId, a.id);
-        let cost = currentCost;
+        const cost = currentCost;
 
         // + button: disabled if can't afford or at cap
         let plusDisabled = (player.statPoints < cost) || (currentVal >= attrCap) ? 'disabled' : '';
@@ -85,11 +90,10 @@ function showAttributes() {
 
 function allocateAttribute(id, count) {
     count = count || 1;
-    let classId = player.classId || 'warrior';
-    let cost = getTotalSpentPoints() >= 50 ? 2 : 1;
+    const { classId, classBase } = getPlayerClassBase();
+    const cost = getTotalSpentPoints() >= 50 ? 2 : 1;
     let attrCap = getClassAttrCap(classId, id);
 
-    let classBase = getClassBaseAttributes(classId);
     let defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
     let currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : defaultMin;
     let canAllocate = Math.min(count, attrCap - currentVal, Math.floor(player.statPoints / cost));
@@ -100,7 +104,16 @@ function allocateAttribute(id, count) {
     player.statPoints -= canAllocate * cost;
     globalProgression.attributes[id] = currentVal + canAllocate;
 
-    player.maxHp = calculateMaxHp(); player.currentHp = player.maxHp;
+    const oldMaxHp = player.maxHp;
+    player.maxHp = calculateMaxHp();
+    if (oldMaxHp > 0) {
+        const hpRatio = player.maxHp / oldMaxHp;
+        player.currentHp = Math.min(player.maxHp, Math.floor(player.currentHp * hpRatio));
+    } else {
+        player.currentHp = player.maxHp;
+    }
+    // Keep dead players (including those with negative HP) dead
+    if (player.currentHp <= 0 && oldMaxHp > 0) player.currentHp = 0;
     saveGame();
     playSound('click');
     showAttributes();
@@ -108,37 +121,52 @@ function allocateAttribute(id, count) {
 
 function deallocateAttribute(id, count) {
     count = count || 1;
-    let classId = player.classId || 'warrior';
-    let classBase = getClassBaseAttributes(classId);
+    const { classBase } = getPlayerClassBase();
     let defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
     let minVal = defaultMin;
     let currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : minVal;
     let canRemove = Math.min(count, currentVal - minVal);
     if (canRemove <= 0) return;
 
-    let cost = getTotalSpentPoints() >= 50 ? 2 : 1;
+    const cost = getTotalSpentPoints() >= 50 ? 2 : 1;
     player.statPoints += canRemove * cost;
     globalProgression.attributes[id] = currentVal - canRemove;
 
-    player.maxHp = calculateMaxHp(); player.currentHp = player.maxHp;
+    const oldMaxHp = player.maxHp;
+    player.maxHp = calculateMaxHp();
+    if (oldMaxHp > 0) {
+        const hpRatio = player.maxHp / oldMaxHp;
+        player.currentHp = Math.min(player.maxHp, Math.floor(player.currentHp * hpRatio));
+    } else {
+        player.currentHp = player.maxHp;
+    }
+    // Keep dead players (including those with negative HP) dead
+    if (player.currentHp <= 0 && oldMaxHp > 0) player.currentHp = 0;
     saveGame();
     playSound('click');
     showAttributes();
 }
 
 function respecAttributes() {
-    let classId = player.classId || 'warrior';
-    let classBase = getClassBaseAttributes(classId);
-    const normalAttrs = ['hp', 'tenacity', 'agility', 'willpower', 'resistance', 'reflexes', 'fury', 'rawPower', 'force', 'revival', 'vampire', 'defense', 'happiness'];
+    const { classBase } = getPlayerClassBase();
     let totalRefund = 0;
-    normalAttrs.forEach(stat => {
+    ATTRIBUTE_KEYS.forEach(stat => {
         let currentVal = globalProgression.attributes[stat] !== undefined ? globalProgression.attributes[stat] : 0;
         let baseVal = classBase[stat] !== undefined ? classBase[stat] : 0;
         totalRefund += Math.max(0, currentVal - baseVal);
         globalProgression.attributes[stat] = baseVal;
     });
     player.statPoints += totalRefund;
-    player.maxHp = calculateMaxHp(); player.currentHp = player.maxHp;
+    const oldMaxHp = player.maxHp;
+    player.maxHp = calculateMaxHp();
+    if (oldMaxHp > 0) {
+        const hpRatio = player.maxHp / oldMaxHp;
+        player.currentHp = Math.min(player.maxHp, Math.floor(player.currentHp * hpRatio));
+    } else {
+        player.currentHp = player.maxHp;
+    }
+    // Keep dead players (including those with negative HP) dead
+    if (player.currentHp <= 0 && oldMaxHp > 0) player.currentHp = 0;
     saveGame();
     playSound('click');
     showAttributes();
@@ -147,10 +175,9 @@ function respecAttributes() {
 
 // --- ATTRIBUTE BUDGET HELPERS ---
 function getTotalSpentPoints() {
-    let classBase = getClassBaseAttributes(player.classId || 'warrior');
+    const { classBase } = getPlayerClassBase();
     let total = 0;
-    const attrs = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','vampire','defense','happiness'];
-    attrs.forEach(stat => {
+    ATTRIBUTE_KEYS.forEach(stat => {
         total += Math.max(0, (globalProgression.attributes[stat] || 0) - (classBase[stat] || 0));
     });
     return total;
@@ -163,8 +190,7 @@ function getMaxAttributePoints() {
 
 function clampAttributes() {
     let maxPoints = getMaxAttributePoints();
-    let classBase = getClassBaseAttributes(player.classId || 'warrior');
-    const attrs = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','vampire','defense','happiness'];
+    const { classBase } = getPlayerClassBase();
 
     let spent = getTotalSpentPoints();
     let totalUsed = spent + Math.max(0, player.statPoints);
@@ -179,7 +205,7 @@ function clampAttributes() {
         // Then trim from allocated attributes (highest above base first)
         while (excess > 0) {
             let highest = null, highestVal = 0;
-            attrs.forEach(stat => {
+            ATTRIBUTE_KEYS.forEach(stat => {
                 let cur = globalProgression.attributes[stat] || 0;
                 let base = classBase[stat] || 0;
                 if (cur - base > highestVal) { highestVal = cur - base; highest = stat; }

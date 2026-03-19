@@ -150,11 +150,20 @@ const PET_DATA = [
 
 const EQUIP_SLOTS = ['head', 'shoulders', 'chest', 'arms', 'waist', 'legs', 'boots', 'necklace', 'ring1', 'ring2', 'ring3', 'ring4', 'weapon', 'cape'];
 const RARITIES = ['common', 'rare', 'epic', 'legendary', 'mythic'];
-const RARITY_MULTS = { common: 1, rare: 2, epic: 5, legendary: 10, mythic: 30 };
+const RARITY_CONFIG = {
+    common:    { score: 1,  hp: 1.0, dmg: 1.0, def: 1.0 },
+    normal:    { score: 1,  hp: 1.0, dmg: 1.0, def: 1.0 },
+    rare:      { score: 2,  hp: 1.3, dmg: 1.1, def: 1.1 },
+    epic:      { score: 5,  hp: 1.8, dmg: 1.3, def: 1.3 },
+    legendary: { score: 10, hp: 2.5, dmg: 1.5, def: 1.6 },
+    mythic:    { score: 30, hp: 4.5, dmg: 1.8, def: 2.2 }
+};
+// Backward-compatible aliases
+const RARITY_MULTS    = Object.fromEntries(Object.entries(RARITY_CONFIG).map(([k, v]) => [k, v.score]));
 // Per-stat rarity multipliers for enemies
-const RARITY_HP_MULTS   = { normal: 1.0, common: 1.0, rare: 1.3, epic: 1.8, legendary: 2.5, mythic: 4.5 };
-const RARITY_DMG_MULTS  = { normal: 1.0, common: 1.0, rare: 1.1, epic: 1.3, legendary: 1.5, mythic: 1.8 };
-const RARITY_DEF_MULTS  = { normal: 1.0, common: 1.0, rare: 1.1, epic: 1.3, legendary: 1.6, mythic: 2.2 };
+const RARITY_HP_MULTS  = Object.fromEntries(Object.entries(RARITY_CONFIG).map(([k, v]) => [k, v.hp]));
+const RARITY_DMG_MULTS = Object.fromEntries(Object.entries(RARITY_CONFIG).map(([k, v]) => [k, v.dmg]));
+const RARITY_DEF_MULTS = Object.fromEntries(Object.entries(RARITY_CONFIG).map(([k, v]) => [k, v.def]));
 
 // CLASSES & SKILLS
 const CLASSES = {

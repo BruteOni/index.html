@@ -946,7 +946,7 @@ function getClassAttrCap(classId, attrId) {
 
 function switchScreen(screenId) {
     if (typeof clampAttributes === 'function' && typeof player !== 'undefined' && player && player.classId && typeof globalProgression !== 'undefined' && globalProgression && globalProgression.attributes) {
-        try { clampAttributes(); player.maxHp = calculateMaxHp(); } catch(e) { console.error('switchScreen: clampAttributes failed', e); }
+        try { clampAttributes(); player.maxHp = calculateMaxHp(); player.currentHp = Math.min(player.currentHp, player.maxHp); } catch(e) { console.error('switchScreen: clampAttributes failed', e); }
     }
     document.querySelectorAll('.screen').forEach(s => {
         s.classList.remove('active-screen');

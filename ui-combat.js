@@ -42,7 +42,8 @@ const ENEMY_SKILL_POOL = [
 function getEnemyBracketStats(level) {
     // Returns { baseHp, baseDmg, baseDef, perLevelMult } for the given level bracket
     let bracket;
-    if (level <= 20)       bracket = { baseHp: 200,  baseDmg: 80,  baseDef: 10, mult: 1.0 };
+    if (level <= 5)        bracket = { baseHp: 150,  baseDmg: 60,  baseDef: 5,  mult: 0.7 };
+    else if (level <= 20)  bracket = { baseHp: 200,  baseDmg: 80,  baseDef: 10, mult: 1.0 };
     else if (level <= 40)  bracket = { baseHp: 240,  baseDmg: 95,  baseDef: 16, mult: 1.15 };
     else if (level <= 60)  bracket = { baseHp: 290,  baseDmg: 115, baseDef: 26, mult: 1.35 };
     else if (level <= 80)  bracket = { baseHp: 350,  baseDmg: 145, baseDef: 38, mult: 1.6 };
@@ -57,7 +58,7 @@ function getEnemyBracketStats(level) {
         levelWithinBracket = level - 80; // continual scaling from level 80
     }
 
-    let scalingFactor = 1 + (levelWithinBracket - 1) * 0.03;
+    let scalingFactor = 1 + (levelWithinBracket - 1) * (level <= 5 ? 0.06 : 0.03);
     return {
         hp:  Math.floor(bracket.baseHp  * bracket.mult * scalingFactor),
         dmg: Math.floor(bracket.baseDmg * bracket.mult * scalingFactor),

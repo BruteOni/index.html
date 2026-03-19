@@ -40,7 +40,7 @@ function showWorkshop() {
     });
     // Inventory items
     (globalProgression.equipInventory || []).forEach((item, idx) => {
-        if(item.rarity === 'mythic') mythicItems.push({ item, source: 'inventory', idx });
+        if(item && item.rarity === 'mythic') mythicItems.push({ item, source: 'inventory', idx });
     });
 
     if(mythicItems.length === 0) {
@@ -130,16 +130,24 @@ function workshopEnhance(btn) {
     }
     if(source === 'equipped') {
         Object.values(globalProgression.equipped).forEach(item => {
-            if(item && item.name && item.name.includes(itemName.split(' [Lv.')[0]) && item.rarity === 'mythic') {
-                recalcMythicItem(item);
-                found = true;
+            if(!found && item && item.name && item.rarity === 'mythic') {
+                const searchPrefix = itemName.split(' [Lv.')[0];
+                const itemPrefix = item.name.split(' [Lv.')[0];
+                if(itemPrefix === searchPrefix) {
+                    recalcMythicItem(item);
+                    found = true;
+                }
             }
         });
     } else {
         (globalProgression.equipInventory || []).forEach(item => {
-            if(item && item.name && item.name.includes(itemName.split(' [Lv.')[0]) && item.rarity === 'mythic') {
-                recalcMythicItem(item);
-                found = true;
+            if(!found && item && item.name && item.rarity === 'mythic') {
+                const searchPrefix = itemName.split(' [Lv.')[0];
+                const itemPrefix = item.name.split(' [Lv.')[0];
+                if(itemPrefix === searchPrefix) {
+                    recalcMythicItem(item);
+                    found = true;
+                }
             }
         });
     }
