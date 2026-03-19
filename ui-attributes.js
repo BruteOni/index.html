@@ -30,23 +30,25 @@ function showAttributes() {
         { id: 'vampire',    name: 'Vampire',    desc: '+0.25% life received per hit per point', color: 'text-violet-400' },
     ];
 
-    const currentCost = getTotalSpentPoints() >= 50 ? 2 : 1;
-
     attrDefs.forEach(a => {
         let currentVal = globalProgression.attributes[a.id] !== undefined ? globalProgression.attributes[a.id] : 0;
         const { classId, classBase } = getPlayerClassBase();
         let minVal = classBase[a.id] !== undefined ? classBase[a.id] : 0;
         let attrCap = getClassAttrCap(classId, a.id);
-        const cost = currentCost;
+        const cost = currentVal >= 50 ? 2 : 1;
 
         // + button: disabled if can't afford or at cap
         let plusDisabled = (player.statPoints < cost) || (currentVal >= attrCap) ? 'disabled' : '';
 
-        // +5 button disabled logic
-        let plus5Disabled = (currentVal >= attrCap || player.statPoints < 5 * cost) ? 'disabled' : '';
+        // +5 button disabled logic (some levels may cross the 50 threshold)
+        let cheap5 = Math.max(0, Math.min(5, 50 - currentVal));
+        let plus5Cost = cheap5 + (5 - cheap5) * 2;
+        let plus5Disabled = (currentVal >= attrCap || player.statPoints < plus5Cost) ? 'disabled' : '';
 
-        // +50 button disabled logic
-        let plus50Disabled = (currentVal >= attrCap || player.statPoints < 50 * cost) ? 'disabled' : '';
+        // +50 button disabled logic (some levels may cross the 50 threshold)
+        let cheap50 = Math.max(0, Math.min(50, 50 - currentVal));
+        let plus50Cost = cheap50 + (50 - cheap50) * 2;
+        let plus50Disabled = (currentVal >= attrCap || player.statPoints < plus50Cost) ? 'disabled' : '';
 
         // - button: disabled if at class minimum (permanent base)
         let minusDisabled = currentVal <= minVal ? 'disabled' : '';
@@ -91,17 +93,33 @@ function showAttributes() {
 function allocateAttribute(id, count) {
     count = count || 1;
     const { classId, classBase } = getPlayerClassBase();
-    const cost = getTotalSpentPoints() >= 50 ? 2 : 1;
     let attrCap = getClassAttrCap(classId, id);
 
     let defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
     let currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : defaultMin;
-    let canAllocate = Math.min(count, attrCap - currentVal, Math.floor(player.statPoints / cost));
-    // Enforce total attribute budget
-    let maxBudget = getMaxAttributePoints() - getTotalSpentPoints();
-    canAllocate = Math.min(canAllocate, Math.max(0, maxBudget));
+
+    // Determine how many levels we can afford, accounting for threshold at 50
+    let affordable;
+    if (currentVal >= 50) {
+        affordable = Math.floor(player.statPoints / 2);
+    } else {
+        let cheapCapacity = 50 - currentVal; // levels available at cost 1 SP
+        if (player.statPoints <= cheapCapacity) {
+            affordable = player.statPoints;
+        } else {
+            affordable = cheapCapacity + Math.floor((player.statPoints - cheapCapacity) / 2);
+        }
+    }
+
+    let canAllocate = Math.min(count, attrCap - currentVal, affordable);
     if (canAllocate <= 0) return;
-    player.statPoints -= canAllocate * cost;
+
+    // Calculate actual SP cost, accounting for threshold crossing
+    let cheap = Math.max(0, Math.min(canAllocate, 50 - currentVal));
+    let expensive = Math.max(0, canAllocate - cheap);
+    let totalCost = cheap + expensive * 2;
+
+    player.statPoints -= totalCost;
     globalProgression.attributes[id] = currentVal + canAllocate;
 
     recalcAndClampHp();
@@ -119,9 +137,13 @@ function deallocateAttribute(id, count) {
     let canRemove = Math.min(count, currentVal - minVal);
     if (canRemove <= 0) return;
 
-    const cost = getTotalSpentPoints() >= 50 ? 2 : 1;
+    // Calculate refund: levels above 50 refund 2 SP each, levels at/below 50 refund 1 SP each
+    let expensiveRemoved = Math.min(canRemove, Math.max(0, currentVal - 50));
+    let cheapRemoved = canRemove - expensiveRemoved;
+    let totalRefund = cheapRemoved + expensiveRemoved * 2;
+
     globalProgression.attributes[id] = currentVal - canRemove;
-    player.statPoints += canRemove * cost;
+    player.statPoints += totalRefund;
 
     recalcAndClampHp();
     saveGame();
@@ -135,7 +157,9 @@ function respecAttributes() {
     ATTRIBUTE_KEYS.forEach(stat => {
         let currentVal = globalProgression.attributes[stat] !== undefined ? globalProgression.attributes[stat] : 0;
         let baseVal = classBase[stat] !== undefined ? classBase[stat] : 0;
-        totalRefund += Math.max(0, currentVal - baseVal);
+        let cheapLevels = Math.max(0, Math.min(50, currentVal) - baseVal);
+        let expensiveLevels = Math.max(0, currentVal - Math.max(50, baseVal));
+        totalRefund += cheapLevels + expensiveLevels * 2;
         globalProgression.attributes[stat] = baseVal;
     });
     player.statPoints += totalRefund;
@@ -160,7 +184,13 @@ function getTotalSpentPoints() {
     const { classBase } = getPlayerClassBase();
     let total = 0;
     ATTRIBUTE_KEYS.forEach(stat => {
-        total += Math.max(0, (globalProgression.attributes[stat] || 0) - (classBase[stat] || 0));
+        let cur = globalProgression.attributes[stat] || 0;
+        let base = classBase[stat] || 0;
+        // Levels from base up to 50 cost 1 SP each
+        let cheapLevels = Math.max(0, Math.min(50, cur) - base);
+        // Levels from 50 up to cur cost 2 SP each
+        let expensiveLevels = Math.max(0, cur - Math.max(50, base));
+        total += cheapLevels + expensiveLevels * 2;
     });
     return total;
 }
@@ -193,8 +223,14 @@ function clampAttributes() {
                 if (cur - base > highestVal) { highestVal = cur - base; highest = stat; }
             });
             if (!highest) break;
+            let curLevel = globalProgression.attributes[highest] || 0;
+            let trimCost = curLevel > 50 ? 2 : 1;
             globalProgression.attributes[highest]--;
-            excess--;
+            excess -= trimCost;
+        }
+        // If trimming overshot (excess < 0), return the extra SP to the unspent pool
+        if (excess < 0) {
+            player.statPoints += -excess;
         }
     } else if (totalUsed < maxPoints) {
         // Restore missing points to unspent pool
