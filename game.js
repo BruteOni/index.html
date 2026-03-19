@@ -525,6 +525,14 @@ function ensureProgressStats() {
 }
 
 // --- SAVE / LOAD SYSTEM ---
+function safeSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) {
+        console.warn('saveGame: localStorage.setItem failed for key "' + key + '":', e);
+    }
+}
+
 function saveGame() {
     // Accumulate play time on each save
     if (player.progressStats) {
@@ -536,16 +544,16 @@ function saveGame() {
     if (typeof clampAttributes === 'function') clampAttributes();
     const data = JSON.stringify({ global: globalProgression, pState: player });
     const checksum = btoa(data.length.toString());
-    localStorage.setItem('EternalAscensionSaveDataV1', data + "|" + checksum);
+    safeSetItem('EternalAscensionSaveDataV1', data + "|" + checksum);
     // Also save to class-specific key so each class has its own independent save
     if (player && player.classId) {
         const classKey = 'EternalAscensionClassSave_' + player.classId;
-        localStorage.setItem(classKey, data + "|" + checksum);
+        safeSetItem(classKey, data + "|" + checksum);
     }
     // Persist saved enemies so they survive page reloads
     try {
         if (savedEnemies && typeof savedEnemies === 'object' && Object.keys(savedEnemies).length > 0) {
-            localStorage.setItem('EternalAscensionSavedEnemies', JSON.stringify(savedEnemies));
+            safeSetItem('EternalAscensionSavedEnemies', JSON.stringify(savedEnemies));
         } else {
             localStorage.removeItem('EternalAscensionSavedEnemies');
         }
@@ -553,7 +561,7 @@ function saveGame() {
 }
 function applyDefaults(target, defaults) {
     for (const key of Object.keys(defaults)) {
-        if (target[key] === undefined) {
+        if (target[key] === undefined || target[key] === null) {
             target[key] = structuredClone(defaults[key]);
         } else if (
             typeof defaults[key] === 'object' &&
@@ -677,6 +685,27 @@ function loadGameAndContinue() {
             // Fill in any fields missing due to version updates
             applyDefaults(globalProgression, makeInitialGlobalProgression());
             applyDefaults(player, makeInitialPlayerState());
+
+            // --- Null-safety guards for critical arrays/objects ---
+            // applyDefaults (with null-fix) handles most fields, but explicitly
+            // enforce the fields that downstream UI code accesses without null checks.
+            const defaultsGP = makeInitialGlobalProgression();
+            const defaultsPS = makeInitialPlayerState();
+            if (!Array.isArray(player.equippedSkills))   player.equippedSkills   = structuredClone(defaultsPS.equippedSkills);
+            if (!Array.isArray(player.unlockedSkills))   player.unlockedSkills   = structuredClone(defaultsPS.unlockedSkills);
+            if (!Array.isArray(player.regenBuffs))       player.regenBuffs       = structuredClone(defaultsPS.regenBuffs);
+            if (!Array.isArray(player.activeBuffs))      player.activeBuffs      = structuredClone(defaultsPS.activeBuffs);
+            if (!Array.isArray(player.equippedUsables))  player.equippedUsables  = structuredClone(defaultsPS.equippedUsables);
+            if (typeof globalProgression.inventory !== 'object' || globalProgression.inventory === null)
+                globalProgression.inventory = structuredClone(defaultsGP.inventory);
+            if (typeof globalProgression.settings !== 'object' || globalProgression.settings === null)
+                globalProgression.settings = structuredClone(defaultsGP.settings);
+            if (typeof globalProgression.attributes !== 'object' || globalProgression.attributes === null)
+                globalProgression.attributes = structuredClone(defaultsGP.attributes);
+            if (typeof globalProgression.equipped !== 'object' || globalProgression.equipped === null)
+                globalProgression.equipped = structuredClone(defaultsGP.equipped);
+            if (!Array.isArray(globalProgression.equipInventory)) globalProgression.equipInventory = [];
+            if (!Array.isArray(globalProgression.skillTreeEnhancements)) globalProgression.skillTreeEnhancements = [];
 
             // --- Deletion migrations (attributes removed in newer versions) ---
             if (globalProgression.attributes.devotion !== undefined) {
