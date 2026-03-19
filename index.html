@@ -39,21 +39,21 @@
                 ▶ Continue Saved Game
             </button>
         </div>
-    </div>
 
-    <!-- NEW GAME CONFIRMATION MODAL -->
-    <div id="modal-confirm-new-game" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-80 z-50 items-center justify-center p-4" style="display:none;">
-        <div class="bg-gray-900 border-2 border-red-700 rounded-2xl p-6 w-full max-w-xs shadow-2xl text-center">
-            <div class="text-5xl mb-3">⚠️</div>
-            <h3 class="text-2xl font-black text-red-400 mb-2 uppercase tracking-wide">Start New Game?</h3>
-            <p class="text-gray-300 text-sm mb-6">This will <span class="text-red-400 font-bold">erase your current save</span> and start fresh. Are you sure?</p>
-            <div class="flex flex-col gap-3">
-                <button onclick="confirmNewGameYes()" class="w-full py-4 rounded-xl font-black text-lg border-2 border-red-500 hover:border-red-400 active:scale-95 transition shadow-[0_0_20px_rgba(239,68,68,0.4)]" style="background: linear-gradient(135deg, #7f1d1d, #991b1b, #7f1d1d);">
-                    ⚔️ Yes, Start New Game
-                </button>
-                <button onclick="closeConfirmNewGame()" class="w-full py-3 rounded-xl font-bold text-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 active:scale-95 transition">
-                    ✕ Cancel
-                </button>
+        <!-- NEW GAME CONFIRMATION MODAL -->
+        <div id="modal-confirm-new-game" class="absolute top-0 left-0 w-full h-full bg-black bg-opacity-80 z-50 items-center justify-center p-4" style="display:none;">
+            <div class="bg-gray-900 border-2 border-red-700 rounded-2xl p-6 w-full max-w-xs shadow-2xl text-center">
+                <div class="text-5xl mb-3">⚠️</div>
+                <h3 class="text-2xl font-black text-red-400 mb-2 uppercase tracking-wide">Start New Game?</h3>
+                <p class="text-gray-300 text-sm mb-6">This will <span class="text-red-400 font-bold">erase your current save</span> and start fresh. Are you sure?</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="confirmNewGameYes()" class="w-full py-4 rounded-xl font-black text-lg border-2 border-red-500 hover:border-red-400 active:scale-95 transition shadow-[0_0_20px_rgba(239,68,68,0.4)]" style="background: linear-gradient(135deg, #7f1d1d, #991b1b, #7f1d1d);">
+                        ⚔️ Yes, Start New Game
+                    </button>
+                    <button onclick="closeConfirmNewGame()" class="w-full py-3 rounded-xl font-bold text-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 active:scale-95 transition">
+                        ✕ Cancel
+                    </button>
+                </div>
             </div>
         </div>
     </div>
