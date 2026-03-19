@@ -1275,6 +1275,15 @@ function usePlayerSkill(slotIndex) {
         playSound('shield'); player.shield = skill.power; addLog(`Used ${skill.name}! Guarding!`, "text-blue-300 font-bold"); 
     } else if (skill.type === 'buff') {
         playSound('buff'); triggerAnim('combat-player-avatar', 'anim-heal'); addLog(`Used ${skill.name}!`, "text-white font-bold");
+        if(skill.baseDmgHit) {
+            let target = enemies[activeTargetIndex];
+            if(target && target.currentHp > 0) {
+                let dmg = getBaseDamage();
+                target.currentHp = Math.max(0, target.currentHp - dmg);
+                showDamageNumber(`enemy-card-${activeTargetIndex}`, dmg, false);
+                addLog(`${skill.name} also dealt ${dmg} damage!`, 'text-yellow-400');
+            }
+        }
     } else if (skill.type === 'debuff') {
         playSound('buff'); addLog(`Used ${skill.name}!`, "text-purple-400 font-bold");
         let target = enemies[activeTargetIndex];
@@ -2126,7 +2135,7 @@ function endBattle(playerWon) {
                 setTimeout(() => {
                     playSound('win');
                     player.lvl++; player.xp -= xpNeeded; player.statPoints += 5; 
-                    if(player.lvl % 2 === 0) { player.skillPoints++; spTxt.classList.remove('hidden'); }
+                    player.skillPoints++; spTxt.classList.remove('hidden');
                     player.maxHp = calculateMaxHp(); player.currentHp = player.maxHp;
                     lvlUp.classList.remove('hidden'); endXpBar.style.transition = 'none'; endXpBar.style.width = '0%';
                     setTimeout(() => { endXpBar.style.transition = 'width 0.5s ease-out'; endXpBar.style.width = `${(player.xp / getXpForNextLevel(player.lvl)) * 100}%`; }, 50);

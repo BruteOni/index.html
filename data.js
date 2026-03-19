@@ -197,8 +197,8 @@ const CLASSES = {
         skills: [
             // Index 0-2: always unlocked
             { name: 'Strike', type: 'attack', mult: 1, cd: 0, color: 'bg-gray-700', desc: 'Base damage' },
-            { name: 'Shield Explosion', type: 'buff', mult: 0, self_effect: { reflect: 0.80, reflectTurns: 3 }, cd: 6, color: 'bg-yellow-600', desc: 'Reflect 80% of incoming damage (3t)' },
-            { name: 'Iron Shield', type: 'buff', mult: 0, self_effect: { reflect: 1.50, reflectTurns: 2, regenPct: 0.05, regenTurns: 2 }, cd: 7, color: 'bg-green-700', desc: 'Reflect 150% damage received (2t) + Heal 5% HP/turn (2t)' },
+            { name: 'Shield Explosion', type: 'buff', mult: 0, self_effect: { reflect: 0.80, reflectTurns: 3 }, baseDmgHit: true, cd: 6, color: 'bg-yellow-600', desc: 'Reflect 80% of incoming damage (3t) + Deal base damage' },
+            { name: 'Iron Shield', type: 'buff', mult: 0, self_effect: { reflect: 1.50, reflectTurns: 2, regenPct: 0.05, regenTurns: 2 }, baseDmgHit: true, cd: 7, color: 'bg-green-700', desc: 'Reflect 150% damage received (2t) + Heal 5% HP/turn (2t) + Deal base damage' },
             // Index 3-5: Holy Path
             { name: 'Swinging Hammer', type: 'attack', mult: 1.35, effect: { stunChance: 1.0 }, cd: 6, color: 'bg-orange-700', desc: 'Base damage +35% + Stun (1t)' },
             { name: 'Thirsty', type: 'buff', mult: 0, self_effect: { healPct: 0.30, reflect: 1.00, reflectTurns: 1, defUp: 0.40, turns: 4 }, cd: 5, color: 'bg-purple-700', desc: 'Heal 30% + Reflect 100% (1t) + Defense +40% (4t)' },
