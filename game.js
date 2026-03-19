@@ -875,7 +875,7 @@ function getClassAttrCap(classId, attrId) {
 }
 
 function switchScreen(screenId) {
-    if (typeof clampAttributes === 'function') {
+    if (typeof clampAttributes === 'function' && typeof player !== 'undefined' && player && player.classId && typeof globalProgression !== 'undefined' && globalProgression && globalProgression.attributes) {
         try { clampAttributes(); player.maxHp = calculateMaxHp(); } catch(e) { console.error('switchScreen: clampAttributes failed', e); }
     }
     document.querySelectorAll('.screen').forEach(s => {
@@ -947,9 +947,12 @@ function showGenderSelect(classId) {
         if (video) {
             const src = document.getElementById('class-intro-video-src');
             if (src) src.src = videoFile;
-            video.muted = false;
+            video.muted = true;
             video.load();
-            video.play().catch(err => console.warn('Autoplay blocked:', err));
+            video.play().catch(err => {
+                console.warn('Autoplay blocked:', err);
+                onClassVideoEnd();
+            });
             video.onended = onClassVideoEnd;
         }
         switchScreen('screen-class-intro-video');
