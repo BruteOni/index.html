@@ -25,7 +25,47 @@ function setAvatarDisplay(elementId, avatar) {
     }
 }
 
-function initAudio() { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } if (audioCtx.state === 'suspended') { audioCtx.resume(); } }
+// Master gain/compressor node – created once and reused for all sounds
+let _masterGain = null;
+let _activeOscCount = 0;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Create a DynamicsCompressor as a master limiter to prevent clipping
+        const compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.value = -6;   // dB
+        compressor.knee.value = 3;
+        compressor.ratio.value = 20;
+        compressor.attack.value = 0.001;
+        compressor.release.value = 0.1;
+        _masterGain = audioCtx.createGain();
+        _masterGain.gain.value = 0.9;
+        _masterGain.connect(compressor);
+        compressor.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+}
+
+// Helper: connect a gain node to the master output instead of destination directly.
+// Replaces the common pattern: gain.connect(audioCtx.destination)
+function _connectToMaster(gainNode) {
+    gainNode.connect(_masterGain || audioCtx.destination);
+}
+
+// Helper: create an oscillator + gain pair and wire to master, returning { osc, gain }.
+// Schedules automatic cleanup to keep _activeOscCount accurate.
+function _makeOscGain(stopTime) {
+    if (_activeOscCount >= CONFIG.MAX_CONCURRENT_OSCILLATORS) return null;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    _connectToMaster(gain);
+    _activeOscCount++;
+    osc.addEventListener('ended', () => { _activeOscCount = Math.max(0, _activeOscCount - 1); });
+    return { osc, gain };
+}
+
 window.addEventListener('click', (e) => { if (!audioCtx || audioCtx.state !== 'running') initAudio(); if(e.target.closest('button') || e.target.closest('.equip-slot') || e.target.closest('.enemy-card')) playSound('click'); });
 
 function playSound(type) {
@@ -33,190 +73,161 @@ function playSound(type) {
     if(!globalProgression.settings) globalProgression.settings = { sound: true, music: true };
     if(!globalProgression.settings.sound) return;
     if (!audioCtx || audioCtx.state !== 'running') return;
+    // Guard: skip new sounds if already at oscillator cap to prevent memory leaks
+    if (_activeOscCount >= CONFIG.MAX_CONCURRENT_OSCILLATORS) return;
     const now = audioCtx.currentTime;
 
     if (type === 'hit') {
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.exponentialRampToValueAtTime(55, now + 0.12);
-        gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.start(now); osc.stop(now + 0.12);
+        const p = _makeOscGain(now + 0.12); if(!p) return;
+        p.osc.type = 'sawtooth'; p.osc.frequency.setValueAtTime(220, now); p.osc.frequency.exponentialRampToValueAtTime(55, now + 0.12);
+        p.gain.gain.setValueAtTime(0.08, now); p.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        p.osc.start(now); p.osc.stop(now + 0.12);
     } else if (type === 'crit') {
         // Metallic crash: noise burst via rapid random frequency modulation
-        const noiseOsc = audioCtx.createOscillator();
-        const noiseGain = audioCtx.createGain();
-        noiseOsc.type = 'square';
-        noiseOsc.frequency.setValueAtTime(3000, now);
+        const n = _makeOscGain(now + 0.15); if(!n) return;
+        n.osc.type = 'square';
+        n.osc.frequency.setValueAtTime(3000, now);
         for (let t = 0; t < 0.15; t += 0.003) {
-            noiseOsc.frequency.setValueAtTime(1000 + Math.random() * 4000, now + t);
+            n.osc.frequency.setValueAtTime(1000 + Math.random() * 4000, now + t);
         }
-        noiseOsc.connect(noiseGain);
-        noiseGain.connect(audioCtx.destination);
-        noiseGain.gain.setValueAtTime(0.06, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        noiseOsc.start(now);
-        noiseOsc.stop(now + 0.15);
+        n.gain.gain.setValueAtTime(0.06, now);
+        n.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        n.osc.start(now);
+        n.osc.stop(now + 0.15);
 
         // Second noise layer (triangle) for thickness/density
-        const triOsc = audioCtx.createOscillator();
-        const triGain = audioCtx.createGain();
-        triOsc.type = 'triangle';
-        triOsc.frequency.setValueAtTime(500, now);
+        const tri = _makeOscGain(now + 0.12); if(!tri) return;
+        tri.osc.type = 'triangle';
+        tri.osc.frequency.setValueAtTime(500, now);
         for (let t = 0; t < 0.12; t += 0.003) {
-            triOsc.frequency.setValueAtTime(500 + Math.random() * 1500, now + t);
+            tri.osc.frequency.setValueAtTime(500 + Math.random() * 1500, now + t);
         }
-        triOsc.connect(triGain);
-        triGain.connect(audioCtx.destination);
-        triGain.gain.setValueAtTime(0.04, now);
-        triGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        triOsc.start(now);
-        triOsc.stop(now + 0.12);
+        tri.gain.gain.setValueAtTime(0.04, now);
+        tri.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        tri.osc.start(now);
+        tri.osc.stop(now + 0.12);
 
         // High-pitched descending sweep
-        const sweepOsc = audioCtx.createOscillator();
-        const sweepGain = audioCtx.createGain();
-        sweepOsc.type = 'sine';
-        sweepOsc.frequency.setValueAtTime(2500, now);
-        sweepOsc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
-        sweepOsc.connect(sweepGain);
-        sweepGain.connect(audioCtx.destination);
-        sweepGain.gain.setValueAtTime(0.05, now);
-        sweepGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        sweepOsc.start(now);
-        sweepOsc.stop(now + 0.18);
+        const sw = _makeOscGain(now + 0.18); if(!sw) return;
+        sw.osc.type = 'sine';
+        sw.osc.frequency.setValueAtTime(2500, now);
+        sw.osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+        sw.gain.gain.setValueAtTime(0.05, now);
+        sw.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        sw.osc.start(now);
+        sw.osc.stop(now + 0.18);
 
         // Low thump for weight
-        const thumpOsc = audioCtx.createOscillator();
-        const thumpGain = audioCtx.createGain();
-        thumpOsc.type = 'sine';
-        thumpOsc.frequency.setValueAtTime(80, now);
-        thumpOsc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
-        thumpOsc.connect(thumpGain);
-        thumpGain.connect(audioCtx.destination);
-        thumpGain.gain.setValueAtTime(0.07, now);
-        thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
-        thumpOsc.start(now);
-        thumpOsc.stop(now + 0.10);
+        const th = _makeOscGain(now + 0.10); if(!th) return;
+        th.osc.type = 'sine';
+        th.osc.frequency.setValueAtTime(80, now);
+        th.osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+        th.gain.gain.setValueAtTime(0.07, now);
+        th.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+        th.osc.start(now);
+        th.osc.stop(now + 0.10);
     } else if (type === 'heal') {
         [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now + i * 0.07);
-            gain.gain.setValueAtTime(0.0, now + i * 0.07); gain.gain.linearRampToValueAtTime(0.05, now + i * 0.07 + 0.05); gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.25);
-            osc.start(now + i * 0.07); osc.stop(now + i * 0.07 + 0.25);
+            const p = _makeOscGain(now + i * 0.07 + 0.25); if(!p) return;
+            p.osc.type = 'sine'; p.osc.frequency.setValueAtTime(freq, now + i * 0.07);
+            p.gain.gain.setValueAtTime(0.0, now + i * 0.07); p.gain.gain.linearRampToValueAtTime(0.05, now + i * 0.07 + 0.05); p.gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.25);
+            p.osc.start(now + i * 0.07); p.osc.stop(now + i * 0.07 + 0.25);
         });
     } else if (type === 'shield' || type === 'buff') {
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        const p = _makeOscGain(now + 0.3); if(!p) return;
         const lfo = audioCtx.createOscillator(); const lfoGain = audioCtx.createGain();
         lfo.type = 'sine'; lfo.frequency.value = 8; lfoGain.gain.value = 6;
-        lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(800, now + 0.2);
-        gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0.001, now + 0.3);
-        osc.start(now); lfo.start(now); osc.stop(now + 0.3); lfo.stop(now + 0.3);
+        lfo.connect(lfoGain); lfoGain.connect(p.osc.frequency);
+        p.osc.type = 'triangle'; p.osc.frequency.setValueAtTime(600, now); p.osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+        p.gain.gain.setValueAtTime(0.05, now); p.gain.gain.linearRampToValueAtTime(0.001, now + 0.3);
+        p.osc.start(now); lfo.start(now); p.osc.stop(now + 0.3); lfo.stop(now + 0.3);
     } else if (type === 'win') {
         [[523.25, 0], [659.25, 0.1], [783.99, 0.2], [1046.5, 0.3], [1318.5, 0.4]].forEach(([freq, delay]) => {
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, now + delay);
-            gain.gain.setValueAtTime(0.05, now + delay); gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.25);
-            osc.start(now + delay); osc.stop(now + delay + 0.25);
+            const p = _makeOscGain(now + delay + 0.25); if(!p) return;
+            p.osc.type = 'triangle'; p.osc.frequency.setValueAtTime(freq, now + delay);
+            p.gain.gain.setValueAtTime(0.05, now + delay); p.gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.25);
+            p.osc.start(now + delay); p.osc.stop(now + delay + 0.25);
         });
     } else if (type === 'lose') {
         [[440, 0], [370, 0.15], [311, 0.3], [261, 0.45], [220, 0.6]].forEach(([freq, delay]) => {
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, now + delay); osc.frequency.linearRampToValueAtTime(freq * 0.7, now + delay + 0.2);
-            gain.gain.setValueAtTime(0.04, now + delay); gain.gain.linearRampToValueAtTime(0.001, now + delay + 0.3);
-            osc.start(now + delay); osc.stop(now + delay + 0.3);
+            const p = _makeOscGain(now + delay + 0.3); if(!p) return;
+            p.osc.type = 'sawtooth'; p.osc.frequency.setValueAtTime(freq, now + delay); p.osc.frequency.linearRampToValueAtTime(freq * 0.7, now + delay + 0.2);
+            p.gain.gain.setValueAtTime(0.04, now + delay); p.gain.gain.linearRampToValueAtTime(0.001, now + delay + 0.3);
+            p.osc.start(now + delay); p.osc.stop(now + delay + 0.3);
         });
     } else if (type === 'click') {
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.04);
-        gain.gain.setValueAtTime(0.015, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-        osc.start(now); osc.stop(now + 0.04);
+        const p = _makeOscGain(now + 0.04); if(!p) return;
+        p.osc.type = 'sine'; p.osc.frequency.setValueAtTime(1200, now); p.osc.frequency.exponentialRampToValueAtTime(600, now + 0.04);
+        p.gain.gain.setValueAtTime(0.015, now); p.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        p.osc.start(now); p.osc.stop(now + 0.04);
     } else if (type === 'pb_clash') {
         // Meaty layered impact: low thump + metallic crunch + high burst
-        const thump = audioCtx.createOscillator(); const thumpG = audioCtx.createGain();
-        thump.type = 'sine'; thump.frequency.setValueAtTime(120, now); thump.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-        thump.connect(thumpG); thumpG.connect(audioCtx.destination);
-        thumpG.gain.setValueAtTime(0.12, now); thumpG.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        thump.start(now); thump.stop(now + 0.18);
-        const crunch = audioCtx.createOscillator(); const crunchG = audioCtx.createGain();
-        crunch.type = 'square';
-        for (let t = 0; t < 0.12; t += 0.004) crunch.frequency.setValueAtTime(800 + Math.random() * 2000, now + t);
-        crunch.connect(crunchG); crunchG.connect(audioCtx.destination);
-        crunchG.gain.setValueAtTime(0.07, now); crunchG.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-        crunch.start(now); crunch.stop(now + 0.14);
-        const burst = audioCtx.createOscillator(); const burstG = audioCtx.createGain();
-        burst.type = 'sawtooth'; burst.frequency.setValueAtTime(400, now); burst.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-        burst.connect(burstG); burstG.connect(audioCtx.destination);
-        burstG.gain.setValueAtTime(0.05, now); burstG.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-        burst.start(now); burst.stop(now + 0.1);
+        const thump = _makeOscGain(now + 0.18); if(!thump) return;
+        thump.osc.type = 'sine'; thump.osc.frequency.setValueAtTime(120, now); thump.osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        thump.gain.gain.setValueAtTime(0.12, now); thump.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        thump.osc.start(now); thump.osc.stop(now + 0.18);
+        const crunch = _makeOscGain(now + 0.14); if(!crunch) return;
+        crunch.osc.type = 'square';
+        for (let t = 0; t < 0.12; t += 0.004) crunch.osc.frequency.setValueAtTime(800 + Math.random() * 2000, now + t);
+        crunch.gain.gain.setValueAtTime(0.07, now); crunch.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        crunch.osc.start(now); crunch.osc.stop(now + 0.14);
+        const burst = _makeOscGain(now + 0.1); if(!burst) return;
+        burst.osc.type = 'sawtooth'; burst.osc.frequency.setValueAtTime(400, now); burst.osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+        burst.gain.gain.setValueAtTime(0.05, now); burst.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        burst.osc.start(now); burst.osc.stop(now + 0.1);
     } else if (type === 'pb_shield') {
         // Resonant metallic "ting!" - high ping with long decay
-        const ping = audioCtx.createOscillator(); const pingG = audioCtx.createGain();
-        ping.type = 'triangle'; ping.frequency.setValueAtTime(2200, now); ping.frequency.exponentialRampToValueAtTime(1800, now + 0.3);
-        ping.connect(pingG); pingG.connect(audioCtx.destination);
-        pingG.gain.setValueAtTime(0.07, now); pingG.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        ping.start(now); ping.stop(now + 0.35);
-        const ring = audioCtx.createOscillator(); const ringG = audioCtx.createGain();
-        ring.type = 'sine'; ring.frequency.setValueAtTime(3400, now); ring.frequency.exponentialRampToValueAtTime(2800, now + 0.25);
-        ring.connect(ringG); ringG.connect(audioCtx.destination);
-        ringG.gain.setValueAtTime(0.04, now + 0.01); ringG.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-        ring.start(now + 0.01); ring.stop(now + 0.28);
+        const ping = _makeOscGain(now + 0.35); if(!ping) return;
+        ping.osc.type = 'triangle'; ping.osc.frequency.setValueAtTime(2200, now); ping.osc.frequency.exponentialRampToValueAtTime(1800, now + 0.3);
+        ping.gain.gain.setValueAtTime(0.07, now); ping.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        ping.osc.start(now); ping.osc.stop(now + 0.35);
+        const ring = _makeOscGain(now + 0.28); if(!ring) return;
+        ring.osc.type = 'sine'; ring.osc.frequency.setValueAtTime(3400, now); ring.osc.frequency.exponentialRampToValueAtTime(2800, now + 0.25);
+        ring.gain.gain.setValueAtTime(0.04, now + 0.01); ring.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        ring.osc.start(now + 0.01); ring.osc.stop(now + 0.28);
     } else if (type === 'pb_counter') {
         // Quick whip/whoosh: fast descending sweep + snap
-        const whoosh = audioCtx.createOscillator(); const whooshG = audioCtx.createGain();
-        whoosh.type = 'sawtooth'; whoosh.frequency.setValueAtTime(900, now); whoosh.frequency.exponentialRampToValueAtTime(150, now + 0.08);
-        whoosh.connect(whooshG); whooshG.connect(audioCtx.destination);
-        whooshG.gain.setValueAtTime(0.06, now); whooshG.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-        whoosh.start(now); whoosh.stop(now + 0.1);
-        const snap = audioCtx.createOscillator(); const snapG = audioCtx.createGain();
-        snap.type = 'square'; snap.frequency.setValueAtTime(2500, now + 0.07); snap.frequency.exponentialRampToValueAtTime(400, now + 0.12);
-        snap.connect(snapG); snapG.connect(audioCtx.destination);
-        snapG.gain.setValueAtTime(0.05, now + 0.07); snapG.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
-        snap.start(now + 0.07); snap.stop(now + 0.13);
+        const whoosh = _makeOscGain(now + 0.1); if(!whoosh) return;
+        whoosh.osc.type = 'sawtooth'; whoosh.osc.frequency.setValueAtTime(900, now); whoosh.osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+        whoosh.gain.gain.setValueAtTime(0.06, now); whoosh.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        whoosh.osc.start(now); whoosh.osc.stop(now + 0.1);
+        const snap = _makeOscGain(now + 0.13); if(!snap) return;
+        snap.osc.type = 'square'; snap.osc.frequency.setValueAtTime(2500, now + 0.07); snap.osc.frequency.exponentialRampToValueAtTime(400, now + 0.12);
+        snap.gain.gain.setValueAtTime(0.05, now + 0.07); snap.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+        snap.osc.start(now + 0.07); snap.osc.stop(now + 0.13);
     } else if (type === 'pb_suspense') {
         // Slow ascending tone that builds anticipation
-        const rise = audioCtx.createOscillator(); const riseG = audioCtx.createGain();
-        rise.type = 'sine'; rise.frequency.setValueAtTime(200, now); rise.frequency.linearRampToValueAtTime(600, now + 0.45);
-        rise.connect(riseG); riseG.connect(audioCtx.destination);
-        riseG.gain.setValueAtTime(0.0, now); riseG.gain.linearRampToValueAtTime(0.06, now + 0.1);
-        riseG.gain.linearRampToValueAtTime(0.08, now + 0.4); riseG.gain.linearRampToValueAtTime(0.0, now + 0.5);
-        rise.start(now); rise.stop(now + 0.5);
-        const shimmer = audioCtx.createOscillator(); const shimmerG = audioCtx.createGain();
-        shimmer.type = 'triangle'; shimmer.frequency.setValueAtTime(400, now); shimmer.frequency.linearRampToValueAtTime(1200, now + 0.45);
-        shimmer.connect(shimmerG); shimmerG.connect(audioCtx.destination);
-        shimmerG.gain.setValueAtTime(0.0, now); shimmerG.gain.linearRampToValueAtTime(0.03, now + 0.15);
-        shimmerG.gain.linearRampToValueAtTime(0.0, now + 0.5);
-        shimmer.start(now); shimmer.stop(now + 0.5);
+        const rise = _makeOscGain(now + 0.5); if(!rise) return;
+        rise.osc.type = 'sine'; rise.osc.frequency.setValueAtTime(200, now); rise.osc.frequency.linearRampToValueAtTime(600, now + 0.45);
+        rise.gain.gain.setValueAtTime(0.0, now); rise.gain.gain.linearRampToValueAtTime(0.06, now + 0.1);
+        rise.gain.gain.linearRampToValueAtTime(0.08, now + 0.4); rise.gain.gain.linearRampToValueAtTime(0.0, now + 0.5);
+        rise.osc.start(now); rise.osc.stop(now + 0.5);
+        const shimmer = _makeOscGain(now + 0.5); if(!shimmer) return;
+        shimmer.osc.type = 'triangle'; shimmer.osc.frequency.setValueAtTime(400, now); shimmer.osc.frequency.linearRampToValueAtTime(1200, now + 0.45);
+        shimmer.gain.gain.setValueAtTime(0.0, now); shimmer.gain.gain.linearRampToValueAtTime(0.03, now + 0.15);
+        shimmer.gain.gain.linearRampToValueAtTime(0.0, now + 0.5);
+        shimmer.osc.start(now); shimmer.osc.stop(now + 0.5);
     } else if (type === 'pb_big_hit') {
         // Extra punchy multi-layer: deep sub + metallic crash + high shriek
-        const sub = audioCtx.createOscillator(); const subG = audioCtx.createGain();
-        sub.type = 'sine'; sub.frequency.setValueAtTime(60, now); sub.frequency.exponentialRampToValueAtTime(25, now + 0.2);
-        sub.connect(subG); subG.connect(audioCtx.destination);
-        subG.gain.setValueAtTime(0.15, now); subG.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-        sub.start(now); sub.stop(now + 0.22);
-        const mid = audioCtx.createOscillator(); const midG = audioCtx.createGain();
-        mid.type = 'sawtooth'; mid.frequency.setValueAtTime(300, now); mid.frequency.exponentialRampToValueAtTime(80, now + 0.18);
-        mid.connect(midG); midG.connect(audioCtx.destination);
-        midG.gain.setValueAtTime(0.09, now); midG.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-        mid.start(now); mid.stop(now + 0.2);
-        const shriek = audioCtx.createOscillator(); const shriekG = audioCtx.createGain();
-        shriek.type = 'square';
-        for (let t = 0; t < 0.16; t += 0.003) shriek.frequency.setValueAtTime(1500 + Math.random() * 3000, now + t);
-        shriek.connect(shriekG); shriekG.connect(audioCtx.destination);
-        shriekG.gain.setValueAtTime(0.06, now); shriekG.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        shriek.start(now); shriek.stop(now + 0.18);
+        const sub = _makeOscGain(now + 0.22); if(!sub) return;
+        sub.osc.type = 'sine'; sub.osc.frequency.setValueAtTime(60, now); sub.osc.frequency.exponentialRampToValueAtTime(25, now + 0.2);
+        sub.gain.gain.setValueAtTime(0.15, now); sub.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        sub.osc.start(now); sub.osc.stop(now + 0.22);
+        const mid = _makeOscGain(now + 0.2); if(!mid) return;
+        mid.osc.type = 'sawtooth'; mid.osc.frequency.setValueAtTime(300, now); mid.osc.frequency.exponentialRampToValueAtTime(80, now + 0.18);
+        mid.gain.gain.setValueAtTime(0.09, now); mid.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        mid.osc.start(now); mid.osc.stop(now + 0.2);
+        const shriek = _makeOscGain(now + 0.18); if(!shriek) return;
+        shriek.osc.type = 'square';
+        for (let t = 0; t < 0.16; t += 0.003) shriek.osc.frequency.setValueAtTime(1500 + Math.random() * 3000, now + t);
+        shriek.gain.gain.setValueAtTime(0.06, now); shriek.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        shriek.osc.start(now); shriek.osc.stop(now + 0.18);
     } else if (type === 'pb_whiff') {
         // Soft "pff" miss: gentle noise puff
-        const pff = audioCtx.createOscillator(); const pffG = audioCtx.createGain();
-        pff.type = 'triangle'; pff.frequency.setValueAtTime(500, now); pff.frequency.exponentialRampToValueAtTime(150, now + 0.12);
-        pff.connect(pffG); pffG.connect(audioCtx.destination);
-        pffG.gain.setValueAtTime(0.03, now); pffG.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-        pff.start(now); pff.stop(now + 0.14);
+        const p = _makeOscGain(now + 0.14); if(!p) return;
+        p.osc.type = 'triangle'; p.osc.frequency.setValueAtTime(500, now); p.osc.frequency.exponentialRampToValueAtTime(150, now + 0.12);
+        p.gain.gain.setValueAtTime(0.03, now); p.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        p.osc.start(now); p.osc.stop(now + 0.14);
     }
 }
 
@@ -230,7 +241,7 @@ function playBossSong1() {
     // Bass drone
     const bass = audioCtx.createOscillator(); const bassGain = audioCtx.createGain();
     bass.type = 'sine'; bass.frequency.value = 65.41;
-    bass.connect(bassGain); bassGain.connect(audioCtx.destination);
+    bass.connect(bassGain); _connectToMaster(bassGain);
     bassGain.gain.setValueAtTime(0, now); bassGain.gain.linearRampToValueAtTime(0.04, now + 3);
     bass.start(now); activeOscillators.push({osc: bass, gain: bassGain});
     // Slow melody
@@ -238,7 +249,7 @@ function playBossSong1() {
     mel.type = 'sine';
     const melody = [[130.81,3],[155.56,3],[146.83,3],[130.81,3],[116.54,3],[123.47,3],[130.81,3],[110,3],[130.81,3],[155.56,3],[146.83,3],[130.81,3],[116.54,6],[130.81,3],[155.56,3],[185,3],[174.61,3],[155.56,3],[146.83,6]];
     let t = now; melody.forEach(([f, d]) => { mel.frequency.setValueAtTime(f, t); t += d; });
-    mel.connect(melGain); melGain.connect(audioCtx.destination);
+    mel.connect(melGain); _connectToMaster(melGain);
     melGain.gain.setValueAtTime(0, now); melGain.gain.linearRampToValueAtTime(0.025, now + 4);
     mel.start(now); activeOscillators.push({osc: mel, gain: melGain});
     const totalDur = melody.reduce((s, [f,d]) => s+d, 0);
@@ -254,7 +265,7 @@ function playBossSong2() {
     osc.type = 'triangle';
     const penta = [[220,4],[261.63,4],[293.66,4],[349.23,4],[392,4],[349.23,4],[293.66,4],[261.63,4],[220,4],[196,4],[220,4],[261.63,4],[293.66,4],[349.23,4],[392,4],[440,4],[392,4],[349.23,4],[293.66,4],[220,8]];
     let t = now; penta.forEach(([f,d]) => { osc.frequency.setValueAtTime(f, t); t += d; });
-    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.connect(gain); _connectToMaster(gain);
     gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.035, now + 3);
     osc.start(now); activeOscillators.push({osc, gain});
     const totalDur = penta.reduce((s, [f,d]) => s+d, 0);
@@ -355,6 +366,19 @@ function getMaxEnergy() {
     return Math.min(baseCap, 10 + Math.max(0, player.lvl - 1));
 }
 
+// --- DOM ELEMENT CACHE ---
+// Cache frequently queried elements to avoid repeated getElementById in hot intervals.
+// Elements are lazily resolved on first access (DOM may not be ready at parse time).
+const _domCache = {};
+function _el(id) {
+    if (!_domCache[id]) _domCache[id] = document.getElementById(id);
+    return _domCache[id];
+}
+
+// Timer element refs may be destroyed/re-created (hub screen teardown),
+// so they are fetched fresh each tick rather than cached.
+const GATHER_TYPES = ['herbs', 'mine', 'fish', 'enchants'];
+
 function updateEnergy() {
     let maxEnergy = getMaxEnergy();
     let now = Date.now(); let msPassed = now - globalProgression.lastEnergyTime; let minutesPassed = Math.floor(msPassed / 60000);
@@ -362,16 +386,16 @@ function updateEnergy() {
         if (minutesPassed > 0) { globalProgression.energy = Math.min(maxEnergy, globalProgression.energy + minutesPassed); globalProgression.lastEnergyTime = now - (msPassed % 60000); saveGame(); }
     } else { globalProgression.lastEnergyTime = now; }
 
-    const eEl = document.getElementById('hub-energy'); if(eEl) eEl.innerText = globalProgression.energy;
-    const eMxEl = document.getElementById('hub-energy-max'); if(eMxEl) eMxEl.innerText = maxEnergy;
-    const eBar = document.getElementById('hub-energy-bar'); if(eBar) eBar.style.width = (maxEnergy > 0 ? Math.round((globalProgression.energy / maxEnergy) * 100) : 0) + '%';
-    const seEl = document.getElementById('story-energy'); if(seEl) seEl.innerText = globalProgression.energy;
+    const eEl = _el('hub-energy'); if(eEl) eEl.innerText = globalProgression.energy;
+    const eMxEl = _el('hub-energy-max'); if(eMxEl) eMxEl.innerText = maxEnergy;
+    const eBar = _el('hub-energy-bar'); if(eBar) eBar.style.width = (maxEnergy > 0 ? Math.round((globalProgression.energy / maxEnergy) * 100) : 0) + '%';
+    const seEl = _el('story-energy'); if(seEl) seEl.innerText = globalProgression.energy;
 
     // Show/hide energy cap upgrade indicator in well button
-    const wellNoti = document.getElementById('hub-well-energy-noti');
+    const wellNoti = _el('hub-well-energy-noti');
     if(wellNoti) wellNoti.style.display = (!globalProgression.energyCapUnlocked && getMaxEnergy() >= 50 && (globalProgression.gold >= 300)) ? 'inline' : 'none';
 
-    ['herbs', 'mine', 'fish', 'enchants'].forEach(type => {
+    GATHER_TYPES.forEach(type => {
         let el = document.getElementById(`timer-${type}`);
         if(el) {
             let cd = globalProgression.cooldowns[type] || 0; let remaining = cd - now;
@@ -380,7 +404,8 @@ function updateEnergy() {
         }
     });
 }
-setInterval(updateEnergy, 1000);
+if (typeof _energyIntervalId === 'undefined') { var _energyIntervalId = setInterval(updateEnergy, CONFIG.UI_POLL_INTERVAL_MS); }
+
 
 function updateHp() {
     let now = Date.now();
@@ -388,7 +413,7 @@ function updateHp() {
     let minutesPassed = Math.floor(msPassed / 60000);
     if (player.currentHp < player.maxHp) {
         if (minutesPassed > 0) {
-            let regenAmt = Math.min(player.maxHp - player.currentHp, minutesPassed * 10);
+            let regenAmt = Math.min(player.maxHp - player.currentHp, minutesPassed * CONFIG.HP_REGEN_AMOUNT);
             player.currentHp = Math.min(player.maxHp, player.currentHp + regenAmt);
             globalProgression.lastHpRegenTime = now - (msPassed % 60000);
             saveGame();
@@ -396,21 +421,21 @@ function updateHp() {
     } else {
         globalProgression.lastHpRegenTime = now;
     }
-    const hpCur = document.getElementById('hub-hp-current'); if(hpCur) hpCur.innerText = Math.ceil(Math.max(0, player.currentHp));
-    const hpMax = document.getElementById('hub-hp-max'); if(hpMax) hpMax.innerText = player.maxHp;
-    const hpBar = document.getElementById('hub-hp-bar'); if(hpBar) hpBar.style.width = (player.maxHp > 0 ? Math.round((Math.max(0, player.currentHp) / player.maxHp) * 100) : 0) + '%';
-    const hpTimer = document.getElementById('hub-hp-timer');
+    const hpCur = _el('hub-hp-current'); if(hpCur) hpCur.innerText = Math.ceil(Math.max(0, player.currentHp));
+    const hpMax = _el('hub-hp-max'); if(hpMax) hpMax.innerText = player.maxHp;
+    const hpBar = _el('hub-hp-bar'); if(hpBar) hpBar.style.width = (player.maxHp > 0 ? Math.round((Math.max(0, player.currentHp) / player.maxHp) * 100) : 0) + '%';
+    const hpTimer = _el('hub-hp-timer');
     if(hpTimer) {
         if(player.currentHp >= player.maxHp) { hpTimer.innerText = 'Full'; }
         else {
             let timeSinceLast = now - (globalProgression.lastHpRegenTime || now);
-            let timeToNext = 60000 - (timeSinceLast % 60000);
+            let timeToNext = CONFIG.HP_REGEN_INTERVAL_MS - (timeSinceLast % CONFIG.HP_REGEN_INTERVAL_MS);
             let sec = Math.ceil(timeToNext / 1000);
-            hpTimer.innerText = `+10 in ${sec}s`;
+            hpTimer.innerText = `+${CONFIG.HP_REGEN_AMOUNT} in ${sec}s`;
         }
     }
 }
-setInterval(updateHp, 1000);
+if (typeof _hpIntervalId === 'undefined') { var _hpIntervalId = setInterval(updateHp, CONFIG.UI_POLL_INTERVAL_MS); }
 
 function consumeEnergy(amount) {
     if(globalProgression.energy >= amount) { globalProgression.energy -= amount; let maxEnergy = getMaxEnergy(); if(globalProgression.energy === maxEnergy - amount) globalProgression.lastEnergyTime = Date.now(); saveGame(); updateEnergy(); return true; }
@@ -445,7 +470,60 @@ function ensureProgressStats() {
     return player.progressStats;
 }
 
-// --- SAVE / LOAD SYSTEM ---
+// --- SAVE / LOAD SYSTEM (IndexedDB primary, localStorage fallback) ---
+
+// Lazy-opens the IndexedDB connection and returns a Promise<IDBDatabase>.
+let _idbPromise = null;
+function _openIDB() {
+    if (_idbPromise) return _idbPromise;
+    _idbPromise = new Promise((resolve, reject) => {
+        if (!window.indexedDB) { reject(new Error('IndexedDB not supported')); return; }
+        const req = indexedDB.open(CONFIG.IDB_DB_NAME, CONFIG.IDB_DB_VERSION);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(CONFIG.IDB_STORE_NAME)) {
+                db.createObjectStore(CONFIG.IDB_STORE_NAME);
+            }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = (e) => { reject(e.target.error); };
+    });
+    return _idbPromise;
+}
+
+// Write a value to IndexedDB under the given key. Returns a Promise.
+function _idbSet(key, value) {
+    return _openIDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CONFIG.IDB_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(CONFIG.IDB_STORE_NAME);
+        const req = store.put(value, key);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+    }));
+}
+
+// Delete a key from IndexedDB. Returns a Promise.
+function _idbDelete(key) {
+    return _openIDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CONFIG.IDB_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(CONFIG.IDB_STORE_NAME);
+        const req = store.delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+    }));
+}
+
+// Read a value from IndexedDB. Returns a Promise<value|null>.
+function _idbGet(key) {
+    return _openIDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(CONFIG.IDB_STORE_NAME, 'readonly');
+        const store = tx.objectStore(CONFIG.IDB_STORE_NAME);
+        const req = store.get(key);
+        req.onsuccess = (e) => resolve(e.target.result !== undefined ? e.target.result : null);
+        req.onerror = (e) => reject(e.target.error);
+    }));
+}
+
 function saveGame() {
     // Accumulate play time on each save
     if (player.progressStats) {
@@ -455,23 +533,41 @@ function saveGame() {
         player.progressStats.sessionStartTime = now;
     }
     if (typeof clampAttributes === 'function') clampAttributes();
-    const data = JSON.stringify({ global: globalProgression, pState: player });
-    const checksum = btoa(data.length.toString());
-    localStorage.setItem('EternalAscensionSaveDataV1', data + "|" + checksum);
-    // Also save to class-specific key so each class has its own independent save
+    const saveObj = { global: globalProgression, pState: player };
+
+    // Primary: write to IndexedDB (async, no quota limit issue)
+    _idbSet(CONFIG.SAVE_KEY, saveObj).catch(err => {
+        console.warn('IndexedDB save failed, falling back to localStorage:', err);
+    });
+    // Per-class save in IndexedDB
     if (player && player.classId) {
-        const classKey = 'EternalAscensionClassSave_' + player.classId;
-        localStorage.setItem(classKey, data + "|" + checksum);
+        _idbSet(CONFIG.CLASS_SAVE_PREFIX + player.classId, saveObj).catch(() => {});
     }
-    // Persist saved enemies so they survive page reloads
+
+    // Fallback: also write to localStorage (may throw QuotaExceededError for large saves)
     try {
-        if (savedEnemies && typeof savedEnemies === 'object' && Object.keys(savedEnemies).length > 0) {
-            localStorage.setItem('EternalAscensionSavedEnemies', JSON.stringify(savedEnemies));
-        } else {
-            localStorage.removeItem('EternalAscensionSavedEnemies');
+        const data = JSON.stringify(saveObj);
+        const checksum = btoa(data.length.toString());
+        localStorage.setItem(CONFIG.SAVE_KEY, data + '|' + checksum);
+        if (player && player.classId) {
+            localStorage.setItem(CONFIG.CLASS_SAVE_PREFIX + player.classId, data + '|' + checksum);
         }
-    } catch(e) { /* ignore storage errors */ }
+    } catch(e) {
+        // QuotaExceededError is non-fatal here – IndexedDB has the authoritative copy
+        if (e.name !== 'QuotaExceededError') console.warn('localStorage save error:', e);
+    }
+
+    // Persist saved enemies
+    const enemiesVal = (savedEnemies && Object.keys(savedEnemies).length > 0) ? savedEnemies : null;
+    if (enemiesVal) {
+        _idbSet(CONFIG.SAVE_KEY_ENEMIES, enemiesVal).catch(() => {});
+        try { localStorage.setItem(CONFIG.SAVE_KEY_ENEMIES, JSON.stringify(enemiesVal)); } catch(e) { /* ignore */ }
+    } else {
+        _idbDelete(CONFIG.SAVE_KEY_ENEMIES).catch(() => {});
+        try { localStorage.removeItem(CONFIG.SAVE_KEY_ENEMIES); } catch(e) { /* ignore */ }
+    }
 }
+
 function applyDefaults(target, defaults) {
     for (const key of Object.keys(defaults)) {
         if (target[key] === undefined) {
@@ -490,17 +586,49 @@ function applyDefaults(target, defaults) {
 }
 
 function loadGameAndContinue() {
-    try {
     if (typeof CLASSES === 'undefined') {
         console.error('loadGameAndContinue: CLASSES is not defined. Ensure data.js is loaded.');
         return;
     }
-    const saved = localStorage.getItem('EternalAscensionSaveDataV1') || localStorage.getItem('fogFighterSaveDataV22') || localStorage.getItem('fogFighterSaveDataV21') || localStorage.getItem('fogFighterSaveDataV20');
-    const savedKey = localStorage.getItem('EternalAscensionSaveDataV1') ? 'EternalAscensionSaveDataV1' : localStorage.getItem('fogFighterSaveDataV22') ? 'fogFighterSaveDataV22' : localStorage.getItem('fogFighterSaveDataV21') ? 'fogFighterSaveDataV21' : localStorage.getItem('fogFighterSaveDataV20') ? 'fogFighterSaveDataV20' : null;
-    console.log('loadGameAndContinue: saved data found =', !!saved, 'key =', savedKey);
-    if(saved) {
-        const savedJson = saved.includes('|') ? saved.split('|')[0] : saved;
-        const data = JSON.parse(savedJson); globalProgression = data.global; player = data.pState;
+
+    // Try IndexedDB first, fall back to localStorage for legacy saves
+    _idbGet(CONFIG.SAVE_KEY).then(idbData => {
+        let data = idbData;
+        if (!data) {
+            // Legacy localStorage fallback (and old save-key migration)
+            const lsSaved = localStorage.getItem('EternalAscensionSaveDataV1')
+                || localStorage.getItem('fogFighterSaveDataV22')
+                || localStorage.getItem('fogFighterSaveDataV21')
+                || localStorage.getItem('fogFighterSaveDataV20');
+            if (lsSaved) {
+                const savedJson = lsSaved.includes('|') ? lsSaved.split('|')[0] : lsSaved;
+                data = JSON.parse(savedJson);
+            }
+        }
+        if (!data) { console.log('loadGameAndContinue: no save data found'); return; }
+        _applySaveData(data);
+    }).catch(err => {
+        console.warn('loadGameAndContinue: IndexedDB read failed, trying localStorage:', err);
+        try {
+            const lsSaved = localStorage.getItem('EternalAscensionSaveDataV1')
+                || localStorage.getItem('fogFighterSaveDataV22')
+                || localStorage.getItem('fogFighterSaveDataV21')
+                || localStorage.getItem('fogFighterSaveDataV20');
+            if (lsSaved) {
+                const savedJson = lsSaved.includes('|') ? lsSaved.split('|')[0] : lsSaved;
+                _applySaveData(JSON.parse(savedJson));
+            }
+        } catch(e2) {
+            console.error('loadGameAndContinue: all fallbacks failed:', e2);
+            alert('Failed to load saved game. Your save may be corrupted. Error: ' + e2.message);
+            try { switchScreen('screen-menu'); } catch(se) { console.error(se); }
+        }
+    });
+}
+
+function _applySaveData(data) {
+    try {
+    globalProgression = data.global; player = data.pState;
 
         // Build current defaults to fill in any missing fields from new updates
         const defaultGP = {
@@ -546,7 +674,6 @@ function loadGameAndContinue() {
                 mythicBossFound: 0, maxDungeonCleared: 0, bossesDefeated: 0,
                 goldSpent: 0, highestGold: 0, gamblingWins: 0, gamblingLosses: 0,
                 totalPlayTimeSeconds: 0, potionsConsumed: 0, sessionStartTime: Date.now()
-            }
         };
         applyDefaults(globalProgression, defaultGP);
         applyDefaults(player, defaultPlayer);
@@ -662,23 +789,40 @@ function loadGameAndContinue() {
         let genderAvatars = CLASS_GENDER_AVATARS[player.classId];
         if (genderAvatars) { player.data = { ...player.data, avatar: genderAvatars[globalProgression.gender] }; }
 
-        // Restore saved enemies from previous session
-        try {
-            let seData = localStorage.getItem('EternalAscensionSavedEnemies');
-            if (seData) { let parsed = JSON.parse(seData); if (parsed && typeof parsed === 'object') savedEnemies = parsed; }
-        } catch(e) { /* ignore parse errors */ }
+        // Restore saved enemies from previous session: try IndexedDB first, then localStorage
+        _idbGet(CONFIG.SAVE_KEY_ENEMIES).then(idbEnemies => {
+            if (idbEnemies && typeof idbEnemies === 'object') savedEnemies = idbEnemies;
+        }).catch(() => {
+            try {
+                let seData = localStorage.getItem(CONFIG.SAVE_KEY_ENEMIES);
+                if (seData) { let parsed = JSON.parse(seData); if (parsed && typeof parsed === 'object') savedEnemies = parsed; }
+            } catch(e) { /* ignore parse errors */ }
+        });
 
         if (typeof clampAttributes === 'function') clampAttributes();
         showHub();
-    }
     } catch (err) {
-        console.error('loadGameAndContinue: failed to load game:', err);
+        console.error('_applySaveData: failed to apply save:', err);
         alert('Failed to load saved game. Your save may be corrupted. Error: ' + err.message);
-        // Try showing the menu so they can start fresh
-        try { switchScreen('screen-menu'); } catch(e) { console.error('loadGameAndContinue: fallback switchScreen failed', e); }
+        try { switchScreen('screen-menu'); } catch(e) { console.error('_applySaveData: fallback switchScreen failed', e); }
     }
 }
-window.onload = () => { if(localStorage.getItem('EternalAscensionSaveDataV1') || localStorage.getItem('fogFighterSaveDataV22') || localStorage.getItem('fogFighterSaveDataV21') || localStorage.getItem('fogFighterSaveDataV20')) document.getElementById('btn-continue-save').classList.remove('hidden'); updateEnergy(); updateHp(); };
+window.onload = () => {
+    // Show "Continue" button if any save exists (check IndexedDB first, then localStorage)
+    _idbGet(CONFIG.SAVE_KEY).then(idbData => {
+        if (idbData) {
+            const btn = document.getElementById('btn-continue-save');
+            if (btn) btn.classList.remove('hidden');
+        }
+    }).catch(() => {});
+    // Also check localStorage for legacy saves
+    const hasLsSave = CONFIG.LEGACY_SAVE_KEYS.concat([CONFIG.SAVE_KEY]).some(k => localStorage.getItem(k));
+    if (hasLsSave) {
+        const btn = document.getElementById('btn-continue-save');
+        if (btn) btn.classList.remove('hidden');
+    }
+    updateEnergy(); updateHp();
+};
 
 // --- UTILS & MATH ---
 function getXpForNextLevel(lvl) { 
@@ -841,21 +985,23 @@ function confirmNewGameYes() {
     closeConfirmNewGame();
     pendingNewGame = true;
     // Wipe ALL save data so no stale class saves persist
-    localStorage.removeItem('EternalAscensionSaveDataV1');
-    localStorage.removeItem('fogFighterSaveDataV22');
-    localStorage.removeItem('fogFighterSaveDataV21');
-    localStorage.removeItem('fogFighterSaveDataV20');
-    localStorage.removeItem('EternalAscensionSavedEnemies');
+    [CONFIG.SAVE_KEY, ...CONFIG.LEGACY_SAVE_KEYS, CONFIG.SAVE_KEY_ENEMIES].forEach(k => {
+        try { localStorage.removeItem(k); } catch(e) {}
+        _idbDelete(k).catch(() => {});
+    });
     // Remove all per-class saves
     ['warrior', 'mage', 'paladin', 'ninja', 'cleric', 'archer'].forEach(cls => {
-        localStorage.removeItem('EternalAscensionClassSave_' + cls);
+        const key = CONFIG.CLASS_SAVE_PREFIX + cls;
+        try { localStorage.removeItem(key); } catch(e) {}
+        _idbDelete(key).catch(() => {});
     });
     showClassSelect();
 }
 
 function changeClass() {
-    const saveKey = 'EternalAscensionClassSave_' + player.classId;
-    localStorage.setItem(saveKey, JSON.stringify({ global: globalProgression, pState: player }));
+    // Save current class state before switching
+    _idbSet(CONFIG.CLASS_SAVE_PREFIX + player.classId, { global: globalProgression, pState: player }).catch(() => {});
+    try { localStorage.setItem(CONFIG.CLASS_SAVE_PREFIX + player.classId, JSON.stringify({ global: globalProgression, pState: player })); } catch(e) {}
     pendingNewGame = false;
     switchScreen('screen-class-select');
 }
@@ -939,8 +1085,7 @@ function selectGenderAndStart(gender, chosenAvatar) {
             console.error('selectGenderAndStart: CLASSES is not defined. Ensure data.js is loaded.');
             return;
         }
-        const classSaveKey = 'EternalAscensionClassSave_' + pendingClassId;
-        const classSave = localStorage.getItem(classSaveKey);
+        const classSaveKey = CONFIG.CLASS_SAVE_PREFIX + pendingClassId;
         const isNewGame = pendingNewGame;
         pendingNewGame = false;
 
@@ -949,43 +1094,66 @@ function selectGenderAndStart(gender, chosenAvatar) {
         // Determine the final avatar: use chosen emoji if provided, else fall back to class defaults
         let finalAvatar = chosenAvatar || (CLASS_GENDER_AVATARS[pendingClassId] ? CLASS_GENDER_AVATARS[pendingClassId][gender] : (gender === 'female' ? '👩' : '🧑'));
 
-        if (!isNewGame && classSave) {
-            // Load existing class-specific save — restore both globalProgression and player
-            const savedJson = classSave.includes('|') ? classSave.split('|')[0] : classSave;
-            const data = JSON.parse(savedJson);
-            globalProgression = data.global;
-            player = data.pState;
-            // Apply defaults for any missing fields (same as loadGameAndContinue)
-            applyDefaults(globalProgression, { petFavorites: [] });
-            if(!globalProgression.inventory) globalProgression.inventory = {};
-            if(globalProgression.inventory.magic_stone === undefined) globalProgression.inventory.magic_stone = 0;
-            applyDefaults(player, { nodeEnhancements: {} });
-            player.classId = pendingClassId;
-            player.data = CLASSES[player.classId];
-            globalProgression.gender = gender;
-            player.data = { ...player.data, avatar: finalAvatar };
-            setAvatarDisplay('hub-avatar', player.data.avatar);
-        } else if (!isNewGame) {
-            // Switching to a new class with no prior save: start a fresh game for that class
-            startGame(pendingClassId);
-            globalProgression.gender = gender;
-            player.data = { ...player.data, avatar: finalAvatar };
-            setAvatarDisplay('hub-avatar', player.data.avatar);
+        // Try IndexedDB class save first, fall back to localStorage
+        const _applyClassSave = (classSaveData) => {
+            if (!isNewGame && classSaveData) {
+                // Load existing class-specific save — restore both globalProgression and player
+                let data = classSaveData;
+                if (typeof data === 'string') {
+                    const savedJson = data.includes('|') ? data.split('|')[0] : data;
+                    data = JSON.parse(savedJson);
+                }
+                globalProgression = data.global;
+                player = data.pState;
+                // Apply defaults for any missing fields (same as loadGameAndContinue)
+                applyDefaults(globalProgression, { petFavorites: [] });
+                if(!globalProgression.inventory) globalProgression.inventory = {};
+                if(globalProgression.inventory.magic_stone === undefined) globalProgression.inventory.magic_stone = 0;
+                applyDefaults(player, { nodeEnhancements: {} });
+                player.classId = pendingClassId;
+                player.data = CLASSES[player.classId];
+                globalProgression.gender = gender;
+                player.data = { ...player.data, avatar: finalAvatar };
+                setAvatarDisplay('hub-avatar', player.data.avatar);
+            } else if (!isNewGame) {
+                // Switching to a new class with no prior save: start a fresh game for that class
+                startGame(pendingClassId);
+                globalProgression.gender = gender;
+                player.data = { ...player.data, avatar: finalAvatar };
+                setAvatarDisplay('hub-avatar', player.data.avatar);
+                saveGame();
+                showHub();
+                return;
+            } else {
+                // Explicit new game: full reset
+                startGame(pendingClassId);
+                globalProgression.gender = gender;
+                player.data = { ...player.data, avatar: finalAvatar };
+                setAvatarDisplay('hub-avatar', player.data.avatar);
+                saveGame();
+                showHub();
+                return;
+            }
             saveGame();
             showHub();
-            return;
+        };
+
+        if (!isNewGame) {
+            _idbGet(classSaveKey).then(idbData => {
+                if (idbData) {
+                    _applyClassSave(idbData);
+                } else {
+                    // Fall back to localStorage
+                    const lsSave = localStorage.getItem(classSaveKey);
+                    _applyClassSave(lsSave || null);
+                }
+            }).catch(() => {
+                const lsSave = localStorage.getItem(classSaveKey);
+                _applyClassSave(lsSave || null);
+            });
         } else {
-            // Explicit new game: full reset
-            startGame(pendingClassId);
-            globalProgression.gender = gender;
-            player.data = { ...player.data, avatar: finalAvatar };
-            setAvatarDisplay('hub-avatar', player.data.avatar);
-            saveGame();
-            showHub();
-            return;
+            _applyClassSave(null);
         }
-        saveGame();
-        showHub();
     } catch (err) {
         console.error('selectGenderAndStart: failed to start game:', err);
         // RECOVERY: Try to at least get to the hub

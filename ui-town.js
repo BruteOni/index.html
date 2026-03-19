@@ -730,7 +730,10 @@ function petBattleLose() {
 function showPetBattleVictory() {
     let overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 flex items-center justify-center z-50 pointer-events-none';
-    overlay.innerHTML = '<div class="text-6xl font-black text-yellow-400 anim-victory drop-shadow-lg">🎉 VICTORY!</div>';
+    let inner = document.createElement('div');
+    inner.className = 'text-6xl font-black text-yellow-400 anim-victory drop-shadow-lg';
+    inner.textContent = '🎉 VICTORY!';
+    overlay.appendChild(inner);
     document.body.appendChild(overlay);
     let screen = document.getElementById('screen-pet-battle');
     if(screen) screen.classList.add('anim-screen-shake');
@@ -740,7 +743,10 @@ function showPetBattleVictory() {
 function showPetBattleDefeat() {
     let overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 flex items-center justify-center z-50 pointer-events-none';
-    overlay.innerHTML = '<div class="text-6xl font-black text-red-500 anim-defeat drop-shadow-lg">💀 DEFEAT</div>';
+    let inner = document.createElement('div');
+    inner.className = 'text-6xl font-black text-red-500 anim-defeat drop-shadow-lg';
+    inner.textContent = '💀 DEFEAT';
+    overlay.appendChild(inner);
     document.body.appendChild(overlay);
     let screen = document.getElementById('screen-pet-battle');
     if(screen) screen.classList.add('anim-screen-shake');
@@ -750,7 +756,11 @@ function showPetBattleDefeat() {
 function showPetBattleStart() {
     let overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 flex items-center justify-center z-50 pointer-events-none';
-    overlay.innerHTML = '<div class="text-6xl font-black text-green-400 drop-shadow-lg" style="animation: petStartPulse 0.6s ease-in-out 3 alternate;">⚡ START!</div>';
+    let inner = document.createElement('div');
+    inner.className = 'text-6xl font-black text-green-400 drop-shadow-lg';
+    inner.style.animation = 'petStartPulse 0.6s ease-in-out 3 alternate';
+    inner.textContent = '⚡ START!';
+    overlay.appendChild(inner);
     document.body.appendChild(overlay);
     setTimeout(() => {
         overlay.remove();

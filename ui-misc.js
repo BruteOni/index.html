@@ -211,7 +211,13 @@ function showExport() {
 
 function showImport() {
     document.getElementById('sl-modal-title').innerText = "Import Save Data";
-    document.getElementById('sl-modal-desc').innerHTML = "<span class='text-red-400 font-bold'>Warning:</span> This will overwrite your current progress! Paste your code below.";
+    const descEl = document.getElementById('sl-modal-desc');
+    descEl.textContent = '';
+    const warningSpan = document.createElement('span');
+    warningSpan.className = 'text-red-400 font-bold';
+    warningSpan.textContent = 'Warning:';
+    descEl.appendChild(warningSpan);
+    descEl.appendChild(document.createTextNode(' This will overwrite your current progress! Paste your code below.'));
     document.getElementById('sl-modal-text').value = "";
     document.getElementById('sl-modal-text').readOnly = false;
     let btn = document.getElementById('sl-modal-btn');

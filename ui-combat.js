@@ -9,7 +9,14 @@ function showNoEnergyAnimation() {
     let overlay = document.createElement('div');
     overlay.className = 'no-energy-overlay';
     overlay.id = 'no-energy-overlay';
-    overlay.innerHTML = '<div class="no-energy-emoji">⚡</div><div class="no-energy-label">No Energy!</div>';
+    let emojiEl = document.createElement('div');
+    emojiEl.className = 'no-energy-emoji';
+    emojiEl.textContent = '⚡';
+    let labelEl = document.createElement('div');
+    labelEl.className = 'no-energy-label';
+    labelEl.textContent = 'No Energy!';
+    overlay.appendChild(emojiEl);
+    overlay.appendChild(labelEl);
     document.body.appendChild(overlay);
     playSound('lose');
     setTimeout(() => { let el = document.getElementById('no-energy-overlay'); if(el) el.remove(); }, NO_ENERGY_OVERLAY_DURATION_MS);
@@ -834,8 +841,17 @@ function renderSkills() {
 }
 
 function addLog(msg, colorClass = "text-gray-300") {
-    combatLog.push(`<span class="${colorClass}">${msg}</span>`); if (combatLog.length > 20) combatLog.shift();
-    const logDiv = document.getElementById('combat-log'); logDiv.innerHTML = combatLog.map(m => `<div>${m}</div>`).join(''); logDiv.scrollTop = logDiv.scrollHeight;
+    // Build entry using DOM rather than raw HTML concatenation to avoid XSS
+    const span = document.createElement('span');
+    // colorClass comes only from internal game code (static string literals), safe to set
+    span.className = colorClass;
+    span.textContent = msg;
+    combatLog.push(span.outerHTML);
+    if (combatLog.length > CONFIG.COMBAT_LOG_MAX_ENTRIES) combatLog.shift();
+    const logDiv = document.getElementById('combat-log');
+    if (!logDiv) return;
+    logDiv.innerHTML = combatLog.map(m => `<div>${m}</div>`).join('');
+    logDiv.scrollTop = logDiv.scrollHeight;
 }
 
 function triggerAnim(elementId, animClass) {
@@ -967,7 +983,7 @@ function processRegenAndBuffs() {
                 let target = enemies.find(e => e.currentHp > 0);
                 if(target) { target.currentHp = Math.max(0, target.currentHp - burnDmg); addLog(`💊 Medicine reflected ${burnDmg} burn damage to ${target.name}!`, 'text-green-400'); }
             } else {
-                player.currentHp -= burnDmg;
+                player.currentHp = Math.max(0, Math.floor(player.currentHp - burnDmg));
                 showFloatText('player-avatar-container', `-${burnDmg}`, 'text-red-500');
                 addLog(`Burn damage!`, 'text-red-500');
                 playSound('hit');
@@ -987,7 +1003,7 @@ function processRegenAndBuffs() {
                 let target = enemies.find(e => e.currentHp > 0);
                 if(target) { target.currentHp = Math.max(0, target.currentHp - poisonDmg); addLog(`💊 Medicine reflected ${poisonDmg} poison damage to ${target.name}!`, 'text-green-400'); }
             } else {
-                player.currentHp -= poisonDmg;
+                player.currentHp = Math.max(0, Math.floor(player.currentHp - poisonDmg));
                 showFloatText('player-avatar-container', '-' + poisonDmg, 'text-green-500');
                 addLog('Poison damage! (' + poisonStacks + ' stacks)', 'text-green-500');
                 playSound('hit');
@@ -1152,7 +1168,7 @@ function usePlayerSkill(slotIndex) {
                     playSound('crit');
                 }
                 
-                target.currentHp -= Math.max(1, hitDmg); 
+                target.currentHp = Math.max(0, Math.floor(target.currentHp - Math.max(1, hitDmg))); 
                 totalDmg += hitDmg;
                 _pendingDamageNumbers.push({ id: `enemy-card-${tIdx}`, dmg: hitDmg, crit: isCrit });
 
@@ -1428,19 +1444,19 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
 
     if(extraTurns === 0 && e.bleedTurns > 0) {
         // Bleed: 2% of max HP per stack per turn, reduces def by 2% per stack
-        let bDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * e.bleedStacks)); e.currentHp -= bDmg; e.bleedTurns--; showFloatText(`enemy-card-${enemyIdx}`, `-${bDmg}`, 'text-red-600');
+        let bDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * e.bleedStacks)); e.currentHp = Math.max(0, Math.floor(e.currentHp - bDmg)); e.bleedTurns--; showFloatText(`enemy-card-${enemyIdx}`, `-${bDmg}`, 'text-red-600');
         if(e.currentHp <= 0) { updateCombatUI(); setTimeout(() => executeEnemyTurns(enemyIdx + 1), 400); return; }
     }
     if(extraTurns === 0 && e.burnTurns > 0) {
         // Burn: 6% max HP per turn, max 1 stack
         let burnStacks = Math.min(1, e.burnStacks || 1);
-        let burnDmg = Math.max(1, Math.floor(e.maxHp * 0.06 * burnStacks)); e.currentHp -= burnDmg; e.burnTurns--; if(e.burnTurns <= 0) e.burnStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${burnDmg}🔥`, 'text-orange-500');
+        let burnDmg = Math.max(1, Math.floor(e.maxHp * 0.06 * burnStacks)); e.currentHp = Math.max(0, Math.floor(e.currentHp - burnDmg)); e.burnTurns--; if(e.burnTurns <= 0) e.burnStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${burnDmg}🔥`, 'text-orange-500');
         if(e.currentHp <= 0) { updateCombatUI(); setTimeout(() => executeEnemyTurns(enemyIdx + 1), 400); return; }
     }
     if(extraTurns === 0 && e.poisonTurns > 0) {
         // Poison: 2% HP per stack per turn, max 2 stacks
         let poisonStacks = Math.min(2, e.poisonStacks || 1);
-        let poisonDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * poisonStacks)); e.currentHp -= poisonDmg; e.poisonTurns--; if(e.poisonTurns <= 0) e.poisonStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${poisonDmg}☠️`, 'text-green-500');
+        let poisonDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * poisonStacks)); e.currentHp = Math.max(0, Math.floor(e.currentHp - poisonDmg)); e.poisonTurns--; if(e.poisonTurns <= 0) e.poisonStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${poisonDmg}☠️`, 'text-green-500');
         if(e.currentHp <= 0) { updateCombatUI(); setTimeout(() => executeEnemyTurns(enemyIdx + 1), 400); return; }
     }
     if(extraTurns === 0 && e.dmgTakenTurns > 0) { e.dmgTakenTurns--; if(e.dmgTakenTurns <= 0) e.dmgTakenMult = 1; }
@@ -1712,8 +1728,8 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     let doubleBuff = player.activeBuffs.find(b => b.type === 'double_damage_taken');
     if(doubleBuff) { dmg = dmg * 2; }
     
-    dmg = Number.isFinite(dmg) ? Math.max(1, dmg) : 1;
-    player.currentHp -= dmg;
+    dmg = Number.isFinite(dmg) ? Math.max(1, Math.floor(dmg)) : 1;
+    player.currentHp = Math.max(0, Math.floor(player.currentHp - dmg));
 
     // Re Alive passive (Cleric)
     if(player.currentHp <= 0 && player.reAliveArmed && !player.reAliveUsed) {
@@ -1766,7 +1782,7 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     if(reflectPct > 0 && attackerEnemy) {
         let reflectDmg = Math.max(1, Math.floor(dmg * reflectPct));
         if(attackerEnemy.currentHp > 0) {
-            attackerEnemy.currentHp -= reflectDmg;
+            attackerEnemy.currentHp = Math.max(0, Math.floor(attackerEnemy.currentHp - reflectDmg));
             showFloatText(`enemy-card-${activeTargetIndex}`, `-${reflectDmg}`, 'text-orange-400');
             if(fireShieldActive) {
                 attackerEnemy.burnTurns = 1;
@@ -1795,7 +1811,7 @@ function startPlayerTurn() {
     
     if(player.bleedTurns > 0) {
         let bDmg = Math.max(1, Math.floor(player.maxHp * 0.02 * player.bleedStacks));
-        player.currentHp -= bDmg; player.bleedTurns--; 
+        player.currentHp = Math.max(0, Math.floor(player.currentHp - bDmg)); player.bleedTurns--; 
         showFloatText(`player-avatar-container`, `-${bDmg}`, 'text-red-600'); addLog(`Bleed damage!`, 'text-red-600');
         if(player.currentHp <= 0) { updateCombatUI(); setTimeout(() => endBattle(false), 500); return; }
     }
