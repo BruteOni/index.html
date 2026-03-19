@@ -104,16 +104,7 @@ function allocateAttribute(id, count) {
     player.statPoints -= canAllocate * cost;
     globalProgression.attributes[id] = currentVal + canAllocate;
 
-    const oldMaxHp = player.maxHp;
-    player.maxHp = calculateMaxHp();
-    if (oldMaxHp > 0) {
-        const hpRatio = player.maxHp / oldMaxHp;
-        player.currentHp = Math.min(player.maxHp, Math.floor(player.currentHp * hpRatio));
-    } else {
-        player.currentHp = player.maxHp;
-    }
-    // Keep dead players (including those with negative HP) dead
-    if (player.currentHp <= 0 && oldMaxHp > 0) player.currentHp = 0;
+    recalcAndClampHp();
     saveGame();
     playSound('click');
     showAttributes();
@@ -129,19 +120,10 @@ function deallocateAttribute(id, count) {
     if (canRemove <= 0) return;
 
     const cost = getTotalSpentPoints() >= 50 ? 2 : 1;
-    player.statPoints += canRemove * cost;
     globalProgression.attributes[id] = currentVal - canRemove;
+    player.statPoints += canRemove * cost;
 
-    const oldMaxHp = player.maxHp;
-    player.maxHp = calculateMaxHp();
-    if (oldMaxHp > 0) {
-        const hpRatio = player.maxHp / oldMaxHp;
-        player.currentHp = Math.min(player.maxHp, Math.floor(player.currentHp * hpRatio));
-    } else {
-        player.currentHp = player.maxHp;
-    }
-    // Keep dead players (including those with negative HP) dead
-    if (player.currentHp <= 0 && oldMaxHp > 0) player.currentHp = 0;
+    recalcAndClampHp();
     saveGame();
     playSound('click');
     showAttributes();
@@ -157,16 +139,7 @@ function respecAttributes() {
         globalProgression.attributes[stat] = baseVal;
     });
     player.statPoints += totalRefund;
-    const oldMaxHp = player.maxHp;
-    player.maxHp = calculateMaxHp();
-    if (oldMaxHp > 0) {
-        const hpRatio = player.maxHp / oldMaxHp;
-        player.currentHp = Math.min(player.maxHp, Math.floor(player.currentHp * hpRatio));
-    } else {
-        player.currentHp = player.maxHp;
-    }
-    // Keep dead players (including those with negative HP) dead
-    if (player.currentHp <= 0 && oldMaxHp > 0) player.currentHp = 0;
+    recalcAndClampHp();
     saveGame();
     playSound('click');
     showAttributes();
@@ -174,6 +147,15 @@ function respecAttributes() {
 
 
 // --- ATTRIBUTE BUDGET HELPERS ---
+function recalcAndClampHp() {
+    const oldMaxHp = player.maxHp;
+    player.maxHp = calculateMaxHp();
+    // Clamp currentHp to the new max without scaling — no free healing from stat changes
+    player.currentHp = Math.min(player.currentHp, player.maxHp);
+    // Keep dead players dead
+    if (player.currentHp <= 0 && oldMaxHp > 0) player.currentHp = 0;
+}
+
 function getTotalSpentPoints() {
     const { classBase } = getPlayerClassBase();
     let total = 0;
@@ -220,4 +202,6 @@ function clampAttributes() {
     }
 
     player.statPoints = Math.max(0, player.statPoints);
+    // Recalculate maxHp and clamp currentHp in case the hp attribute was trimmed
+    recalcAndClampHp();
 }
