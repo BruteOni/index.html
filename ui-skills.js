@@ -1,7 +1,7 @@
 // --- SKILL SLOT COLOR CONSTANTS ---
 const SLOT_FIXED_COLORS = ['bg-gray-700', 'bg-green-700', 'bg-green-700', 'bg-green-700', 'bg-green-700'];
 
-// Keep ENHANCEMENT_DEFS for backward compatibility (WoH, HP boost in calculateMaxHp)
+// Keep ENHANCEMENT_DEFS for backward compatibility (WoH still usable in old saves; hpBoost still read in calculateMaxHp)
 const ENHANCEMENT_RARITIES = ['normal', 'rare', 'epic', 'legendary'];
 const ENHANCEMENT_RARITY_COLORS = { normal: 'text-white', rare: 'text-blue-500', epic: 'text-purple-500', legendary: 'text-orange-500' };
 const ENHANCEMENT_RARITY_BORDERS = { normal: 'border-gray-600', rare: 'border-blue-500', epic: 'border-purple-500', legendary: 'border-yellow-500' };
@@ -103,7 +103,7 @@ function showSkillUnlockPopup(skillIdx) {
 
 // --- SKILL MENU (new 50-node linear system) ---
 
-// Skill unlock nodes (0-indexed): node indices 4, 9, 14, 19, 24, 29 unlock skills 3-8
+// Skill unlock nodes (0-indexed): node indices 4, 9, 14, 19, 24, 29 (display nodes 5, 10, 15, 20, 25, 30) unlock skills 3-8
 const SKILL_MENU_SKILL_NODES = [4, 9, 14, 19, 24, 29];
 const SKILL_MENU_TOTAL = 50;
 

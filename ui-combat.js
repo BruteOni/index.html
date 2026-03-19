@@ -1276,6 +1276,7 @@ function usePlayerSkill(slotIndex) {
     } else if (skill.type === 'buff') {
         playSound('buff'); triggerAnim('combat-player-avatar', 'anim-heal'); addLog(`Used ${skill.name}!`, "text-white font-bold");
         if(skill.baseDmgHit) {
+            // Intentionally deals raw base damage (ignoring defense) as a flat bonus hit
             let target = enemies[activeTargetIndex];
             if(target && target.currentHp > 0) {
                 let dmg = getBaseDamage();
