@@ -1,6 +1,7 @@
 // --- WEB AUDIO API & MUSIC ---
 let audioCtx = null;
 let activeOscillators = [];
+let musicLoopTimeoutId = null;
 
 function setAvatarDisplay(elementId, avatar) {
     const el = document.getElementById(elementId);
@@ -242,7 +243,7 @@ function playBossSong1() {
     melGain.gain.setValueAtTime(0, now); melGain.gain.linearRampToValueAtTime(0.025, now + 4);
     mel.start(now); activeOscillators.push({osc: mel, gain: melGain});
     const totalDur = melody.reduce((s, [f,d]) => s+d, 0);
-    setTimeout(() => { if(globalProgression.settings.music && activeOscillators.length > 0) playBossSong1(); }, totalDur * 1000);
+    musicLoopTimeoutId = setTimeout(() => { if(globalProgression.settings.music && activeOscillators.length > 0) playBossSong1(); }, totalDur * 1000);
 }
 
 // Boss Song 2: Ethereal - triangle waves, minor pentatonic, slow (loops)
@@ -258,7 +259,7 @@ function playBossSong2() {
     gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.035, now + 3);
     osc.start(now); activeOscillators.push({osc, gain});
     const totalDur = penta.reduce((s, [f,d]) => s+d, 0);
-    setTimeout(() => { if(globalProgression.settings.music && activeOscillators.length > 0) playBossSong2(); }, totalDur * 1000);
+    musicLoopTimeoutId = setTimeout(() => { if(globalProgression.settings.music && activeOscillators.length > 0) playBossSong2(); }, totalDur * 1000);
 }
 
 function playBossMusic() {
@@ -270,6 +271,7 @@ function playBossMusic() {
 function playBattleMusic() { /* no music for regular battles */ }
 
 function stopMusic() {
+    if (musicLoopTimeoutId !== null) { clearTimeout(musicLoopTimeoutId); musicLoopTimeoutId = null; }
     if (!audioCtx) { activeOscillators = []; return; }
     activeOscillators.forEach(o => {
         try { 
@@ -359,7 +361,7 @@ function updateEnergy() {
     let maxEnergy = getMaxEnergy();
     let now = Date.now(); let msPassed = now - globalProgression.lastEnergyTime; let minutesPassed = Math.floor(msPassed / 60000);
     if (globalProgression.energy < maxEnergy) {
-        if (minutesPassed > 0) { globalProgression.energy = Math.min(maxEnergy, globalProgression.energy + minutesPassed); globalProgression.lastEnergyTime = now - (msPassed % 60000); saveGame(); }
+        if (minutesPassed > 0) { globalProgression.energy = Math.min(maxEnergy, globalProgression.energy + minutesPassed); globalProgression.lastEnergyTime = now - (msPassed % 60000); }
     } else { globalProgression.lastEnergyTime = now; }
 
     const eEl = document.getElementById('hub-energy'); if(eEl) eEl.innerText = globalProgression.energy;
@@ -391,7 +393,6 @@ function updateHp() {
             let regenAmt = Math.min(player.maxHp - player.currentHp, minutesPassed * 10);
             player.currentHp = Math.min(player.maxHp, player.currentHp + regenAmt);
             globalProgression.lastHpRegenTime = now - (msPassed % 60000);
-            saveGame();
         }
     } else {
         globalProgression.lastHpRegenTime = now;
@@ -411,6 +412,9 @@ function updateHp() {
     }
 }
 setInterval(updateHp, 1000);
+// Auto-save every 30 seconds to capture regen progress without blocking the UI
+// on every single regen tick. Explicit user actions still call saveGame() directly.
+setInterval(saveGame, 30000);
 
 function consumeEnergy(amount) {
     if(globalProgression.energy >= amount) { globalProgression.energy -= amount; let maxEnergy = getMaxEnergy(); if(globalProgression.energy === maxEnergy - amount) globalProgression.lastEnergyTime = Date.now(); saveGame(); updateEnergy(); return true; }

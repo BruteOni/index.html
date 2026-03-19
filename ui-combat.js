@@ -94,7 +94,7 @@ function returnToTown() {
     // Save living enemies for persistence (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
         let persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
-        savedEnemies[persistKey] = enemies.map(e => JSON.parse(JSON.stringify(e)));
+        savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
     }
     enemies = []; // Clear enemies so fresh ones spawn next battle
     const btn = document.getElementById('btn-auto');
@@ -123,7 +123,7 @@ function generateEnemies() {
             let alive = saved.filter(e => e.currentHp > 0);
             if (alive.length > 0) {
                 enemies = alive.map(e => {
-                    let restored = JSON.parse(JSON.stringify(e));
+                    let restored = structuredClone(e);
                     restored.bleedStacks = 0; restored.bleedTurns = 0;
                     restored.burnStacks = 0; restored.burnTurns = 0;
                     restored.poisonStacks = 0; restored.poisonTurns = 0;
@@ -2162,7 +2162,7 @@ function endBattle(playerWon) {
         // Save living enemies for persistence on defeat (exclude special modes)
         if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
             let persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
-            savedEnemies[persistKey] = enemies.map(e => JSON.parse(JSON.stringify(e)));
+            savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
         }
         enemies = [];
         saveGame();
