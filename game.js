@@ -811,7 +811,7 @@ function getClassAttrCap(classId, attrId) {
 }
 
 function switchScreen(screenId) {
-    if (typeof clampAttributes === 'function') {
+    if (typeof clampAttributes === 'function' && player && player.attributes) {
         try { clampAttributes(); player.maxHp = calculateMaxHp(); } catch(e) { console.error('switchScreen: clampAttributes failed', e); }
     }
     document.querySelectorAll('.screen').forEach(s => {
