@@ -885,7 +885,7 @@ function petBattleLose() {
         petBattleActive = false;
         document.getElementById('pb-result-text').innerText = '⚡ Auto: Restarting fight...';
         setTimeout(() => {
-            if(petBattleAutoMode) startPetBattle(petBattlePlayerPet.id);
+            if(petBattleAutoMode && petBattlePlayerPet) startPetBattle(petBattlePlayerPet.id);
         }, 2000);
     } else {
         petBattleActive = false;
