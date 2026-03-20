@@ -59,8 +59,8 @@ function showWorkshop() {
                 <div class="flex items-center gap-3">
                     <span class="text-3xl">${item.icon || '✨'}</span>
                     <div>
-                        <div class="font-black text-white text-sm drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">${item.name}</div>
-                        <div class="text-xs text-gray-300">Slot: ${item.type}</div>
+                        <div class="font-black text-white text-sm drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">${sanitizeHTML(item.name)}</div>
+                        <div class="text-xs text-gray-300">Slot: ${sanitizeHTML(item.type)}</div>
                         <div class="text-xs mt-1">
                             <span class="text-cyan-300">Item Lvl: ${itemLvl}</span>
                             <span class="text-gray-400 mx-1">→</span>
@@ -72,7 +72,7 @@ function showWorkshop() {
                 <div class="flex flex-col items-center gap-2">
                     ${alreadyMaxed
                         ? '<span class="text-xs text-green-400 font-bold text-center">✓ Already<br>at level</span>'
-                        : `<button onclick="workshopEnhance(this)" data-item-name="${item.name}" data-source="${source}" class="bg-cyan-700 hover:bg-cyan-600 text-white font-bold px-3 py-2 rounded-lg transition active:scale-95 text-sm border border-cyan-400 shadow-md ${canEnhance ? '' : 'opacity-50 cursor-not-allowed'}" ${canEnhance ? '' : 'disabled'}>
+                        : `<button onclick="workshopEnhance(this)" data-item-id="${sanitizeHTML(item.id)}" data-source="${source}" class="bg-cyan-700 hover:bg-cyan-600 text-white font-bold px-3 py-2 rounded-lg transition active:scale-95 text-sm border border-cyan-400 shadow-md ${canEnhance ? '' : 'opacity-50 cursor-not-allowed'}" ${canEnhance ? '' : 'disabled'}>
                             Scale Enhance<br><span class="text-xs text-purple-300">🔮 10</span>
                            </button>`
                     }
@@ -105,7 +105,7 @@ function showWorkshop() {
 
 function workshopEnhance(btn) {
     if((globalProgression.inventory.soul_pebbles || 0) < 10) return;
-    let itemName = btn.dataset.itemName;
+    let itemId = btn.dataset.itemId;
     let source = btn.dataset.source;
 
     // Find and update the item
@@ -130,10 +130,8 @@ function workshopEnhance(btn) {
     }
     if(source === 'equipped') {
         Object.values(globalProgression.equipped).forEach(item => {
-            if(!found && item && item.name && item.rarity === 'mythic') {
-                const searchPrefix = itemName.split(' [Lv.')[0];
-                const itemPrefix = item.name.split(' [Lv.')[0];
-                if(itemPrefix === searchPrefix) {
+            if(!found && item && item.id && item.rarity === 'mythic') {
+                if(item.id === itemId) {
                     recalcMythicItem(item);
                     found = true;
                 }
@@ -141,10 +139,8 @@ function workshopEnhance(btn) {
         });
     } else {
         (globalProgression.equipInventory || []).forEach(item => {
-            if(!found && item && item.name && item.rarity === 'mythic') {
-                const searchPrefix = itemName.split(' [Lv.')[0];
-                const itemPrefix = item.name.split(' [Lv.')[0];
-                if(itemPrefix === searchPrefix) {
+            if(!found && item && item.id && item.rarity === 'mythic') {
+                if(item.id === itemId) {
                     recalcMythicItem(item);
                     found = true;
                 }

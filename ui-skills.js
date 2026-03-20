@@ -48,7 +48,7 @@ function openSkillModal(slotIndex) {
         let btn = document.createElement('button');
         btn.className = `p-3 rounded-lg flex justify-between items-center text-left ${isEquipped ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600 transition active:scale-95 border border-gray-500'}`;
         btn.disabled = isEquipped;
-        btn.innerHTML = `<div><div class="font-bold text-white">${skill.name}</div><div class="text-xs text-gray-300">${skill.desc}</div><div class="text-[10px] text-yellow-400">CD: ${skill.cd} turns</div></div> <div class="text-2xl">${isEquipped?'✅':''}</div>`;
+        btn.innerHTML = `<div><div class="font-bold text-white">${sanitizeHTML(skill.name)}</div><div class="text-xs text-gray-300">${sanitizeHTML(skill.desc)}</div><div class="text-[10px] text-yellow-400">CD: ${skill.cd} turns</div></div> <div class="text-2xl">${isEquipped?'✅':''}</div>`;
         if(!isEquipped) btn.onclick = () => {
             player.equippedSkills[activeSkillSlot] = skillIdx;
             playSound('click'); saveGame(); closeSkillModal();
@@ -77,8 +77,8 @@ function showSkillUnlockPopup(skillIdx) {
         <div class="bg-gray-900 border-2 border-yellow-400 rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
             <div class="text-5xl mb-3">🎯</div>
             <div class="text-xs text-yellow-400 uppercase tracking-widest mb-1">New Skill Unlocked!</div>
-            <div class="text-2xl font-black ${skill.color || 'text-white'} mb-3">${skill.name}</div>
-            <div class="text-sm text-gray-300 bg-gray-800 rounded-xl p-3 mb-4">${skill.desc}</div>
+            <div class="text-2xl font-black ${skill.color || 'text-white'} mb-3">${sanitizeHTML(skill.name)}</div>
+            <div class="text-sm text-gray-300 bg-gray-800 rounded-xl p-3 mb-4">${sanitizeHTML(skill.desc)}</div>
             <button onclick="document.getElementById('skill-unlock-popup').remove(); if(typeof showSkillTree === 'function') showSkillTree();" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl transition active:scale-95">
                 Awesome!
             </button>
@@ -151,6 +151,8 @@ function showSkillMenu() {
         if (nodeInfo.type === 'skill') {
             let skillName = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].name : '???';
             let skillDesc = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].desc : '';
+            let safeSkillName = sanitizeHTML(skillName);
+            let safeSkillDesc = sanitizeHTML(skillDesc);
             if (isUnlocked) {
                 card.className = 'w-full rounded-xl border-2 px-3 py-2 bg-indigo-900 border-indigo-500 text-indigo-100 shadow';
                 card.innerHTML = `
@@ -158,7 +160,7 @@ function showSkillMenu() {
                         <span class="text-xl">🎯</span>
                         <div>
                             <div class="font-bold text-sm">Node ${i+1} — Skill Unlocked ✅</div>
-                            <div class="text-xs text-indigo-300">${skillName}: ${skillDesc}</div>
+                            <div class="text-xs text-indigo-300">${safeSkillName}: ${safeSkillDesc}</div>
                         </div>
                     </div>`;
             } else if (isNext) {
@@ -168,16 +170,16 @@ function showSkillMenu() {
                         <span class="text-2xl animate-bounce">🎯</span>
                         <div>
                             <div class="font-black text-sm">Node ${i+1} — Unlock Skill!</div>
-                            <div class="text-xs text-indigo-300 font-bold">${skillName}</div>
-                            <div class="text-[10px] text-gray-300">${skillDesc}</div>
+                            <div class="text-xs text-indigo-300 font-bold">${safeSkillName}</div>
+                            <div class="text-[10px] text-gray-300">${safeSkillDesc}</div>
                         </div>
                     </div>
                     <button onclick="unlockSkillMenuNode('skill')" class="w-full bg-yellow-500 hover:bg-yellow-400 active:scale-95 font-bold text-sm py-2 rounded-lg transition text-gray-900 shadow">
-                        🎯 Unlock ${skillName} — 1 SP
+                        🎯 Unlock ${safeSkillName} — 1 SP
                     </button>`;
             } else {
                 card.className = 'w-full rounded-xl border-2 px-3 py-2 opacity-40 bg-gray-800 border-gray-600 text-gray-500';
-                card.innerHTML = `<div class="text-xs text-center font-bold">Node ${i+1} — 🎯 Skill: ${skillName} (Locked)</div>`;
+                card.innerHTML = `<div class="text-xs text-center font-bold">Node ${i+1} — 🎯 Skill: ${safeSkillName} (Locked)</div>`;
             }
         } else {
             // Stat choice node

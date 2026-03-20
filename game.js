@@ -1,3 +1,9 @@
+// --- HTML SANITIZATION ---
+function sanitizeHTML(str) {
+    if (typeof str !== 'string') return String(str);
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 // --- WEB AUDIO API & MUSIC ---
 let audioCtx = null;
 let activeOscillators = [];
