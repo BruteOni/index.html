@@ -244,7 +244,7 @@ const CLASSES = {
         name: 'Ninja', icon: '🌟', avatar: '🥷', baseHp: 1000, baseDmg: 100,
         skills: [
             // Index 0-2: always unlocked
-            { name: 'Shuriken Hit', type: 'attack', mult: 1, cd: 0, color: 'bg-gray-700', desc: 'Base damage' },
+            { name: 'Shuriken Hit', type: 'attack', mult: 0.333, hits: 3, cd: 0, color: 'bg-gray-700', desc: '3 hits, each hit = 1/3 base damage' },
             { name: 'Face Kick', type: 'attack', mult: 3.0, cd: 6, color: 'bg-green-700', desc: 'Base damage +200%' },
             { name: 'Throw', type: 'attack', mult: 1.50, effect: { stunChance: 1.0, defDown: 0.15 }, cd: 6, color: 'bg-purple-700', desc: 'Base damage +50% + Stun (1t) + Enemy DEF -15%' },
             // Index 3-5: Shadow Path
