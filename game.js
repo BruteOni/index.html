@@ -1172,20 +1172,72 @@ function showGenderSelect(classId) {
     if (videoFile) {
         const video = document.getElementById('class-intro-video');
         if (video) {
+            // Reset video element before re-use to avoid stale source issues
+            video.pause();
             const src = document.getElementById('class-intro-video-src');
-            if (src) src.src = videoFile;
-            video.muted = false;
+            if (src) src.src = '';
             video.load();
-            video.play().catch(err => {
-                console.warn('Autoplay blocked:', err);
-                // Try muted as fallback to allow video to play
-                video.muted = true;
-                video.play().catch(muteErr => {
-                    console.warn('Muted autoplay also blocked, skipping video:', muteErr);
-                    onClassVideoEnd();
+
+            // Ensure inline playback attributes are set for iOS/Android
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', '');
+
+            if (src) src.src = videoFile;
+
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            // Start muted on mobile — browsers allow muted autoplay after a user gesture
+            video.muted = isMobile;
+            video.load();
+
+            const videoContainer = video.parentElement;
+
+            // Helper: remove any existing tap-to-play overlay
+            const removeTapOverlay = () => {
+                const existing = videoContainer && videoContainer.querySelector('.tap-to-play-overlay');
+                if (existing) existing.remove();
+            };
+
+            const attemptPlay = () => {
+                video.play().then(() => {
+                    removeTapOverlay();
+                    // On mobile: video is now playing muted — try to unmute
+                    if (isMobile && video.muted) {
+                        video.muted = false;
+                    }
+                }).catch(err => {
+                    console.warn('Autoplay blocked:', err);
+                    if (!video.muted) {
+                        // Retry muted
+                        video.muted = true;
+                        video.play().then(() => {
+                            removeTapOverlay();
+                        }).catch(muteErr => {
+                            console.warn('Muted autoplay also blocked, showing tap overlay:', muteErr);
+                            showTapOverlay();
+                        });
+                    } else {
+                        console.warn('Muted autoplay blocked, showing tap overlay');
+                        showTapOverlay();
+                    }
                 });
-            });
+            };
+
+            const showTapOverlay = () => {
+                if (!videoContainer) { onClassVideoEnd(); return; }
+                removeTapOverlay();
+                const overlay = document.createElement('div');
+                overlay.className = 'tap-to-play-overlay';
+                overlay.innerHTML = '<span>▶ Tap to Play</span>';
+                overlay.addEventListener('click', () => {
+                    overlay.remove();
+                    video.muted = false;
+                    video.play().catch(() => { video.muted = true; video.play().catch(() => onClassVideoEnd()); });
+                }, { once: true });
+                videoContainer.appendChild(overlay);
+            };
+
             video.onended = onClassVideoEnd;
+            attemptPlay();
         }
         switchScreen('screen-class-intro-video');
         return;
