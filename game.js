@@ -381,13 +381,13 @@ let globalProgression = {
     wellLastHealDate: '', wellXpBattles: 0, wellDropBattles: 0, wellLastXpDate: '', wellLastDropDate: '', wellLastEnergyDate: '', wellLastEnergy50Date: '', wellLastEnergy100Date: '',
     lastHpRegenTime: Date.now(), enemyKillCounts: {}, claimedCodexMilestones: {},
     totalExpEarned: 0, cooldowns: { herbs: 0, mine: 0, fish: 0, enchants: 0 },
-    inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0 },
+    inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 },
     usableItems: {},
     equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null },
     newItems: {}, shopGear: [], shopLastRefresh: 0,
     attributes: { hp: 0, tenacity: 0, agility: 0, willpower: 0, resistance: 0, reflexes: 0, fury: 0, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 },
     storyModeProgress: { hunting: 0, pillage: 0, workshop: 0, island_defense: 0 },
-    settings: { sound: true, music: true, autoBattleTargetPriority: 'easy', autoBattleUsables: [] },
+    settings: { sound: true, music: true, autoBattleTargetPriority: 'easy', autoBattleUsables: [], autoUseRegenAt75: true },
     discoveredEnemies: {}, claimedCodexRewards: {}, killedBosses: {}, discoveredMythicBosses: [],
     skillTreeEnhancements: [],
     burglarDailyPurchases: 0, burglarLastPurchaseDate: '',
@@ -395,8 +395,10 @@ let globalProgression = {
     discoveredPets: {}, claimedPetRewards: {}, ultimatePetRewardClaimed: false,
     petWinLoss: {},
     petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
+    petFavorites: [],
     blackMarketTier: 0,
     zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
+    pebbleBonusDmg: 0, pebbleBonusArmorPierce: 0, pebbleBonusHp: 0, pebbleBonusDef: 0,
     patchV1Applied: true,
     saveVersion: 2
 };
@@ -409,9 +411,9 @@ for(let i=1; i<=50; i++) {
     if(i===48) TREE_NODES.push({type: 'infinite', stat: 'hp', val: 20, cost: 1});
     else if(i===49) TREE_NODES.push({type: 'infinite', stat: 'dmg', val: 5, cost: 1});
     else if(i===50) TREE_NODES.push({type: 'infinite', stat: 'def', val: 2, cost: 1});
-    else if(skillUnlockNodes.includes(i)) { let skillIdx = 3 + skillUnlockNodes.indexOf(i); TREE_NODES.push({type: 'skill', index: skillIdx, cost: 1}); } 
+    else if(skillUnlockNodes.includes(i)) { const skillIdx = 3 + skillUnlockNodes.indexOf(i); TREE_NODES.push({type: 'skill', index: skillIdx, cost: 1}); } 
     else if(regenNodes.includes(i)) { TREE_NODES.push({type: 'stat', stat: 'regen', val: 1, cost: 1}); }
-    else { let st = statCycle[cycleIdx % 3]; let v = st==='hp'? 10 : 1; TREE_NODES.push({type: 'stat', stat: st, val: v, cost: 1}); cycleIdx++; }
+    else { const st = statCycle[cycleIdx % 3]; const v = st==='hp'? 10 : 1; TREE_NODES.push({type: 'stat', stat: st, val: v, cost: 1}); cycleIdx++; }
 }
 
 let player = {
@@ -451,12 +453,12 @@ function getEl(id) {
 }
 
 function getMaxEnergy() {
-    let baseCap = globalProgression.energyCapUnlocked ? 150 : 50;
+    const baseCap = globalProgression.energyCapUnlocked ? 150 : 50;
     return Math.min(baseCap, 10 + Math.max(0, player.lvl - 1));
 }
 
 function getTitleStatBonus() {
-    let zs = globalProgression.zombieStats;
+    const zs = globalProgression.zombieStats;
     return ((zs && zs.titlesEarned) ? zs.titlesEarned.length : 0) * 0.01;
 }
 
@@ -570,15 +572,15 @@ function consumeEnergy(amount) {
     if (typeof globalProgression.energy !== 'number' || isNaN(globalProgression.energy)) {
         globalProgression.energy = getMaxEnergy();
     }
-    if(globalProgression.energy >= amount) { globalProgression.energy -= amount; let maxEnergy = getMaxEnergy(); if(globalProgression.energy === maxEnergy - amount) globalProgression.lastEnergyTime = Date.now(); saveGame(); updateEnergy(); return true; }
+    if(globalProgression.energy >= amount) { globalProgression.energy -= amount; const maxEnergy = getMaxEnergy(); if(globalProgression.energy === maxEnergy - amount) globalProgression.lastEnergyTime = Date.now(); saveGame(); updateEnergy(); return true; }
     return false;
 }
 
 // --- INVENTORY STACK CAP ---
 const INVENTORY_STACK_CAP = 99;
 function addToInventory(type, amount) {
-    let current = globalProgression.inventory[type] || 0;
-    let newAmount = Math.min(current + amount, INVENTORY_STACK_CAP);
+    const current = globalProgression.inventory[type] || 0;
+    const newAmount = Math.min(current + amount, INVENTORY_STACK_CAP);
     globalProgression.inventory[type] = newAmount;
     return newAmount - current; // actual amount added
 }
@@ -613,8 +615,8 @@ function ensureProgressStats() {
 function saveGame() {
     // Accumulate play time on each save
     if (player.progressStats) {
-        let now = Date.now();
-        let elapsed = (now - (player.progressStats.sessionStartTime || now)) / 1000;
+        const now = Date.now();
+        const elapsed = (now - (player.progressStats.sessionStartTime || now)) / 1000;
         player.progressStats.totalPlayTimeSeconds = (player.progressStats.totalPlayTimeSeconds || 0) + Math.floor(elapsed);
         player.progressStats.sessionStartTime = now;
     }
@@ -882,16 +884,16 @@ function loadGameAndContinue() {
                 }
                 // Respec all attributes to base values and refund points
                 const patchAttrs = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','return','vampire','defense','happiness'];
-                let patchClassBase = getClassBaseAttributes(player.classId || 'warrior');
+                const patchClassBase = getClassBaseAttributes(player.classId || 'warrior');
                 let patchRefund = 0;
                 patchAttrs.forEach(stat => {
-                    let cur = globalProgression.attributes[stat] || 0;
-                    let base = patchClassBase[stat] || 0;
+                    const cur = globalProgression.attributes[stat] || 0;
+                    const base = patchClassBase[stat] || 0;
                     patchRefund += Math.max(0, cur - base);
                     globalProgression.attributes[stat] = base;
                 });
                 // Reset skill tree
-                let skillTreeRefund = (player.skillMenuProgress || 0);
+                const skillTreeRefund = (player.skillMenuProgress || 0);
                 player.skillMenuProgress = 0;
                 player.skillMenuBonusDmgPct = 0;
                 player.skillMenuBonusDefPct = 0;
@@ -903,7 +905,7 @@ function loadGameAndContinue() {
                 player.unlockedSkills = [0, 1, 2];
                 player.equippedSkills = [0, 1, 2, null, null];
                 // Recalculate stat points based on new formula
-                let newMaxBudget = (player.lvl || 0) * 2;
+                const newMaxBudget = (player.lvl || 0) * 2;
                 player.statPoints = Math.max(0, newMaxBudget);
                 player.skillPoints = (player.skillPoints || 0) + skillTreeRefund;
                 globalProgression.patchV1Applied = true;
@@ -938,19 +940,19 @@ function getXpForNextLevel(lvl) {
     // where segment = floor((lvl-1)/100), offset = ((lvl-1)%100)+1
     // XP per level = battlesPerLevel * 100
     if (lvl <= 0) lvl = 0; // Level 0 uses offset=1 → 5 battles * 100 = 500 XP
-    let segment = Math.floor(Math.max(0, lvl - 1) / 100);
-    let offset = (Math.max(0, lvl - 1) % 100) + 1;
-    let battlesPerLevel = 4 + segment * 10 + Math.ceil(offset / 10);
+    const segment = Math.floor(Math.max(0, lvl - 1) / 100);
+    const offset = (Math.max(0, lvl - 1) % 100) + 1;
+    const battlesPerLevel = 4 + segment * 10 + Math.ceil(offset / 10);
     return battlesPerLevel * 100;
 }
 
 function getDropRateMultiplier() {
-    let base = (globalProgression.wellDropBattles || 0) > 0 ? 2 : 1;
+    const base = (globalProgression.wellDropBattles || 0) > 0 ? 2 : 1;
     let dropRateBonus = 0;
-    let enhancements = globalProgression.skillTreeEnhancements || [];
+    const enhancements = globalProgression.skillTreeEnhancements || [];
     enhancements.forEach(e => {
         if(e.type === 'dropRate') {
-            let vals = { normal: 0.01, rare: 0.02, epic: 0.03, legendary: 0.04 };
+            const vals = { normal: 0.01, rare: 0.02, epic: 0.03, legendary: 0.04 };
             dropRateBonus += vals[e.rarity] || 0;
         }
     });
@@ -973,7 +975,7 @@ function getGearScore(itemOrStats) {
     if(!itemOrStats) return 0;
     // If it's an item object with itemLevel and rarity, use level * rarity score
     if(itemOrStats.itemLevel && itemOrStats.rarity) {
-        let rarityScore = {common: 1, rare: 2, epic: 5, legendary: 10, mythic: 30}[itemOrStats.rarity] || 1;
+        const rarityScore = {common: 1, rare: 2, epic: 5, legendary: 10, mythic: 30}[itemOrStats.rarity] || 1;
         return itemOrStats.itemLevel * rarityScore;
     }
     // Fallback: old flat stats (for backward compatibility)
@@ -981,10 +983,10 @@ function getGearScore(itemOrStats) {
 }
 
 function hasBetterGear(slot) {
-    let eq = globalProgression.equipped[slot];
-    let eqGS = eq ? getGearScore(eq) : -1;
-    let baseSlot = slot.startsWith('ring') ? 'ring' : slot;
-    let betterInInv = globalProgression.equipInventory.some(i => i.type === baseSlot && getGearScore(i) > eqGS);
+    const eq = globalProgression.equipped[slot];
+    const eqGS = eq ? getGearScore(eq) : -1;
+    const baseSlot = slot.startsWith('ring') ? 'ring' : slot;
+    const betterInInv = globalProgression.equipInventory.some(i => i.type === baseSlot && getGearScore(i) > eqGS);
     return betterInInv;
 }
 
@@ -994,11 +996,11 @@ function hasBetterGear(slot) {
  * @returns {number} The computed maximum HP value (floored).
  */
 function calculateMaxHp() {
-    let a = globalProgression.attributes;
+    const a = globalProgression.attributes;
     // Base HP from class, level scaling, and tree bonus
     let base = player.data.baseHp + (Math.max(0, player.lvl - 1) * 15) + player.treeBonusHp;
     // HP attribute: +0.5% max HP per point
-    let attrHpMult = 1 + ((a.hp || 0) * 0.005);
+    const attrHpMult = 1 + ((a.hp || 0) * 0.005);
     base = Math.floor(base * attrHpMult);
     // Apply HP Boost enhancements
     let hpBoostMult = 1;
@@ -1022,23 +1024,23 @@ function calculateMaxHp() {
  * @returns {number} The computed base damage value (floored).
  */
 function getBaseDamage() {
-    let a = globalProgression.attributes;
+    const a = globalProgression.attributes;
     // Raw Power: +2 base dmg per point; tree bonus flat dmg
     let baseDmg = player.data.baseDmg + ((a.rawPower || 0) * 2) + player.treeBonusDmg;
     // Willpower: +0.3% increased base damage per point
-    let willpowerMult = 1 + ((a.willpower || 0) * 0.003);
+    const willpowerMult = 1 + ((a.willpower || 0) * 0.003);
     baseDmg = Math.floor(baseDmg * willpowerMult);
     // Apply weapon base damage percentage bonus (from weaponBaseDmgPct property, 0.1% per level)
-    let weapon = globalProgression.equipped ? globalProgression.equipped['weapon'] : null;
-    let weaponPctBonus = weapon ? (weapon.weaponBaseDmgPct || 0) : 0;
+    const weapon = globalProgression.equipped ? globalProgression.equipped['weapon'] : null;
+    const weaponPctBonus = weapon ? (weapon.weaponBaseDmgPct || 0) : 0;
     if(weaponPctBonus > 0) baseDmg = Math.floor(baseDmg * (1 + weaponPctBonus));
     // Apply bonusBaseDmgPct from gear (bonus stat for weapon/arms, 0.02% per level)
     if (typeof getEquipBonusStat === 'function') {
-        let baseDmgPct = getEquipBonusStat('bonusBaseDmgPct');
+        const baseDmgPct = getEquipBonusStat('bonusBaseDmgPct');
         if(baseDmgPct > 0) baseDmg = Math.floor(baseDmg * (1 + baseDmgPct));
     }
     // Apply weapon enhancement flat bonus (WeaponSmith system — stored in item.stats.dmg)
-    let weaponEnhanceDmg = weapon ? ((weapon.stats && weapon.stats.dmg) || 0) : 0;
+    const weaponEnhanceDmg = weapon ? ((weapon.stats && weapon.stats.dmg) || 0) : 0;
     baseDmg += weaponEnhanceDmg;
     // Apply weapon enhance max bonus (+5% at level 100)
     if(weapon && weapon.weaponEnhanceMaxBonus) baseDmg = Math.floor(baseDmg * 1.05);
@@ -1047,7 +1049,7 @@ function getBaseDamage() {
     // Apply pebble exchange damage bonus
     baseDmg = Math.floor(baseDmg * (1 + (globalProgression.pebbleBonusDmg || 0) * 0.01));
     // Apply zombie title bonus (+1% damage per title)
-    let titleBonus = getTitleStatBonus();
+    const titleBonus = getTitleStatBonus();
     if(titleBonus > 0) baseDmg = Math.floor(baseDmg * (1 + titleBonus));
     return baseDmg;
 }
@@ -1058,7 +1060,7 @@ function getBaseDamage() {
  * @returns {number} The computed defense value (floored).
  */
 function getPlayerDef() {
-    let a = globalProgression.attributes;
+    const a = globalProgression.attributes;
     return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01) * (1 + getTitleStatBonus()));
 }
 
@@ -1088,17 +1090,17 @@ function switchScreen(screenId) {
 function showMerchants() { switchScreen('screen-merchants'); }
 
 function showPortal() {
-    let zombieBtn = document.getElementById('portal-zombie-btn');
+    const zombieBtn = document.getElementById('portal-zombie-btn');
     if(zombieBtn) {
         if(player.lvl < 100) {
             zombieBtn.disabled = true;
             zombieBtn.style.opacity = '0.5';
-            let label = zombieBtn.querySelector('.font-bold');
+            const label = zombieBtn.querySelector('.font-bold');
             if(label) label.innerHTML = '🔒 Zombie Apocalypse <span class="text-xs text-gray-400">(Lvl 100)</span>';
         } else {
             zombieBtn.disabled = false;
             zombieBtn.style.opacity = '';
-            let label = zombieBtn.querySelector('.font-bold');
+            const label = zombieBtn.querySelector('.font-bold');
             if(label) label.innerHTML = 'Zombie Apocalypse';
         }
     }
@@ -1139,7 +1141,9 @@ function confirmNewGameYes() {
 
 function changeClass() {
     const saveKey = 'EternalAscensionClassSave_' + player.classId;
-    localStorage.setItem(saveKey, JSON.stringify({ global: globalProgression, pState: player }));
+    const data = JSON.stringify({ global: globalProgression, pState: player });
+    const checksum = simpleHash(data);
+    localStorage.setItem(saveKey, data + "|" + checksum);
     // Save current class's enemies to a class-specific key
     if (savedEnemies && Object.keys(savedEnemies).length > 0) {
         localStorage.setItem('EternalAscensionSavedEnemies_' + player.classId, JSON.stringify(savedEnemies));
@@ -1299,7 +1303,7 @@ function selectGenderAndStart(gender, chosenAvatar) {
         pendingNewGame = false;
 
         // Determine the final avatar: use chosen emoji if provided, else fall back to class defaults
-        let finalAvatar = chosenAvatar || (CLASS_GENDER_AVATARS[pendingClassId] ? CLASS_GENDER_AVATARS[pendingClassId][gender] : (gender === 'female' ? '👩' : '🧑'));
+        const finalAvatar = chosenAvatar || (CLASS_GENDER_AVATARS[pendingClassId] ? CLASS_GENDER_AVATARS[pendingClassId][gender] : (gender === 'female' ? '👩' : '🧑'));
 
         if (!isNewGame && classSave) {
             // Load existing class-specific save — restore both globalProgression and player
@@ -1371,7 +1375,7 @@ function selectGenderAndStart(gender, chosenAvatar) {
 function toggleGender() {
     if (!globalProgression.gender) globalProgression.gender = 'male';
     globalProgression.gender = globalProgression.gender === 'male' ? 'female' : 'male';
-    let avatarMap = CLASS_GENDER_AVATARS[player.classId];
+    const avatarMap = CLASS_GENDER_AVATARS[player.classId];
     if (avatarMap) { player.data = { ...player.data, avatar: avatarMap[globalProgression.gender] }; }
     playSound('click');
     saveGame();
@@ -1385,7 +1389,7 @@ function showHub() {
     player.regenBuffs = []; player.activeBuffs = []; player.skillCooldowns = {};
     player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;
     player.reAliveArmed = false; player.reAliveUsed = false;
-    let heroMenu = document.getElementById('hub-hero-menu');
+    const heroMenu = document.getElementById('hub-hero-menu');
     if(heroMenu) heroMenu.classList.add('hidden');
 
     try {
@@ -1395,7 +1399,7 @@ function showHub() {
         document.getElementById('hub-class').innerText = player.data.name;
         setAvatarDisplay('hub-avatar', player.data.avatar);
         // Apply Black Market Tier 1 avatar glow
-        let hubAvatar = document.getElementById('hub-avatar');
+        const hubAvatar = document.getElementById('hub-avatar');
         if (hubAvatar) {
             if ((globalProgression.blackMarketTier || 0) >= 1) {
                 hubAvatar.classList.add('bm-avatar-glow');
@@ -1406,16 +1410,16 @@ function showHub() {
         document.getElementById('hub-level-up-noti').classList.toggle('hidden', player.statPoints <= 0);
 
         // Show highest earned zombie title badge
-        let zs = globalProgression.zombieStats;
-        let titlesEarned = (zs && zs.titlesEarned) ? zs.titlesEarned : [];
+        const zs = globalProgression.zombieStats;
+        const titlesEarned = (zs && zs.titlesEarned) ? zs.titlesEarned : [];
         let highestTitle = null;
         if(titlesEarned.length > 0 && typeof ZOMBIE_TITLES !== 'undefined') {
             for(let i = ZOMBIE_TITLES.length - 1; i >= 0; i--) {
                 if(titlesEarned.includes(ZOMBIE_TITLES[i].id)) { highestTitle = ZOMBIE_TITLES[i]; break; }
             }
         }
-        let titleBadgeEl = document.getElementById('hub-title-badge');
-        let titleMobileEl = document.getElementById('hub-title-mobile');
+        const titleBadgeEl = document.getElementById('hub-title-badge');
+        const titleMobileEl = document.getElementById('hub-title-mobile');
         if(highestTitle) {
             const badgeSpan = document.createElement('span');
             badgeSpan.className = 'title-badge';
@@ -1431,18 +1435,18 @@ function showHub() {
     try {
         // Sync hero bar notification badges
         if(document.getElementById('hub-attr-noti-hero')) document.getElementById('hub-attr-noti-hero').classList.toggle('hidden', player.statPoints <= 0);
-        let skillTreeMaxed = (player.skillMenuProgress || 0) >= SKILL_MENU_TOTAL;
+        const skillTreeMaxed = (player.skillMenuProgress || 0) >= SKILL_MENU_TOTAL;
         if(document.getElementById('hub-skill-noti-hero')) document.getElementById('hub-skill-noti-hero').classList.toggle('hidden', player.skillPoints <= 0 || skillTreeMaxed);
         
-        let hasUnequippedBetter = EQUIP_SLOTS.some(slot => hasBetterGear(slot));
+        const hasUnequippedBetter = EQUIP_SLOTS.some(slot => hasBetterGear(slot));
         if(document.getElementById('hub-char-noti-hero')) document.getElementById('hub-char-noti-hero').classList.toggle('hidden', !hasUnequippedBetter);
     } catch(e) { console.error('showHub: hero bar badges failed', e); }
 
     try {
         // Sync codex checks to base names
-        let allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
+        const allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
         let hasUnclaimedCodex = false;
-        for(let e of allM) {
+        for(const e of allM) {
             if(globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[e.name]) {
                 if(!globalProgression.claimedCodexRewards || !globalProgression.claimedCodexRewards[e.name]) {
                     hasUnclaimedCodex = true; break;
@@ -1451,7 +1455,7 @@ function showHub() {
         }
         // Also check mythic bosses for unclaimed codex rewards
         if(!hasUnclaimedCodex && globalProgression.discoveredMythicBosses) {
-            for(let bossName of globalProgression.discoveredMythicBosses) {
+            for(const bossName of globalProgression.discoveredMythicBosses) {
                 if(!globalProgression.claimedCodexRewards || !globalProgression.claimedCodexRewards[bossName]) {
                     hasUnclaimedCodex = true; break;
                 }
@@ -1467,8 +1471,8 @@ function showHub() {
         if(petNoti) {
             let hasUnclaimedPet = false;
             if(typeof PET_DATA !== 'undefined') {
-                for(let pet of PET_DATA) {
-                    let isClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[pet.name];
+                for(const pet of PET_DATA) {
+                    const isClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[pet.name];
                     if(isPetDiscovered(pet) && !isClaimed) { hasUnclaimedPet = true; break; }
                 }
             }
@@ -1530,8 +1534,8 @@ function showSettings() {
     document.getElementById('toggle-music-btn').innerText = globalProgression.settings.music ? 'ON' : 'OFF';
     document.getElementById('toggle-music-btn').className = `px-6 py-2 rounded font-bold text-white transition active:scale-95 ${globalProgression.settings.music ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`;
 
-    let gender = globalProgression.gender || 'male';
-    let genderBtn = document.getElementById('toggle-gender-btn');
+    const gender = globalProgression.gender || 'male';
+    const genderBtn = document.getElementById('toggle-gender-btn');
     if (genderBtn) {
         genderBtn.innerText = gender === 'male' ? '♂ Male' : '♀ Female';
         genderBtn.className = `px-6 py-2 rounded font-bold text-white transition active:scale-95 ${gender === 'male' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-pink-600 hover:bg-pink-500'}`;
@@ -1570,8 +1574,8 @@ function setAutoBattleTargetPriority(value) {
 
 function toggleAutoBattleUsable(key) {
     if(!globalProgression.settings.autoBattleUsables) globalProgression.settings.autoBattleUsables = [];
-    let arr = globalProgression.settings.autoBattleUsables;
-    let idx = arr.indexOf(key);
+    const arr = globalProgression.settings.autoBattleUsables;
+    const idx = arr.indexOf(key);
     if(idx !== -1) {
         arr.splice(idx, 1);
     } else {
@@ -1623,12 +1627,12 @@ function renderAutoBattleSettingsModal() {
     list.innerHTML = '';
     let hasAny = false;
     Object.keys(USABLE_ITEMS).forEach(key => {
-        let amt = (globalProgression.usableItems || {})[key] || 0;
+        const amt = (globalProgression.usableItems || {})[key] || 0;
         if(amt <= 0) return;
         hasAny = true;
-        let item = USABLE_ITEMS[key];
-        let isSel = selected.includes(key);
-        let row = document.createElement('div');
+        const item = USABLE_ITEMS[key];
+        const isSel = selected.includes(key);
+        const row = document.createElement('div');
         row.className = 'flex items-center justify-between py-2 border-b border-gray-700';
         row.innerHTML = `
             <div class="flex items-center gap-2">
@@ -1652,39 +1656,41 @@ function renderAutoBattleSettingsModal() {
 function showCodex() {
     document.getElementById('codex-gold-display').innerText = globalProgression.gold;
     const list = document.getElementById('codex-list'); list.innerHTML = '';
-    let allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
+    const allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
+    const htmlParts = [];
     
     // Mythic bosses section — render FIRST, sort so unclaimed (claimable) bosses appear first
-    let discoveredMythicBosses = (globalProgression.discoveredMythicBosses || []).slice().sort((a, b) => {
-        let aClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[a];
-        let bClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[b];
+    const discoveredMythicBosses = (globalProgression.discoveredMythicBosses || []).slice().sort((a, b) => {
+        const aClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[a];
+        const bClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[b];
         if (!aClaimed && bClaimed) return -1;
         if (aClaimed && !bClaimed) return 1;
         return 0;
     });
     if(discoveredMythicBosses.length > 0) {
-        list.innerHTML += `<div class="col-span-full text-center text-white font-black text-sm mt-3 mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">✨ MYTHIC ENCOUNTERS ✨</div>`;
+        htmlParts.push(`<div class="col-span-full text-center text-white font-black text-sm mt-3 mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">✨ MYTHIC ENCOUNTERS ✨</div>`);
         discoveredMythicBosses.forEach(bossName => {
-            let kills = (globalProgression.enemyKillCounts || {})[bossName] || 0;
-            let isClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[bossName];
+            const safeName = sanitizeHTML(bossName);
+            const kills = (globalProgression.enemyKillCounts || {})[bossName] || 0;
+            const isClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[bossName];
             let html = `<div class="bg-gray-900 border-2 border-white rounded-lg p-3 flex flex-col items-center shadow-md relative" style="box-shadow:0 0 20px rgba(255,255,255,0.6),0 0 40px rgba(200,200,255,0.3);">`;
             html += `<div class="text-4xl mb-1">✨</div>`;
-            html += `<div class="font-black text-sm text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)]">${bossName}</div>`;
+            html += `<div class="font-black text-sm text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)]">${safeName}</div>`;
             html += `<div class="text-[10px] text-gray-300 mb-1">⚠️ MYTHIC BOSS</div>`;
             html += `<div class="text-[10px] text-pink-300 mb-1">Kills: ${kills}</div>`;
             if(!isClaimed) {
-                html += `<button onclick="claimCodexReward('${bossName}')" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 100G</button>`;
+                html += `<button onclick="claimCodexReward('${safeName}')" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 100G</button>`;
             } else {
                 html += `<div class="text-xs text-gray-500 italic mt-auto">Claimed ✓</div>`;
             }
             html += `</div>`;
-            list.innerHTML += html;
+            htmlParts.push(html);
         });
     }
 
     // Filter unique by base name
-    let uniqueEnemies = [];
-    let seenNames = new Set();
+    const uniqueEnemies = [];
+    const seenNames = new Set();
     allM.forEach(e => {
         if(!seenNames.has(e.name)) {
             seenNames.add(e.name);
@@ -1693,27 +1699,28 @@ function showCodex() {
     });
 
     uniqueEnemies.sort((a, b) => {
-        let aDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[a.name];
-        let bDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[b.name];
-        let aClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[a.name];
-        let bClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[b.name];
-        let aPriority = !aDiscovered ? 3 : (!aClaimed ? 1 : 2);
-        let bPriority = !bDiscovered ? 3 : (!bClaimed ? 1 : 2);
+        const aDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[a.name];
+        const bDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[b.name];
+        const aClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[a.name];
+        const bClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[b.name];
+        const aPriority = !aDiscovered ? 3 : (!aClaimed ? 1 : 2);
+        const bPriority = !bDiscovered ? 3 : (!bClaimed ? 1 : 2);
         return aPriority - bPriority;
     });
 
     uniqueEnemies.forEach(e => {
-        let isDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[e.name];
-        let isClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[e.name];
+        const isDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[e.name];
+        const isClaimed = globalProgression.claimedCodexRewards && globalProgression.claimedCodexRewards[e.name];
+        const safeName = sanitizeHTML(e.name);
         
         let html = `<div class="bg-gray-800 border border-gray-600 rounded-lg p-3 flex flex-col items-center shadow-md relative">`;
         
         if (isDiscovered) {
-            let kills = (globalProgression.enemyKillCounts || {})[e.name] || 0;
-            let milestoneProgress = kills % 100;
-            html += `<div class="text-4xl mb-1 drop-shadow-lg">${e.avatar}</div><div class="font-bold text-sm text-white">${e.name}</div><div class="text-[10px] text-gray-400 mb-1">HPx${e.hpMult} Dmgx${e.dmgMult}</div><div class="text-[10px] text-blue-400 mb-1">Kills: ${kills} (${milestoneProgress}/100)</div>`;
+            const kills = (globalProgression.enemyKillCounts || {})[e.name] || 0;
+            const milestoneProgress = kills % 100;
+            html += `<div class="text-4xl mb-1 drop-shadow-lg">${e.avatar}</div><div class="font-bold text-sm text-white">${safeName}</div><div class="text-[10px] text-gray-400 mb-1">HPx${e.hpMult} Dmgx${e.dmgMult}</div><div class="text-[10px] text-blue-400 mb-1">Kills: ${kills} (${milestoneProgress}/100)</div>`;
             if (!isClaimed) {
-                html += `<button onclick="claimCodexReward('${e.name}')" class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 20G</button>`;
+                html += `<button onclick="claimCodexReward('${safeName}')" class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 20G</button>`;
             } else {
                 html += `<div class="text-xs text-gray-500 italic mt-auto">Claimed ✓</div>`;
             }
@@ -1722,8 +1729,9 @@ function showCodex() {
         }
         
         html += `</div>`;
-        list.innerHTML += html;
+        htmlParts.push(html);
     });
+    list.innerHTML = htmlParts.join('');
 
     switchScreen('screen-codex');
 }
@@ -1732,7 +1740,7 @@ function claimCodexReward(enemyName) {
     if(!globalProgression.claimedCodexRewards) globalProgression.claimedCodexRewards = {};
     if(!globalProgression.claimedCodexRewards[enemyName]) {
         globalProgression.claimedCodexRewards[enemyName] = true;
-        let isMythicBoss = (globalProgression.discoveredMythicBosses || []).includes(enemyName);
+        const isMythicBoss = (globalProgression.discoveredMythicBosses || []).includes(enemyName);
         globalProgression.gold += isMythicBoss ? 100 : 20;
         playSound('win');
         saveGame();
@@ -1741,14 +1749,14 @@ function claimCodexReward(enemyName) {
 }
 
 function claimAllCodexRewards() {
-    let allEnemies = [...(ENEMIES_HUNT || []), ...(ENEMIES_PILLAGE || []), ...(ENEMIES_WORKSHOP || []), ...(ENEMIES_DUNGEON || []), ...(ENEMIES_ISLAND_DEFENSE || [])];
-    let mythicBosses = globalProgression.discoveredMythicBosses || [];
+    const allEnemies = [...(ENEMIES_HUNT || []), ...(ENEMIES_PILLAGE || []), ...(ENEMIES_WORKSHOP || []), ...(ENEMIES_DUNGEON || []), ...(ENEMIES_ISLAND_DEFENSE || [])];
+    const mythicBosses = globalProgression.discoveredMythicBosses || [];
     if(!globalProgression.claimedCodexRewards) globalProgression.claimedCodexRewards = {};
     let claimedAny = false;
     allEnemies.forEach(e => {
-        let isDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[e.name];
-        let isClaimed = globalProgression.claimedCodexRewards[e.name];
-        let isMythic = mythicBosses.includes(e.name);
+        const isDiscovered = globalProgression.discoveredEnemies && globalProgression.discoveredEnemies[e.name];
+        const isClaimed = globalProgression.claimedCodexRewards[e.name];
+        const isMythic = mythicBosses.includes(e.name);
         if(isDiscovered && !isClaimed && !isMythic) {
             globalProgression.claimedCodexRewards[e.name] = true;
             globalProgression.gold += 20;
@@ -1777,10 +1785,10 @@ function showPetCodex() {
 
     // Sort: unclaimed discovered first, then claimed discovered, then undiscovered
     const sortedPets = allPets.slice().sort((a, b) => {
-        let aDisc = isPetDiscovered(a);
-        let bDisc = isPetDiscovered(b);
-        let aClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[a.name];
-        let bClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[b.name];
+        const aDisc = isPetDiscovered(a);
+        const bDisc = isPetDiscovered(b);
+        const aClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[a.name];
+        const bClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[b.name];
         // Unclaimed+discovered first
         if (aDisc && !aClaimed && !(bDisc && !bClaimed)) return -1;
         if (bDisc && !bClaimed && !(aDisc && !aClaimed)) return 1;
@@ -1791,27 +1799,27 @@ function showPetCodex() {
     });
 
     sortedPets.forEach(pet => {
-        let isDiscovered = isPetDiscovered(pet);
-        let isClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[pet.name];
+        const isDiscovered = isPetDiscovered(pet);
+        const isClaimed = globalProgression.claimedPetRewards && globalProgression.claimedPetRewards[pet.name];
         if(isDiscovered) totalDiscovered++;
-        let card = document.createElement('div');
+        const card = document.createElement('div');
         card.className = 'bg-gray-800 border ' + (isDiscovered ? 'border-pink-500' : 'border-gray-600') + ' rounded-lg p-3 flex flex-col items-center shadow-md';
-        let emojiDiv = document.createElement('div');
+        const emojiDiv = document.createElement('div');
         emojiDiv.className = 'text-4xl mb-2' + (isDiscovered ? '' : ' opacity-30');
         emojiDiv.textContent = pet.emoji || '🐾';
-        let nameDiv = document.createElement('div');
+        const nameDiv = document.createElement('div');
         nameDiv.className = 'font-bold text-xs text-center ' + (isDiscovered ? 'text-white' : 'text-gray-500');
         nameDiv.textContent = isDiscovered ? pet.name : '???';
         card.appendChild(emojiDiv);
         card.appendChild(nameDiv);
         if(isDiscovered && !isClaimed) {
-            let btn = document.createElement('button');
+            const btn = document.createElement('button');
             btn.className = 'mt-2 w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1 rounded active:scale-95 transition';
             btn.textContent = 'Claim 20G';
             btn.addEventListener('click', (function(name) { return function() { claimPetReward(name); }; })(pet.name));
             card.appendChild(btn);
         } else if(isClaimed) {
-            let claimedDiv = document.createElement('div');
+            const claimedDiv = document.createElement('div');
             claimedDiv.className = 'text-xs text-gray-500 mt-2 italic';
             claimedDiv.textContent = 'Claimed ✓';
             card.appendChild(claimedDiv);
@@ -1819,7 +1827,7 @@ function showPetCodex() {
         list.appendChild(card);
     });
     if(allPets.length > 0 && totalDiscovered === allPets.length && !globalProgression.ultimatePetRewardClaimed) {
-        let ultimate = document.createElement('button');
+        const ultimate = document.createElement('button');
         ultimate.className = 'col-span-2 md:col-span-3 bg-gradient-to-r from-yellow-500 to-red-500 text-white font-black py-4 rounded-xl shadow-2xl animate-bounce mb-4 w-full';
         ultimate.textContent = '🏆 CLAIM ULTIMATE REWARD: 10,000 GOLD 🏆';
         ultimate.onclick = claimUltimatePetReward;
@@ -1862,7 +1870,7 @@ function gatherAction(type) {
     if(!consumeEnergy(1)) return;
     
     // Show animation overlay
-    let overlay = document.createElement('div');
+    const overlay = document.createElement('div');
     overlay.className = 'gather-anim-overlay';
     overlay.id = 'gather-overlay';
     
@@ -1911,9 +1919,9 @@ function gatherAction(type) {
     document.body.appendChild(overlay);
     
     // Disable gather buttons
-    let herbBtn = document.getElementById('btn-gather-herbs');
-    let fishBtn = document.getElementById('btn-gather-fish');
-    let enchBtn = document.getElementById('btn-gather-enchants');
+    const herbBtn = document.getElementById('btn-gather-herbs');
+    const fishBtn = document.getElementById('btn-gather-fish');
+    const enchBtn = document.getElementById('btn-gather-enchants');
     if(herbBtn) herbBtn.disabled = true;
     if(fishBtn) fishBtn.disabled = true;
     if(enchBtn) enchBtn.disabled = true;
@@ -1922,35 +1930,35 @@ function gatherAction(type) {
     
     setTimeout(() => {
         // Remove overlay
-        let ol = document.getElementById('gather-overlay');
+        const ol = document.getElementById('gather-overlay');
         if(ol) ol.remove();
         if(herbBtn) herbBtn.disabled = false;
         if(fishBtn) fishBtn.disabled = false;
         if(enchBtn) enchBtn.disabled = false;
         
-        let log = document.getElementById('story-log'); playSound('heal');
+        const log = document.getElementById('story-log'); playSound('heal');
         
         // Gold & XP gains
-        let xpGain = Math.floor(getXpForNextLevel(player.lvl) * 0.10);
-        let gatherGold = 5 + Math.floor(player.lvl / 10);
+        const xpGain = Math.floor(getXpForNextLevel(player.lvl) * 0.10);
+        const gatherGold = 5 + Math.floor(player.lvl / 10);
         globalProgression.gold += gatherGold;
         player.xp += xpGain;
 
         showFloatText(`btn-gather-${type}`, `+${xpGain} XP`, 'text-yellow-400');
 
         if(type === 'herbs') {
-            let r1 = (Math.floor(Math.random()*3)+1) * 5; let r2 = (Math.floor(Math.random()*3)+1) * 5;
+            const r1 = (Math.floor(Math.random()*3)+1) * 5; const r2 = (Math.floor(Math.random()*3)+1) * 5;
             addToInventory('herb_red', r1); addToInventory('herb_blue', r2);
             if(log) log.innerHTML = `<span class="text-green-400">Gathered ${r1} Crimson & ${r2} Azure Herbs! (+${gatherGold}G, +${xpGain}XP)</span>`;
         } else if (type === 'fish') {
-            let types = [1,2,3,4,5,6];
-            let pick1 = types.splice(Math.floor(Math.random()*types.length), 1)[0]; let pick2 = types.splice(Math.floor(Math.random()*types.length), 1)[0];
-            let a1 = (Math.floor(Math.random()*2)+1) * 5; let a2 = (Math.floor(Math.random()*2)+1) * 5;
+            const types = [1,2,3,4,5,6];
+            const pick1 = types.splice(Math.floor(Math.random()*types.length), 1)[0]; const pick2 = types.splice(Math.floor(Math.random()*types.length), 1)[0];
+            const a1 = (Math.floor(Math.random()*2)+1) * 5; const a2 = (Math.floor(Math.random()*2)+1) * 5;
             addToInventory(`fish_${pick1}`, a1); addToInventory(`fish_${pick2}`, a2);
             if(log) log.innerHTML = `<span class="text-blue-400">Caught ${a1} ${MAT_NAMES['fish_'+pick1]} & ${a2} ${MAT_NAMES['fish_'+pick2]}! (+${gatherGold}G, +${xpGain}XP)</span>`;
         } else if (type === 'enchants') {
-            let roll = Math.random();
-            let eTier = roll < 0.05 ? 'ench_legendary' : roll < 0.20 ? 'ench_epic' : roll < 0.50 ? 'ench_rare' : 'ench_common';
+            const roll = Math.random();
+            const eTier = roll < 0.05 ? 'ench_legendary' : roll < 0.20 ? 'ench_epic' : roll < 0.50 ? 'ench_rare' : 'ench_common';
             addToInventory(eTier, 5);
             if(log) log.innerHTML = `<span class="text-purple-400">Found 5 ${MAT_NAMES[eTier]}! (+${gatherGold}G, +${xpGain}XP)</span>`;
         }
@@ -1961,7 +1969,7 @@ function gatherAction(type) {
 }
 
 function gambleGold(amount) {
-    let log = document.getElementById('story-log');
+    const log = document.getElementById('story-log');
     if(globalProgression.gold < amount) {
         log.innerHTML = `<span class="text-red-500">Not enough gold to gamble ${amount}G!</span>`;
         playSound('lose');
@@ -1970,7 +1978,7 @@ function gambleGold(amount) {
     // Resolve the bet immediately so closing the browser cannot cause gold loss without a win chance
     const won = Math.random() < 0.5;
     globalProgression.gold -= amount;
-    let ps = ensureProgressStats();
+    const ps = ensureProgressStats();
     ps.goldSpent += amount;
     if(won) {
         globalProgression.gold += (amount * 2);
@@ -1982,13 +1990,13 @@ function gambleGold(amount) {
     // Disable gamble buttons during animation
     document.querySelectorAll('[onclick^="gambleGold"]').forEach(b => b.disabled = true);
     // Show gamble animation overlay
-    let overlay = document.createElement('div');
+    const overlay = document.createElement('div');
     overlay.className = 'gamble-anim-overlay';
     overlay.id = 'gamble-overlay';
     overlay.innerHTML = `<div class="gamble-emoji">🎲</div><div class="gamble-label">Gambling ${amount}G...</div>`;
     document.body.appendChild(overlay);
     setTimeout(() => {
-        let ol = document.getElementById('gamble-overlay');
+        const ol = document.getElementById('gamble-overlay');
         if(ol) ol.remove();
         document.querySelectorAll('[onclick^="gambleGold"]').forEach(b => b.disabled = false);
         if(won) {

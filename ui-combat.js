@@ -17,15 +17,15 @@ let _lastEnemyStateString = "";
 // No-Energy animation overlay
 const NO_ENERGY_OVERLAY_DURATION_MS = 1500;
 function showNoEnergyAnimation() {
-    let existing = document.getElementById('no-energy-overlay');
+    const existing = document.getElementById('no-energy-overlay');
     if(existing) existing.remove();
-    let overlay = document.createElement('div');
+    const overlay = document.createElement('div');
     overlay.className = 'no-energy-overlay';
     overlay.id = 'no-energy-overlay';
     overlay.innerHTML = '<div class="no-energy-emoji">⚡</div><div class="no-energy-label">No Energy!</div>';
     document.body.appendChild(overlay);
     playSound('lose');
-    setTimeout(() => { let el = document.getElementById('no-energy-overlay'); if(el) el.remove(); }, NO_ENERGY_OVERLAY_DURATION_MS);
+    setTimeout(() => { const el = document.getElementById('no-energy-overlay'); if(el) el.remove(); }, NO_ENERGY_OVERLAY_DURATION_MS);
 }
 
 // --- ENEMY SKILLS ---
@@ -62,15 +62,15 @@ function getEnemyBracketStats(level) {
     else                   bracket = { baseHp: 430,  baseDmg: 180, baseDef: 54, mult: 1.9 };
 
     // Level within the bracket (1-based)
-    let bracketSize = 20;
-    let bracketStart = Math.floor((Math.min(level, 100) - 1) / bracketSize) * bracketSize + 1;
+    const bracketSize = 20;
+    const bracketStart = Math.floor((Math.min(level, 100) - 1) / bracketSize) * bracketSize + 1;
     let levelWithinBracket = Math.min(level, 100) - bracketStart + 1;
     // For levels above 100, continue scaling from the 81-100 bracket
     if (level > 100) {
         levelWithinBracket = level - 80; // continual scaling from level 80
     }
 
-    let scalingFactor = 1 + (levelWithinBracket - 1) * (level <= 5 ? 0.06 : 0.03);
+    const scalingFactor = 1 + (levelWithinBracket - 1) * (level <= 5 ? 0.06 : 0.03);
     return {
         hp:  Math.floor(bracket.baseHp  * bracket.mult * scalingFactor),
         dmg: Math.floor(bracket.baseDmg * bracket.mult * scalingFactor),
@@ -86,11 +86,11 @@ function assignEnemySkills(enemy) {
     else if(enemy.rarity === 'mythic') numSpecials = 3;
     
     enemy.skills = ['hit']; // Always has hit
-    let available = ENEMY_SKILL_POOL.map(s => s.id).filter(id => id !== 'hit');
+    const available = ENEMY_SKILL_POOL.map(s => s.id).filter(id => id !== 'hit');
     
     for(let i=0; i<numSpecials; i++) {
         if(available.length === 0) break;
-        let pickIdx = Math.floor(Math.random() * available.length);
+        const pickIdx = Math.floor(Math.random() * available.length);
         enemy.skills.push(available.splice(pickIdx, 1)[0]);
     }
     
@@ -117,7 +117,7 @@ function returnToTown() {
     isAutoBattle = false;
     // Save living enemies for persistence (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
-        let persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
         savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
     }
     enemies = []; // Clear enemies so fresh ones spawn next battle
@@ -142,7 +142,7 @@ function showDamageNumber(targetId, damage, isCrit) {
     const target = document.getElementById(targetId);
     if (!target) return;
     const floater = document.createElement('div');
-    let isPlayerTarget = targetId === 'player-avatar-container';
+    const isPlayerTarget = targetId === 'player-avatar-container';
     floater.className = 'damage-number' + (isCrit ? ' crit' : '') + (isPlayerTarget && !isCrit ? ' player-dmg' : '');
     floater.innerText = isCrit ? `CRIT! -${damage}` : `-${damage}`;
     target.appendChild(floater);
@@ -183,13 +183,13 @@ function getHealingMultipliers() {
 function generateEnemies() {
     // Check for persisted enemies in this mode (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode)) {
-        let persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
         if (savedEnemies[persistKey]) {
-            let saved = savedEnemies[persistKey];
-            let alive = saved.filter(e => e.currentHp > 0);
+            const saved = savedEnemies[persistKey];
+            const alive = saved.filter(e => e.currentHp > 0);
             if (alive.length > 0) {
                 enemies = alive.map(e => {
-                    let restored = structuredClone(e);
+                    const restored = structuredClone(e);
                     restored.bleedStacks = 0; restored.bleedTurns = 0;
                     restored.burnStacks = 0; restored.burnTurns = 0;
                     restored.poisonStacks = 0; restored.poisonTurns = 0;
@@ -213,7 +213,7 @@ function generateEnemies() {
     _lastEnemyStateString = ""; // Force a full enemy card rebuild for the new wave
 
     if (currentMode === 'training') {
-        let e = Object.assign(createBaseEnemy(), { lvl: 1, name: 'Training Dummy', avatar: '🎯', maxHp: 9999999, baseDmg: 0 });
+        const e = Object.assign(createBaseEnemy(), { lvl: 1, name: 'Training Dummy', avatar: '🎯', maxHp: 9999999, baseDmg: 0 });
         e.currentHp = e.maxHp;
         enemies.push(e);
         activeTargetIndex = 0;
@@ -221,8 +221,8 @@ function generateEnemies() {
     }
 
     if (currentMode === 'graveyard') {
-        let baseBoss = globalProgression.killedBosses[activeGraveyardBoss];
-        let e = Object.assign(createBaseEnemy(), { rarity: 'boss', isBoss: true });
+        const baseBoss = globalProgression.killedBosses[activeGraveyardBoss];
+        const e = Object.assign(createBaseEnemy(), { rarity: 'boss', isBoss: true });
         e.lvl = Math.max(1, player.lvl + 2);
         e.name = baseBoss.name; e.avatar = baseBoss.avatar;
         e.maxHp = Math.max(1, Math.floor(25 * baseBoss.hpMult * (1 + (e.lvl - 1) * 0.4) * 3)); 
@@ -237,14 +237,14 @@ function generateEnemies() {
 
     if (currentMode === 'invasion') {
         // Zombie Apocalypse: spawn from ENEMIES_ZOMBIE pool (~5% easier than old invasion)
-        let invasionLevel = Math.max(100, Math.min(player.lvl, 500));
-        let zombiePool = (typeof ENEMIES_ZOMBIE !== 'undefined' && ENEMIES_ZOMBIE.length > 0) ? ENEMIES_ZOMBIE : null;
-        let waveScale = 1 + (zombieConsecutiveWaves * 0.10);
+        const invasionLevel = Math.max(100, Math.min(player.lvl, 500));
+        const zombiePool = (typeof ENEMIES_ZOMBIE !== 'undefined' && ENEMIES_ZOMBIE.length > 0) ? ENEMIES_ZOMBIE : null;
+        const waveScale = 1 + (zombieConsecutiveWaves * 0.10);
 
         // Every 10th wave: spawn a zombie boss
         if(zombieConsecutiveWaves > 0 && zombieConsecutiveWaves % 10 === 0 && typeof ZOMBIE_BOSSES !== 'undefined' && ZOMBIE_BOSSES.length > 0) {
-            let bossTemplate = ZOMBIE_BOSSES[Math.floor(Math.random() * ZOMBIE_BOSSES.length)];
-            let e = Object.assign(createBaseEnemy(), { rarity: 'boss', isBoss: true });
+            const bossTemplate = ZOMBIE_BOSSES[Math.floor(Math.random() * ZOMBIE_BOSSES.length)];
+            const e = Object.assign(createBaseEnemy(), { rarity: 'boss', isBoss: true });
             e.lvl = invasionLevel;
             e.name = bossTemplate.name; e.avatar = bossTemplate.avatar;
             e.maxHp = Math.max(1, Math.floor(invasionLevel * 10 * bossTemplate.hpMult * 0.95 * waveScale));
@@ -260,9 +260,9 @@ function generateEnemies() {
         }
 
         for(let i = 0; i < invasionMaxOnScreen; i++) {
-            let e = Object.assign(createBaseEnemy(), { rarity: 'common', isBoss: false });
+            const e = Object.assign(createBaseEnemy(), { rarity: 'common', isBoss: false });
             if(zombiePool) {
-                let t = zombiePool[Math.floor(Math.random() * zombiePool.length)];
+                const t = zombiePool[Math.floor(Math.random() * zombiePool.length)];
                 e.lvl = invasionLevel;
                 e.name = t.name; e.avatar = t.avatar;
                 e.maxHp = Math.max(1, Math.floor(invasionLevel * 10 * t.hpMult * 0.95 * waveScale));
@@ -292,7 +292,7 @@ function generateEnemies() {
     } else if ((currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop' || currentMode === 'island_defense') && globalProgression.storyModeProgress[currentMode] >= 9) {
         isBossFight = true; count = 1;
     } else {
-        let countRoll = Math.random();
+        const countRoll = Math.random();
         if(countRoll < ENEMY_COUNT_4_CHANCE) count = 4;       // 5% chance
         else if(countRoll < ENEMY_COUNT_3_CHANCE) count = 3;  // 5% chance
         else if(countRoll < ENEMY_COUNT_2_CHANCE) count = 2;  // 40% chance
@@ -307,16 +307,16 @@ function generateEnemies() {
 
     // MYTHIC_BOSS_SPAWN_CHANCE to spawn the secret mythic boss in any non-boss, non-graveyard mode
     if(!isBossFight && Math.random() < MYTHIC_BOSS_SPAWN_CHANCE) {
-        let mythicPrefixes = ['Void', 'Celestial', 'Primordial', 'Abyssal', 'Eternal', 'Cosmic', 'Ancient', 'Infernal', 'Divine', 'Sovereign'];
-        let mythicSuffixes = ['Harbinger', 'Annihilator', 'Devourer', 'Destroyer', 'Colossus', 'Overlord', 'Titan', 'Ravager', 'Obliterator', 'God'];
-        let mName = mythicPrefixes[Math.floor(Math.random() * mythicPrefixes.length)] + ' ' + mythicSuffixes[Math.floor(Math.random() * mythicSuffixes.length)];
-        let e = Object.assign(createBaseEnemy(), { rarity: 'mythic', isBoss: true, isMythicBoss: true });
+        const mythicPrefixes = ['Void', 'Celestial', 'Primordial', 'Abyssal', 'Eternal', 'Cosmic', 'Ancient', 'Infernal', 'Divine', 'Sovereign'];
+        const mythicSuffixes = ['Harbinger', 'Annihilator', 'Devourer', 'Destroyer', 'Colossus', 'Overlord', 'Titan', 'Ravager', 'Obliterator', 'God'];
+        const mName = mythicPrefixes[Math.floor(Math.random() * mythicPrefixes.length)] + ' ' + mythicSuffixes[Math.floor(Math.random() * mythicSuffixes.length)];
+        const e = Object.assign(createBaseEnemy(), { rarity: 'mythic', isBoss: true, isMythicBoss: true });
         e.lvl = Math.max(1, player.lvl + 5);
         e.name = mName;
         e.avatar = '✨';
         // 2x harder than legendary: legendary hpMult~10, so mythic uses RARITY_MULTS.mythic=30 for base, plus boss multiplier
-        let legendaryMult = RARITY_MULTS['legendary']; // 10
-        let mythicBossMult = legendaryMult * 2; // 20
+        const legendaryMult = RARITY_MULTS['legendary']; // 10
+        const mythicBossMult = legendaryMult * 2; // 20
         e.maxHp = Math.max(1, Math.floor(25 * (1 + (e.lvl - 1) * 0.4) * mythicBossMult));
         e.baseDmg = Math.max(1, Math.floor(e.lvl * mythicBossMult * 0.5 * (1 + (e.lvl - 1) * 0.01)));
         e.templateMults = { hpMult: mythicBossMult, dmgMult: mythicBossMult };
@@ -333,32 +333,32 @@ function generateEnemies() {
     }
 
     for(let i=0; i<count; i++) {
-        let e = createBaseEnemy();
+        const e = createBaseEnemy();
         
         if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
             e.lvl = activeDungeonTier * 5; 
-            let dBoss = BOSS_TEMPLATES['dungeon'][Math.floor(Math.random() * BOSS_TEMPLATES['dungeon'].length)];
+            const dBoss = BOSS_TEMPLATES['dungeon'][Math.floor(Math.random() * BOSS_TEMPLATES['dungeon'].length)];
             e.name = dBoss.name; e.avatar = dBoss.avatar;
             e.maxHp = Math.max(1, Math.floor(25 * dBoss.hpMult * (1 + (e.lvl - 1) * 0.4) * 3));
             e.baseDmg = Math.max(1, Math.floor(e.lvl * 2 * dBoss.dmgMult * (1 + (e.lvl - 1) * 0.01)));
             e.rarity = 'boss'; e.isBoss = true;
             e.templateMults = { hpMult: dBoss.hpMult, dmgMult: dBoss.dmgMult };
         } else if (isBossFight) {
-            let lvlBase = player.lvl; e.lvl = Math.max(1, lvlBase + 2);
-            let bPool = BOSS_TEMPLATES[currentMode] || BOSS_TEMPLATES['hunting'];
-            let bTemplate = bPool[Math.floor(Math.random() * bPool.length)];
+            const lvlBase = player.lvl; e.lvl = Math.max(1, lvlBase + 2);
+            const bPool = BOSS_TEMPLATES[currentMode] || BOSS_TEMPLATES['hunting'];
+            const bTemplate = bPool[Math.floor(Math.random() * bPool.length)];
             e.name = bTemplate.name; e.avatar = bTemplate.avatar;
             e.maxHp = Math.max(1, Math.floor(25 * bTemplate.hpMult * (1 + (e.lvl - 1) * 0.4) * 3)); 
             e.baseDmg = Math.max(1, Math.floor(e.lvl * 2 * bTemplate.dmgMult * (1 + (e.lvl - 1) * 0.01))); 
             e.rarity = 'boss'; e.isBoss = true;
             e.templateMults = { hpMult: bTemplate.hpMult, dmgMult: bTemplate.dmgMult };
         } else {
-            let lvlBase = currentMode === 'dungeon' ? (activeDungeonTier - 1) * 5 + activeDungeonRoom : Math.min(player.lvl, 100); 
+            const lvlBase = currentMode === 'dungeon' ? (activeDungeonTier - 1) * 5 + activeDungeonRoom : Math.min(player.lvl, 100); 
             e.lvl = Math.max(1, lvlBase + Math.floor(Math.random() * 3) - 1);
-            let t = pool[Math.floor(Math.random() * pool.length)];
+            const t = pool[Math.floor(Math.random() * pool.length)];
             e.name = t.name; e.avatar = t.avatar;
 
-            let rRoll = Math.random();
+            const rRoll = Math.random();
             if(rRoll < 0.01) e.rarity = 'mythic';
             else if(rRoll < 0.05) e.rarity = 'legendary';
             else if(rRoll < 0.15) e.rarity = 'epic';
@@ -367,11 +367,11 @@ function generateEnemies() {
 
             if (e.rarity !== 'common') { e.name = `${e.rarity.charAt(0).toUpperCase() + e.rarity.slice(1)} ${e.name}`; }
 
-            let bracketStats = getEnemyBracketStats(e.lvl);
-            let hpMult = (RARITY_HP_MULTS[e.rarity] || 1) * t.hpMult;
-            let dmgMult = (RARITY_DMG_MULTS[e.rarity] || 1) * t.dmgMult;
-            let defMult = (RARITY_DEF_MULTS[e.rarity] || 1);
-            let dungeonDiffMult = 1;
+            const bracketStats = getEnemyBracketStats(e.lvl);
+            const hpMult = (RARITY_HP_MULTS[e.rarity] || 1) * t.hpMult;
+            const dmgMult = (RARITY_DMG_MULTS[e.rarity] || 1) * t.dmgMult;
+            const defMult = (RARITY_DEF_MULTS[e.rarity] || 1);
+            const dungeonDiffMult = 1;
             e.maxHp = Math.max(1, Math.floor(bracketStats.hp * hpMult * dungeonDiffMult));
             e.baseDmg = Math.max(1, Math.floor(bracketStats.dmg * dmgMult * dungeonDiffMult));
             e.def = Math.max(0, Math.floor(bracketStats.def * defMult));
@@ -384,7 +384,7 @@ function generateEnemies() {
 
         assignEnemySkills(e);
 
-        let baseName = e.isBoss ? e.name : e.name.replace(/^(Rare |Epic |Legendary |Mythic )/, '');
+        const baseName = e.isBoss ? e.name : e.name.replace(/^(Rare |Epic |Legendary |Mythic )/, '');
         if(!globalProgression.discoveredEnemies) globalProgression.discoveredEnemies = {};
         globalProgression.discoveredEnemies[baseName] = true;
 
@@ -465,13 +465,13 @@ function renderUsableSlots() {
     cont.innerHTML = '';
     if(!player.equippedUsables) player.equippedUsables = [null, null, null, null, null, null, null];
     if(!player.usableCooldowns) player.usableCooldowns = {};
-    let numUnlocked = Math.min(7, 1 + Math.floor(player.lvl / 4));
+    const numUnlocked = Math.min(7, 1 + Math.floor(player.lvl / 4));
     for(let i = 0; i < 7; i++) {
-        let wrapper = document.createElement('div');
+        const wrapper = document.createElement('div');
         wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;';
-        let slot = document.createElement('div');
+        const slot = document.createElement('div');
         slot.style.cssText = 'width:40px;height:40px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;position:relative;';
-        let actionBtn = document.createElement('button');
+        const actionBtn = document.createElement('button');
         actionBtn.style.cssText = 'font-size:0.75rem;padding:4px 8px;border-radius:5px;font-weight:bold;cursor:pointer;border:none;line-height:1;min-width:28px;min-height:24px;';
         if(i >= numUnlocked) {
             slot.style.cssText += 'background:#1f2937;border:1px solid #374151;color:#6b7280;cursor:not-allowed;';
@@ -480,20 +480,20 @@ function renderUsableSlots() {
             actionBtn.innerText = '🔒';
             actionBtn.disabled = true;
         } else if(player.equippedUsables[i]) {
-            let key = player.equippedUsables[i];
-            let usableItem = USABLE_ITEMS[key];
-            let consumableItem = CONSUMABLES[key];
-            let isUsableItem = !!usableItem;
-            let icon = isUsableItem ? usableItem.icon : (consumableItem ? consumableItem.icon : '?');
-            let name = isUsableItem ? usableItem.name : (consumableItem ? consumableItem.name : key);
+            const key = player.equippedUsables[i];
+            const usableItem = USABLE_ITEMS[key];
+            const consumableItem = CONSUMABLES[key];
+            const isUsableItem = !!usableItem;
+            const icon = isUsableItem ? usableItem.icon : (consumableItem ? consumableItem.icon : '?');
+            const name = isUsableItem ? usableItem.name : (consumableItem ? consumableItem.name : key);
             
             if(isUsableItem) {
                 // Usable item (burglar items) - uses per-item cooldown
-                let amt = (globalProgression.usableItems || {})[key] || 0;
-                let cdLeft = player.usableCooldowns[key] || 0;
-                let onCooldown = cdLeft > 0;
-                let hasItems = amt > 0;
-                let canUse = !onCooldown && hasItems && isPlayerTurn && combatActive;
+                const amt = (globalProgression.usableItems || {})[key] || 0;
+                const cdLeft = player.usableCooldowns[key] || 0;
+                const onCooldown = cdLeft > 0;
+                const hasItems = amt > 0;
+                const canUse = !onCooldown && hasItems && isPlayerTurn && combatActive;
 
                 slot.style.cssText += onCooldown
                     ? 'background:#1f2937;border:1px solid #6b7280;cursor:not-allowed;'
@@ -502,7 +502,7 @@ function renderUsableSlots() {
                 
                 // Cooldown overlay
                 if(onCooldown) {
-                    let overlay = document.createElement('div');
+                    const overlay = document.createElement('div');
                     overlay.className = 'usable-cooldown-overlay';
                     overlay.innerText = cdLeft;
                     slot.appendChild(overlay);
@@ -516,8 +516,8 @@ function renderUsableSlots() {
                 actionBtn.onclick = (e) => { e.stopPropagation(); player.equippedUsables[i] = null; renderUsableSlots(); };
             } else {
                 // Original consumable (potions, food)
-                let amt = globalProgression.inventory[key] || 0;
-                let onCooldown = player.usedConsumableThisTurn;
+                const amt = globalProgression.inventory[key] || 0;
+                const onCooldown = player.usedConsumableThisTurn;
                 slot.style.cssText += onCooldown ? 'background:#1f2937;border:1px solid #6b7280;cursor:not-allowed;opacity:0.5;' : 'background:#451a03;border:1px solid #fbbf24;cursor:pointer;';
                 slot.innerHTML = `<span>${icon}</span><span style="position:absolute;bottom:-2px;right:0;font-size:0.55rem;font-weight:bold;color:#fbbf24;">${amt}</span>`;
                 slot.title = onCooldown ? 'Already used a consumable this turn' : name + ' — Click to use';
@@ -580,14 +580,14 @@ function openUsableSlotPicker(slotIdx) {
 function useUsableItem(key) {
     if(!isPlayerTurn || !combatActive) return;
     if(!player.usableCooldowns) player.usableCooldowns = {};
-    let cdLeft = player.usableCooldowns[key] || 0;
+    const cdLeft = player.usableCooldowns[key] || 0;
     if(cdLeft > 0) { addLog(`${USABLE_ITEMS[key].name} is on cooldown! (${cdLeft} turns)`, 'text-gray-400'); return; }
-    let amt = (globalProgression.usableItems || {})[key] || 0;
+    const amt = (globalProgression.usableItems || {})[key] || 0;
     if(amt <= 0) { addLog('No more ' + USABLE_ITEMS[key].name + '!', 'text-gray-400'); return; }
 
     // Consume item
     globalProgression.usableItems[key]--;
-    let item = USABLE_ITEMS[key];
+    const item = USABLE_ITEMS[key];
     // Apply cooldown
     if(item.cooldown > 0) player.usableCooldowns[key] = item.cooldown;
 
@@ -597,7 +597,7 @@ function useUsableItem(key) {
 
     switch(item.effectType) {
         case 'bomb': {
-            let dmg = Math.floor(target.maxHp * 0.30);
+            const dmg = Math.floor(target.maxHp * 0.30);
             target.currentHp = Math.max(0, target.currentHp - dmg);
             addLog(`💣 Bomb! Dealt ${dmg} damage to ${target.name}!`, 'text-orange-400');
             showFloatText('enemies-container', `-${dmg}`, 'text-orange-400');
@@ -612,7 +612,7 @@ function useUsableItem(key) {
             break;
         }
         case 'knife': {
-            let dmg = Math.floor(target.maxHp * 0.10);
+            const dmg = Math.floor(target.maxHp * 0.10);
             target.currentHp = Math.max(0, target.currentHp - dmg);
             target.bleedStacks = (target.bleedStacks || 0) + 2;
             target.bleedTurns = Math.max(target.bleedTurns || 0, 3);
@@ -653,7 +653,7 @@ function useUsableItem(key) {
         case 'distraction': {
             enemies.forEach((e, i) => {
                 if(e.currentHp > 0) {
-                    let selfDmg = Math.floor(e.baseDmg || 10);
+                    const selfDmg = Math.floor(e.baseDmg || 10);
                     e.currentHp = Math.max(0, e.currentHp - selfDmg);
                     addLog(`🎭 ${e.name} attacks itself for ${selfDmg}!`, 'text-yellow-400');
                     showDamageNumber(`enemy-card-${i}`, selfDmg, false);
@@ -665,7 +665,7 @@ function useUsableItem(key) {
         case 'bud_butt': {
             enemies.forEach((e, i) => {
                 if(e.currentHp > 0) {
-                    let dmg = Math.floor(e.maxHp * 0.10);
+                    const dmg = Math.floor(e.maxHp * 0.10);
                     e.currentHp = Math.max(0, e.currentHp - dmg);
                     addLog(`💩 Mud Butt! ${dmg} damage to ${e.name}!`, 'text-pink-400');
                     showDamageNumber(`enemy-card-${i}`, dmg, false);
@@ -684,15 +684,15 @@ function useUsableItem(key) {
 function useConsumable(key) {
     if(!isPlayerTurn || !combatActive || (globalProgression.inventory[key]||0) <= 0) return;
     if(player.usedConsumableThisTurn) { addLog('Already used a consumable this turn!', 'text-gray-400'); return; }
-    globalProgression.inventory[key]--; let c = CONSUMABLES[key];
+    globalProgression.inventory[key]--; const c = CONSUMABLES[key];
     
-    let { healMult } = getHealingMultipliers();
+    const { healMult } = getHealingMultipliers();
 
     if(c.type === 'instant' || c.type === 'buff_hp') {
         let heal = Math.floor(player.maxHp * c.val * healMult); if(c.type === 'buff_hp') heal = Math.floor(player.maxHp * 0.2 * healMult);
         player.currentHp = Math.min(player.maxHp, player.currentHp + heal); addLog(`Ate ${c.name}! Healed ${heal} HP!`, 'text-green-400'); triggerAnim('combat-player-avatar', 'anim-heal'); showFloatText('player-avatar-container', `+${heal}`, 'text-green-400'); playSound('heal');
     } else if(c.type === 'regen') {
-        let healPerTurn = Math.floor((player.maxHp * c.val * healMult) / 5); player.regenBuffs.push({ amount: Math.max(1, healPerTurn), turns: 5 }); addLog(`Ate ${c.name}! Gained Regen!`, 'text-green-400'); triggerAnim('combat-player-avatar', 'anim-heal'); playSound('heal');
+        const healPerTurn = Math.floor((player.maxHp * c.val * healMult) / 5); player.regenBuffs.push({ amount: Math.max(1, healPerTurn), turns: 5 }); addLog(`Ate ${c.name}! Gained Regen!`, 'text-green-400'); triggerAnim('combat-player-avatar', 'anim-heal'); playSound('heal');
     } else if(c.type === 'buff_dmg') {
         player.activeBuffs.push({ type: 'dmg', val: c.val, turns: 5 }); addLog(`Ate ${c.name}! Damage Boosted!`, 'text-orange-400'); triggerAnim('combat-player-avatar', 'anim-heal'); playSound('buff');
     } else if(c.type === 'buff_def') {
@@ -700,7 +700,7 @@ function useConsumable(key) {
     }
     player.usedConsumableThisTurn = true;
     // Track potion consumption for progress stats
-    let psC = ensureProgressStats(); psC.potionsConsumed++;
+    const psC = ensureProgressStats(); psC.potionsConsumed++;
     updateCombatUI(); renderSkills(); 
     if(isAutoBattle) setTimeout(processAutoTurn, 300);
 }
@@ -749,7 +749,7 @@ function updateCombatUI() {
 
     if (ui.playerAvatar) setAvatarDisplay('combat-player-avatar', player.data.avatar);
     // Black Market Tier 1: avatar glow border
-    let avatarContainer = document.getElementById('player-avatar-container');
+    const avatarContainer = document.getElementById('player-avatar-container');
     if (avatarContainer) {
         if ((globalProgression.blackMarketTier || 0) >= 1) {
             avatarContainer.classList.add('bm-avatar-glow');
@@ -802,8 +802,8 @@ function updateCombatUI() {
             // Structural change (death, spawn, or target shift): do a full rebuild.
             eContainer.innerHTML = '';
             enemies.slice(0, 4).forEach((e, idx) => {
-                let isDead = e.currentHp <= 0; let isTarget = idx === activeTargetIndex && !isDead;
-                let card = document.createElement('div'); card.id = `enemy-card-${idx}`;
+                const isDead = e.currentHp <= 0; const isTarget = idx === activeTargetIndex && !isDead;
+                const card = document.createElement('div'); card.id = `enemy-card-${idx}`;
                 
                 let borderClass = 'border-2 border-gray-600 shadow-md';
                 let rarityColor = 'text-gray-300';
@@ -913,12 +913,12 @@ function renderSkills() {
         const slotNum = slotIndex + 1;
         const slotClass = `skill skill-${slotNum}`;
         const slotColor = SLOT_FIXED_COLORS[slotIndex] || 'bg-green-700';
-        let skillIdx = player.equippedSkills[slotIndex];
+        const skillIdx = player.equippedSkills[slotIndex];
         if (skillIdx === 'woh') {
             return makeEmptySlot(thin, slotNum);
         } else if (skillIdx !== null && skillIdx !== undefined) {
-            let skill = player.data.skills[skillIdx];
-            let cd = player.skillCooldowns[skillIdx] || 0;
+            const skill = player.data.skills[skillIdx];
+            const cd = player.skillCooldowns[skillIdx] || 0;
             const btn = document.createElement('button');
             if (thin) {
                 btn.className = `${slotClass} skill-slot skill-btn-thin w-full py-1 px-2 rounded-lg font-bold text-white shadow-lg active:scale-95 relative ${slotColor}`;
@@ -962,24 +962,24 @@ function renderSkills() {
     }
 
     // Skip Turn button: show when player is stunned or ALL equipped skills are on cooldown
-    let oldSkip = document.getElementById('btn-skip-turn');
+    const oldSkip = document.getElementById('btn-skip-turn');
     if (oldSkip) oldSkip.remove();
     if (isPlayerTurn && combatActive && !isAutoBattle) {
-        let maxSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
+        const maxSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
         let allOnCooldown = true;
         let anySkill = false;
         for (let si = 0; si < maxSlots; si++) {
-            let sIdx = player.equippedSkills[si];
+            const sIdx = player.equippedSkills[si];
             if (sIdx !== null && sIdx !== undefined && sIdx !== 'woh') {
                 anySkill = true;
-                let cd = player.skillCooldowns[sIdx] || 0;
-                let silenced = player.silencedSlots && player.silencedSlots[si] > 0;
+                const cd = player.skillCooldowns[sIdx] || 0;
+                const silenced = player.silencedSlots && player.silencedSlots[si] > 0;
                 if (cd <= 0 && !silenced) { allOnCooldown = false; break; }
             }
         }
-        let needsSkip = player.stunned > 0 || (anySkill && allOnCooldown);
+        const needsSkip = player.stunned > 0 || (anySkill && allOnCooldown);
         if (needsSkip) {
-            let skipBtn = document.createElement('button');
+            const skipBtn = document.createElement('button');
             skipBtn.id = 'btn-skip-turn';
             skipBtn.className = 'w-full mt-2 bg-yellow-700 hover:bg-yellow-600 border border-yellow-500 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md';
             skipBtn.innerHTML = player.stunned > 0 ? '⏭ Stunned — Skip Turn' : '⏭ Skip Turn (All Skills on CD)';
@@ -1010,7 +1010,7 @@ function skipPlayerTurn() {
     if (!isPlayerTurn || !combatActive) return;
     addLog('⏭ Turn skipped.', 'text-yellow-400');
     isPlayerTurn = false;
-    let skipBtn = document.getElementById('btn-skip-turn');
+    const skipBtn = document.getElementById('btn-skip-turn');
     if (skipBtn) skipBtn.remove();
     setTimeout(() => executeEnemyTurns(0), 400);
 }
@@ -1024,14 +1024,14 @@ function triggerAnim(elementId, animClass) {
 function processAutoTurn() {
     if(!isPlayerTurn || !combatActive) return;
     if(enemies.every(e => e.currentHp <= 0)) { if(combatActive) endBattle(true); return; }
-    let hpPct = player.currentHp / player.maxHp; let inv = globalProgression.inventory;
+    const hpPct = player.currentHp / player.maxHp; const inv = globalProgression.inventory;
     
-    let { healMult } = getHealingMultipliers();
+    const { healMult } = getHealingMultipliers();
 
     if(!player.usedConsumableThisTurn) {
         // Auto-use regen potions at 75% HP (if enabled in settings)
         if (globalProgression.settings.autoUseRegenAt75 !== false) {
-            let hasActiveRegen = player.regenBuffs && player.regenBuffs.some(b => b.turns > 0);
+            const hasActiveRegen = player.regenBuffs && player.regenBuffs.some(b => b.turns > 0);
             if (hpPct <= 0.75 && !hasActiveRegen) {
                 if(inv.pot_r3 > 0) return useConsumable('pot_r3');
                 if(inv.pot_r2 > 0) return useConsumable('pot_r2');
@@ -1046,12 +1046,12 @@ function processAutoTurn() {
     // Auto-battle target priority
     const RARITY_EASY = ['common', 'rare', 'epic', 'legendary', 'mythic', 'boss'];
     const RARITY_HARD = ['mythic', 'boss', 'legendary', 'epic', 'rare', 'common'];
-    let priorityOrder = (globalProgression.settings.autoBattleTargetPriority === 'hard') ? RARITY_HARD : RARITY_EASY;
+    const priorityOrder = (globalProgression.settings.autoBattleTargetPriority === 'hard') ? RARITY_HARD : RARITY_EASY;
     let bestTarget = -1;
     let bestPriority = Infinity;
     enemies.forEach((e, idx) => {
         if(e.currentHp <= 0) return;
-        let r = e.isBoss ? 'boss' : (e.rarity || 'common');
+        const r = e.isBoss ? 'boss' : (e.rarity || 'common');
         let p = priorityOrder.indexOf(r);
         if(p === -1) p = priorityOrder.length;
         if(p < bestPriority) {
@@ -1063,11 +1063,11 @@ function processAutoTurn() {
     else activeTargetIndex = enemies.findIndex(e => e.currentHp > 0);
 
     // Auto-use usable items (after consumables, before skills)
-    let autoUsables = globalProgression.settings.autoBattleUsables || [];
+    const autoUsables = globalProgression.settings.autoBattleUsables || [];
     if(autoUsables.length > 0) {
-        for(let uKey of autoUsables) {
-            let uAmt = (globalProgression.usableItems || {})[uKey] || 0;
-            let uCd = (player.usableCooldowns || {})[uKey] || 0;
+        for(const uKey of autoUsables) {
+            const uAmt = (globalProgression.usableItems || {})[uKey] || 0;
+            const uCd = (player.usableCooldowns || {})[uKey] || 0;
             if(uAmt > 0 && uCd <= 0) {
                 useUsableItem(uKey);
                 return;
@@ -1075,10 +1075,10 @@ function processAutoTurn() {
         }
     }
 
-    let available = [];
-    let maxSkillSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
+    const available = [];
+    const maxSkillSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
     for(let i=0; i<maxSkillSlots; i++) {
-        let sIdx = player.equippedSkills[i];
+        const sIdx = player.equippedSkills[i];
         // Skip silenced slots
         if(player.silencedSlots && player.silencedSlots[i] > 0) continue;
         if(sIdx !== null && sIdx !== undefined && sIdx !== 'woh' && !(player.skillCooldowns[sIdx] > 0)) {
@@ -1093,26 +1093,26 @@ function processAutoTurn() {
     }
     
     // Prefer non-slot-0 skills; only fall back to slot 0 (basic hit) if nothing else available
-    let nonBasicAvailable = available.filter(x => x.slotPriority > 0);
-    let workingSet = nonBasicAvailable.length > 0 ? nonBasicAvailable : available;
+    const nonBasicAvailable = available.filter(x => x.slotPriority > 0);
+    const workingSet = nonBasicAvailable.length > 0 ? nonBasicAvailable : available;
     
     let chosen = workingSet[0]; 
-    let healSkill = workingSet.find(x => x.skill.type === 'heal');
-    let buffSkill = workingSet.find(x => x.skill.type === 'buff');
+    const healSkill = workingSet.find(x => x.skill.type === 'heal');
+    const buffSkill = workingSet.find(x => x.skill.type === 'buff');
     
     if(healSkill && hpPct < 0.4) chosen = healSkill;
     else if(buffSkill && Math.random() < 0.3) chosen = buffSkill;
-    else { let attacks = workingSet.filter(x => x.skill.type === 'attack').sort((a,b) => (b.skill.mult * (b.skill.hits || 1)) - (a.skill.mult * (a.skill.hits || 1))); if(attacks.length > 0) chosen = attacks[0]; }
+    else { const attacks = workingSet.filter(x => x.skill.type === 'attack').sort((a,b) => (b.skill.mult * (b.skill.hits || 1)) - (a.skill.mult * (a.skill.hits || 1))); if(attacks.length > 0) chosen = attacks[0]; }
     if (!chosen) { isPlayerTurn = false; setTimeout(() => executeEnemyTurns(0), 500); return; }
     usePlayerSkill(chosen.i);
 }
 
 function processRegenAndBuffs() {
-    let { healMult, healingBuffMult } = getHealingMultipliers();
-    let a = globalProgression.attributes || {};
+    const { healMult, healingBuffMult } = getHealingMultipliers();
+    const a = globalProgression.attributes || {};
     // HP Regen: revival attr (0.2% per point) + gear bonusHpRegen
-    let hpRegenAmt = Math.floor(player.maxHp * ((a.revival || 0) * 0.002 + getEquipBonusStat('bonusHpRegen')));
-    let treeRegen = Math.floor(((player.treeBonusRegen || 0) + hpRegenAmt) * healMult * healingBuffMult);
+    const hpRegenAmt = Math.floor(player.maxHp * ((a.revival || 0) * 0.002 + getEquipBonusStat('bonusHpRegen')));
+    const treeRegen = Math.floor(((player.treeBonusRegen || 0) + hpRegenAmt) * healMult * healingBuffMult);
     
     if (treeRegen > 0 && player.currentHp < player.maxHp) {
         player.currentHp = Math.min(player.maxHp, player.currentHp + treeRegen);
@@ -1129,7 +1129,7 @@ function processRegenAndBuffs() {
     if(player.activeBuffs && player.activeBuffs.length > 0) { 
         let burnDmg = 0;
         // Medicine reflect: check before processing burn/poison/bleed
-        let hasMedicineReflect = player.activeBuffs.some(b => b.type === 'medicine_reflect');
+        const hasMedicineReflect = player.activeBuffs.some(b => b.type === 'medicine_reflect');
         
         player.activeBuffs.forEach(b => {
             if(b.type === 'burn') burnDmg += Math.floor(player.maxHp * 0.06); // 6% max HP per burn (max 1 stack)
@@ -1139,7 +1139,7 @@ function processRegenAndBuffs() {
         if(burnDmg > 0) {
             if(hasMedicineReflect) {
                 // Reflect burn to target enemy
-                let target = enemies.find(e => e.currentHp > 0);
+                const target = enemies.find(e => e.currentHp > 0);
                 if(target) { target.currentHp = Math.max(0, target.currentHp - burnDmg); addLog(`💊 Medicine reflected ${burnDmg} burn damage to ${target.name}!`, 'text-green-400'); }
             } else {
                 player.currentHp -= burnDmg;
@@ -1150,16 +1150,16 @@ function processRegenAndBuffs() {
         }
 
         // Poison tick damage (2% per stack, max 2 stacks, reduces healing 50%)
-        let poisonBuffs = player.activeBuffs.filter(b => b.type === 'poison');
-        let poisonStacks = Math.min(poisonBuffs.length, 2);
+        const poisonBuffs = player.activeBuffs.filter(b => b.type === 'poison');
+        const poisonStacks = Math.min(poisonBuffs.length, 2);
         if(poisonBuffs.length > 2) {
-            let keptPoison = poisonBuffs.slice(0, 2);
+            const keptPoison = poisonBuffs.slice(0, 2);
             player.activeBuffs = player.activeBuffs.filter(b => b.type !== 'poison').concat(keptPoison);
         }
-        let poisonDmg = poisonStacks * Math.floor(player.maxHp * 0.02);
+        const poisonDmg = poisonStacks * Math.floor(player.maxHp * 0.02);
         if(poisonDmg > 0) {
             if(hasMedicineReflect) {
-                let target = enemies.find(e => e.currentHp > 0);
+                const target = enemies.find(e => e.currentHp > 0);
                 if(target) { target.currentHp = Math.max(0, target.currentHp - poisonDmg); addLog(`💊 Medicine reflected ${poisonDmg} poison damage to ${target.name}!`, 'text-green-400'); }
             } else {
                 player.currentHp -= poisonDmg;
@@ -1174,10 +1174,10 @@ function processRegenAndBuffs() {
 
     // Bleed on player: check medicine_reflect
     if(player.bleedTurns > 0) {
-        let hasMedicineReflect2 = player.activeBuffs.some(b => b.type === 'medicine_reflect');
+        const hasMedicineReflect2 = player.activeBuffs.some(b => b.type === 'medicine_reflect');
         if(hasMedicineReflect2) {
-            let bleedDmg = Math.max(1, Math.floor(player.maxHp * 0.02 * player.bleedStacks));
-            let target = enemies.find(e => e.currentHp > 0);
+            const bleedDmg = Math.max(1, Math.floor(player.maxHp * 0.02 * player.bleedStacks));
+            const target = enemies.find(e => e.currentHp > 0);
             if(target) { target.currentHp = Math.max(0, target.currentHp - bleedDmg); addLog(`💊 Medicine reflected ${bleedDmg} bleed to ${target.name}!`, 'text-green-400'); }
         }
     }
@@ -1193,14 +1193,14 @@ function usePlayerSkill(slotIndex) {
         addLog(`Skill slot ${slotIndex + 1} is Silenced!`, 'text-purple-400');
         return;
     }
-    let skillIdx = player.equippedSkills[slotIndex];
+    const skillIdx = player.equippedSkills[slotIndex];
     if(skillIdx === null || skillIdx === undefined || skillIdx === 'woh') return;
-    let skill = player.data.skills[skillIdx]; 
+    const skill = player.data.skills[skillIdx]; 
     if (player.skillCooldowns[skillIdx] > 0) return;
 
     isPlayerTurn = false; addLog(`Used <b>${skill.name}</b>!`, "text-white");
 
-    let _pendingDamageNumbers = [];
+    const _pendingDamageNumbers = [];
     try {
     // SET COOLDOWN IMMEDIATELY so no branch can skip it
     let cdReduc = Math.floor(getEquipBonusStat('bonusCdReduc'));
@@ -1213,14 +1213,14 @@ function usePlayerSkill(slotIndex) {
     if (globalProgression.zombieStats && globalProgression.zombieStats.cooldownBuffEarned) cdReduc += 1;
     player.skillCooldowns[skillIdx] = Math.max(0, skill.cd + 1 - cdReduc);
 
-    let baseDmg = getBaseDamage();
+    const baseDmg = getBaseDamage();
     let buffDmgMult = 1.0; 
     if (player.activeBuffs) player.activeBuffs.filter(b => b.type === 'dmg').forEach(b => buffDmgMult *= b.val);
-    let a = globalProgression.attributes;
-    let skillDmgMult = 1 + getEquipBonusStat('bonusSkillDmg');
+    const a = globalProgression.attributes;
+    const skillDmgMult = 1 + getEquipBonusStat('bonusSkillDmg');
     
     let scaledPower = Math.max(1, Math.floor(baseDmg * skill.mult * buffDmgMult * skillDmgMult));
-    let hits = skill.hits || 1;
+    const hits = skill.hits || 1;
 
     // Apply Damage Boost enhancements
     let dmgBoostMult = 1;
@@ -1229,7 +1229,7 @@ function usePlayerSkill(slotIndex) {
     });
 
     // Rage enhancement
-    let rageEnh = globalProgression.skillTreeEnhancements ? globalProgression.skillTreeEnhancements.find(e => e.type === 'rage') : null;
+    const rageEnh = globalProgression.skillTreeEnhancements ? globalProgression.skillTreeEnhancements.find(e => e.type === 'rage') : null;
     if(rageEnh && !player.rageUsed && player.currentHp / player.maxHp < 0.30) {
         dmgBoostMult += ENHANCEMENT_DEFS.rage.vals[rageEnh.rarity];
         player.rageUsed = true;
@@ -1242,13 +1242,13 @@ function usePlayerSkill(slotIndex) {
     scaledPower = Math.max(1, Math.floor(scaledPower * dmgBoostMult));
 
     // Infection buff: +5% dmg per effect stack (bleed, poison, burn) on active target
-    let infectionBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'infection') : null;
+    const infectionBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'infection') : null;
     if(infectionBuff) {
-        let target = enemies[activeTargetIndex];
+        const target = enemies[activeTargetIndex];
         if(target && target.currentHp > 0) {
-            let effectStacks = (target.bleedStacks || 0) + (target.poisonStacks || 0) + (target.burnStacks || 0);
+            const effectStacks = (target.bleedStacks || 0) + (target.poisonStacks || 0) + (target.burnStacks || 0);
             if(effectStacks > 0) {
-                let infectionMult = 1 + effectStacks * 0.05;
+                const infectionMult = 1 + effectStacks * 0.05;
                 scaledPower = Math.max(1, Math.floor(scaledPower * infectionMult));
             }
         }
@@ -1262,7 +1262,7 @@ function usePlayerSkill(slotIndex) {
             if (skill.target === 'all') {
                 targets = enemies.map((e,idx) => ({e,idx})).filter(x => x.e.currentHp > 0);
             } else if (skill.target === 'random') {
-                let alive = enemies.map((e,idx) => ({e,idx})).filter(x => x.e.currentHp > 0);
+                const alive = enemies.map((e,idx) => ({e,idx})).filter(x => x.e.currentHp > 0);
                 if(alive.length > 0) targets.push(alive[Math.floor(Math.random()*alive.length)]);
             } else {
                 if(enemies[activeTargetIndex] && enemies[activeTargetIndex].currentHp > 0) {
@@ -1275,20 +1275,20 @@ function usePlayerSkill(slotIndex) {
             playSound('hit'); triggerAnim('combat-player-avatar', 'anim-avatar-attack'); 
 
             targets.forEach(tObj => {
-                let target = tObj.e;
-                let tIdx = tObj.idx;
+                const target = tObj.e;
+                const tIdx = tObj.idx;
 
                 setTimeout(() => triggerAnim(`enemy-card-${tIdx}`, 'anim-shake'), 150 * (i+1));
                 
                 // Hit chance: 80% base + reflexes 0.1% per point + gear bonusHit
-                let hitChance = 0.80 + ((a.reflexes || 0) * 0.001) + getEquipBonusStat('bonusHit');
+                const hitChance = 0.80 + ((a.reflexes || 0) * 0.001) + getEquipBonusStat('bonusHit');
                 if(target.dodgeTurns > 0 || Math.random() > hitChance) {
                     addLog(`Missed ${target.name}!`, "text-gray-500");
                     showFloatText(`enemy-card-${tIdx}`, `MISS`, 'text-gray-400');
                     if(target.dodgeTurns > 0) target.dodgeTurns--;
                     // Black Market Tier 4: Phantom Strike — deal 50% base damage on miss
                     if ((globalProgression.blackMarketTier || 0) >= 4 && target.currentHp > 0) {
-                        let phantomDmg = Math.max(1, Math.floor(getBaseDamage() * 0.5));
+                        const phantomDmg = Math.max(1, Math.floor(getBaseDamage() * 0.5));
                         target.currentHp = Math.max(0, target.currentHp - phantomDmg);
                         _pendingDamageNumbers.push({ id: `enemy-card-${tIdx}`, dmg: phantomDmg, crit: false });
                         addLog(`👻 Phantom Strike! ${phantomDmg} damage despite miss!`, 'text-blue-400 font-bold');
@@ -1297,15 +1297,15 @@ function usePlayerSkill(slotIndex) {
                 }
                 
                 // Armor Pierce: reflexes 0.3% per point + bonusArmorPierce from accessories + pebble exchange bonus + title bonus
-                let armorPierce = (a.reflexes || 0) * 0.003 + getEquipBonusStat('bonusArmorPierce') + (globalProgression.pebbleBonusArmorPierce || 0) * 0.01 + getTitleStatBonus();
-                let defDownDebuff = target.defReduction || 0;
-                let defMult = 1 + Math.min(0.95, armorPierce + defDownDebuff);
+                const armorPierce = (a.reflexes || 0) * 0.003 + getEquipBonusStat('bonusArmorPierce') + (globalProgression.pebbleBonusArmorPierce || 0) * 0.01 + getTitleStatBonus();
+                const defDownDebuff = target.defReduction || 0;
+                const defMult = 1 + Math.min(0.95, armorPierce + defDownDebuff);
                 let hitDmg = Math.floor(scaledPower * defMult * (target.dmgTakenMult || 1));
                 if(!Number.isFinite(hitDmg) || hitDmg < 0) hitDmg = 0;
                 
                 // vs_bleeding bonus damage
                 if(target.bleedStacks > 0) {
-                    let vsBleedingBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'vs_bleeding') : null;
+                    const vsBleedingBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'vs_bleeding') : null;
                     if(vsBleedingBuff) hitDmg = Math.floor(hitDmg * vsBleedingBuff.val);
                 }
 
@@ -1321,15 +1321,15 @@ function usePlayerSkill(slotIndex) {
                 if (target.shield > 0) { hitDmg = Math.floor(hitDmg * (1 - target.shield)); target.shield = 0; }
 
                 // Apply enemy flat defense (subtract from damage)
-                let enemyDef = target.def || 0;
+                const enemyDef = target.def || 0;
                 if(enemyDef > 0) hitDmg = Math.max(1, hitDmg - enemyDef);
                 
                 // Crit chance: force 0.5% per point + gear bonusCritRate
-                let critChance = Math.min(0.75, ((a.force || 0) * 0.005) + getEquipBonusStat('bonusCritRate'));
-                let isCrit = Math.random() < critChance;
+                const critChance = Math.min(0.75, ((a.force || 0) * 0.005) + getEquipBonusStat('bonusCritRate'));
+                const isCrit = Math.random() < critChance;
                 if(isCrit) {
                     // Crit damage: fury 0.25% per point + gear bonusCritDmg
-                    let critMult = (100 + ((a.fury || 0) * 0.25) + (getEquipBonusStat('bonusCritDmg') * 100)) / 100;
+                    const critMult = (100 + ((a.fury || 0) * 0.25) + (getEquipBonusStat('bonusCritDmg') * 100)) / 100;
                     hitDmg = Math.floor(hitDmg * critMult);
                     addLog(`CRITICAL HIT!`, "text-yellow-400 font-bold");
                     playSound('crit');
@@ -1340,24 +1340,24 @@ function usePlayerSkill(slotIndex) {
                 _pendingDamageNumbers.push({ id: `enemy-card-${tIdx}`, dmg: hitDmg, crit: isCrit });
 
                 // Vampire: life steal from attribute (0.25% per point) + gear bonusVamp
-                let vampPct = ((a.vampire || 0) * 0.0025) + getEquipBonusStat('bonusVamp');
+                const vampPct = ((a.vampire || 0) * 0.0025) + getEquipBonusStat('bonusVamp');
                 if(vampPct > 0 && hitDmg > 0) {
-                    let { healingBuffMult } = getHealingMultipliers();
-                    let vampHeal = Math.max(1, Math.floor(hitDmg * vampPct * healingBuffMult));
+                    const { healingBuffMult } = getHealingMultipliers();
+                    const vampHeal = Math.max(1, Math.floor(hitDmg * vampPct * healingBuffMult));
                     player.currentHp = Math.min(player.maxHp, player.currentHp + vampHeal);
                     showFloatText('player-avatar-container', `+${vampHeal} 🧛`, 'text-violet-400');
                 }
 
                 // Apply enemy reflect (from Reflect skill)
                 if(target.enemyReflect > 0 && target.currentHp > 0) {
-                    let reflectedDmg = Math.max(1, Math.floor(hitDmg * target.enemyReflect));
+                    const reflectedDmg = Math.max(1, Math.floor(hitDmg * target.enemyReflect));
                     player.currentHp = Math.max(0, player.currentHp - reflectedDmg);
                     showFloatText('player-avatar-container', `-${reflectedDmg} 🔄`, 'text-cyan-400');
                     addLog(`${target.name}'s Reflect dealt ${reflectedDmg} damage back!`, 'text-cyan-400');
                 }
 
                 // Eruption buff: each hit inflicts 1 bleed stack
-                let eruptionBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'eruption') : null;
+                const eruptionBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'eruption') : null;
                 if(eruptionBuff) {
                     target.bleedStacks = Math.min(5, (target.bleedStacks || 0) + 1);
                     target.bleedTurns = Math.max(target.bleedTurns || 0, 5);
@@ -1366,13 +1366,13 @@ function usePlayerSkill(slotIndex) {
 
                 if(skill.effect) {
                     if(skill.effect.bleed) {
-                        let bleedChance = skill.effect.chance !== undefined ? skill.effect.chance : 1.0;
+                        const bleedChance = skill.effect.chance !== undefined ? skill.effect.chance : 1.0;
                         if(Math.random() < bleedChance) {
                             target.bleedStacks = (target.bleedStacks || 0) + 1; target.bleedTurns = skill.effect.turns;
                         }
                     }
                     if(skill.effect.defDown) {
-                        let maxDefDown = 5 * (skill.effect.defDown || 0);
+                        const maxDefDown = 5 * (skill.effect.defDown || 0);
                         target.defReduction = Math.min(maxDefDown, (target.defReduction || 0) + skill.effect.defDown);
                         // Refresh turns if defDownTurns provided
                         if(skill.effect.defDownTurns) target.defReductionTurns = skill.effect.defDownTurns;
@@ -1383,7 +1383,7 @@ function usePlayerSkill(slotIndex) {
                         showFloatText(`enemy-card-${tIdx}`, `STUNNED`, 'text-yellow-400');
                     }
                     if(skill.effect.poison) {
-                        let currentPoison = target.poisonTurns || 0;
+                        const currentPoison = target.poisonTurns || 0;
                         target.poisonTurns = Math.max(currentPoison, skill.effect.poisonTurns || 2);
                         target.healBlock = Math.max(target.healBlock || 0, skill.effect.poisonTurns || 2);
                         showFloatText('enemy-card-' + tIdx, 'POISON', 'text-green-400');
@@ -1418,11 +1418,11 @@ function usePlayerSkill(slotIndex) {
         }
         if(totalDmg > 0) {
             addLog(`Used <b>${skill.name}</b>! Dealt ${totalDmg} dmg!`, "text-blue-400 font-bold");
-            let ps = ensureProgressStats(); if (totalDmg > (ps.highestDmg || 0)) ps.highestDmg = totalDmg;
+            const ps = ensureProgressStats(); if (totalDmg > (ps.highestDmg || 0)) ps.highestDmg = totalDmg;
         }
 
         // Extra Turn: chance to take another turn after attacking (from accessories bonusExtraTurn)
-        let extraTurnChance = getEquipBonusStat('bonusExtraTurn');
+        const extraTurnChance = getEquipBonusStat('bonusExtraTurn');
         if(extraTurnChance > 0 && Math.random() < extraTurnChance && enemies.some(e => e.currentHp > 0)) {
             addLog(`⚡ Extra Turn triggered!`, 'text-yellow-300 font-bold');
             isPlayerTurn = true; // Keep player turn active
@@ -1430,14 +1430,14 @@ function usePlayerSkill(slotIndex) {
 
         // Poke special: remove HP% from target and heal self for HP%
         if(skill.special === 'poke') {
-            let pokeTarget = enemies[activeTargetIndex];
+            const pokeTarget = enemies[activeTargetIndex];
             if(pokeTarget && pokeTarget.currentHp > 0) {
-                let pokeEnemyPct = skill.pokeEnemyHpPct || skill.pokePct || 0.10;
-                let pokeSelfPct = skill.pokeSelfHealPct || pokeEnemyPct;
-                let pokeDmg = Math.floor(pokeTarget.maxHp * pokeEnemyPct);
+                const pokeEnemyPct = skill.pokeEnemyHpPct || skill.pokePct || 0.10;
+                const pokeSelfPct = skill.pokeSelfHealPct || pokeEnemyPct;
+                const pokeDmg = Math.floor(pokeTarget.maxHp * pokeEnemyPct);
                 pokeTarget.currentHp = Math.max(0, pokeTarget.currentHp - pokeDmg);
-                let { healMult, healingBuffMult } = getHealingMultipliers();
-                let pokeHeal = Math.floor(player.maxHp * pokeSelfPct * healMult * healingBuffMult);
+                const { healMult, healingBuffMult } = getHealingMultipliers();
+                const pokeHeal = Math.floor(player.maxHp * pokeSelfPct * healMult * healingBuffMult);
                 player.currentHp = Math.min(player.maxHp, player.currentHp + pokeHeal);
                 showFloatText('player-avatar-container', `+${pokeHeal}`, 'text-green-400');
                 showFloatText(`enemy-card-${activeTargetIndex}`, `-${pokeDmg}`, 'text-fuchsia-400');
@@ -1446,8 +1446,8 @@ function usePlayerSkill(slotIndex) {
         }
 
     } else if (skill.type === 'heal') {
-        let { healMult, healingBuffMult } = getHealingMultipliers();
-        let actualHeal = Math.floor(scaledPower * healMult * healingBuffMult);
+        const { healMult, healingBuffMult } = getHealingMultipliers();
+        const actualHeal = Math.floor(scaledPower * healMult * healingBuffMult);
         playSound('heal'); triggerAnim('combat-player-avatar', 'anim-heal'); 
         player.currentHp = Math.min(player.maxHp, player.currentHp + actualHeal); addLog(`Used ${skill.name}! Recovered ${actualHeal} HP!`, "text-green-400 font-bold"); showFloatText('player-avatar-container', `+${actualHeal}`, 'text-green-400');
     } else if (skill.type === 'shield') { 
@@ -1456,9 +1456,9 @@ function usePlayerSkill(slotIndex) {
         playSound('buff'); triggerAnim('combat-player-avatar', 'anim-heal'); addLog(`Used ${skill.name}!`, "text-white font-bold");
         if(skill.baseDmgHit) {
             // Intentionally deals raw base damage (ignoring defense) as a flat bonus hit
-            let target = enemies[activeTargetIndex];
+            const target = enemies[activeTargetIndex];
             if(target && target.currentHp > 0) {
-                let dmg = getBaseDamage();
+                const dmg = getBaseDamage();
                 target.currentHp = Math.max(0, target.currentHp - dmg);
                 showDamageNumber(`enemy-card-${activeTargetIndex}`, dmg, false);
                 addLog(`${skill.name} also dealt ${dmg} damage!`, 'text-yellow-400');
@@ -1466,7 +1466,7 @@ function usePlayerSkill(slotIndex) {
         }
     } else if (skill.type === 'debuff') {
         playSound('buff'); addLog(`Used ${skill.name}!`, "text-purple-400 font-bold");
-        let target = enemies[activeTargetIndex];
+        const target = enemies[activeTargetIndex];
         if(target && target.currentHp > 0 && skill.effect) {
             if(skill.effect.skipChance && skill.effect.skipTurns) {
                 target.skipChance = skill.effect.skipChance;
@@ -1482,7 +1482,7 @@ function usePlayerSkill(slotIndex) {
     }
 
     if(skill.special === 'smokeBomb') {
-        let smBaseDmg = getBaseDamage();
+        const smBaseDmg = getBaseDamage();
         enemies.forEach((e, i) => {
             if(e.currentHp <= 0) return;
             e.currentHp = Math.max(0, e.currentHp - smBaseDmg);
@@ -1500,18 +1500,18 @@ function usePlayerSkill(slotIndex) {
     }
 
     // Heal from damage: active buff from previous skill (e.g. Backhand Slap)
-    let healFromDmgBuff = (player.activeBuffs || []).find(b => b.type === 'heal_from_dmg');
+    const healFromDmgBuff = (player.activeBuffs || []).find(b => b.type === 'heal_from_dmg');
     if(healFromDmgBuff && totalDmg > 0) {
-        let { healMult: hm, healingBuffMult: hbm } = getHealingMultipliers();
-        let h = Math.floor(totalDmg * healFromDmgBuff.val * hm * hbm);
+        const { healMult: hm, healingBuffMult: hbm } = getHealingMultipliers();
+        const h = Math.floor(totalDmg * healFromDmgBuff.val * hm * hbm);
         player.currentHp = Math.min(player.maxHp, player.currentHp + h);
         showFloatText('player-avatar-container', `+${h}`, 'text-green-400');
         addLog(`Healed ${h} HP from damage dealt!`, 'text-green-400');
     }
 
     if(skill.self_effect) {
-        let { healMult, healingBuffMult } = getHealingMultipliers();
-        if(skill.self_effect.healPct) { let h = Math.floor(player.maxHp * skill.self_effect.healPct * healMult * healingBuffMult); player.currentHp = Math.min(player.maxHp, player.currentHp + h); showFloatText('player-avatar-container', `+${h}`, 'text-green-400'); }
+        const { healMult, healingBuffMult } = getHealingMultipliers();
+        if(skill.self_effect.healPct) { const h = Math.floor(player.maxHp * skill.self_effect.healPct * healMult * healingBuffMult); player.currentHp = Math.min(player.maxHp, player.currentHp + h); showFloatText('player-avatar-container', `+${h}`, 'text-green-400'); }
         if(skill.self_effect.fullHeal) { player.currentHp = player.maxHp; showFloatText('player-avatar-container', `FULL HEAL!`, 'text-green-400 font-bold'); playSound('heal'); addLog(`Full HP restored!`, 'text-green-400 font-bold'); }
         if(skill.self_effect.defDown) { player.activeBuffs.push({ type: 'def_down', val: 1 - skill.self_effect.defDown, turns: skill.self_effect.turns }); }
         if(skill.self_effect.regenPct) { player.regenBuffs.push({ amount: Math.floor(player.maxHp * skill.self_effect.regenPct), turns: skill.self_effect.regenTurns || skill.self_effect.turns }); }
@@ -1570,7 +1570,7 @@ function usePlayerSkill(slotIndex) {
             addLog(`Infection active! +5% dmg per enemy effect stack (${skill.self_effect.infectionTurns||5}t)!`, 'text-green-400 font-bold');
         }
         if(skill.self_effect.healFromDmgPct && totalDmg > 0) {
-            let h = Math.floor(totalDmg * skill.self_effect.healFromDmgPct * healMult * healingBuffMult);
+            const h = Math.floor(totalDmg * skill.self_effect.healFromDmgPct * healMult * healingBuffMult);
             player.currentHp = Math.min(player.maxHp, player.currentHp + h);
             showFloatText('player-avatar-container', `+${h}`, 'text-green-400');
             addLog(`Healed ${h} HP from damage dealt!`, 'text-green-400');
@@ -1580,7 +1580,7 @@ function usePlayerSkill(slotIndex) {
             addLog(`Heal from damage active for ${skill.self_effect.healFromDmgTurns}t!`, 'text-green-400');
         }
         if(skill.self_effect.selfDmgPct) {
-            let selfDmg = Math.floor(player.maxHp * skill.self_effect.selfDmgPct);
+            const selfDmg = Math.floor(player.maxHp * skill.self_effect.selfDmgPct);
             player.currentHp = Math.max(1, player.currentHp - selfDmg);
             showFloatText('player-avatar-container', `-${selfDmg}`, 'text-red-500');
             addLog(`Self damage: ${selfDmg}!`, 'text-red-400');
@@ -1606,7 +1606,7 @@ function usePlayerSkill(slotIndex) {
         // Extra turn triggered — give player another action immediately
         setTimeout(() => startPlayerTurn(), 600);
     } else {
-        let enemyDelay = currentMode === 'quest' ? 200 : 800;
+        const enemyDelay = currentMode === 'quest' ? 200 : 800;
         if (enemies.every(e => e.currentHp <= 0)) setTimeout(() => { if(combatActive) endBattle(true); }, 1000); else setTimeout(() => executeEnemyTurns(0), enemyDelay);
     }
 }
@@ -1616,7 +1616,7 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     if(player.currentHp <= 0) { endBattle(false); return; }
     if(enemyIdx >= enemies.length) { startPlayerTurn(); return; }
 
-    let e = enemies[enemyIdx]; if(e.currentHp <= 0) { executeEnemyTurns(enemyIdx + 1); return; }
+    const e = enemies[enemyIdx]; if(e.currentHp <= 0) { executeEnemyTurns(enemyIdx + 1); return; }
 
     if(currentMode === 'quest' || currentMode === 'training') {
         if(currentMode === 'training') { e.currentHp = e.maxHp; }
@@ -1636,19 +1636,19 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
 
     if(extraTurns === 0 && e.bleedTurns > 0) {
         // Bleed: 2% of max HP per stack per turn, reduces def by 2% per stack
-        let bDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * e.bleedStacks)); e.currentHp -= bDmg; e.bleedTurns--; showFloatText(`enemy-card-${enemyIdx}`, `-${bDmg}`, 'text-red-600');
+        const bDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * e.bleedStacks)); e.currentHp -= bDmg; e.bleedTurns--; showFloatText(`enemy-card-${enemyIdx}`, `-${bDmg}`, 'text-red-600');
         if(e.currentHp <= 0) { updateCombatUI(); setTimeout(() => executeEnemyTurns(enemyIdx + 1), 400); return; }
     }
     if(extraTurns === 0 && e.burnTurns > 0) {
         // Burn: 6% max HP per turn, max 1 stack
-        let burnStacks = Math.min(1, e.burnStacks || 1);
-        let burnDmg = Math.max(1, Math.floor(e.maxHp * 0.06 * burnStacks)); e.currentHp -= burnDmg; e.burnTurns--; if(e.burnTurns <= 0) e.burnStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${burnDmg}🔥`, 'text-orange-500');
+        const burnStacks = Math.min(1, e.burnStacks || 1);
+        const burnDmg = Math.max(1, Math.floor(e.maxHp * 0.06 * burnStacks)); e.currentHp -= burnDmg; e.burnTurns--; if(e.burnTurns <= 0) e.burnStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${burnDmg}🔥`, 'text-orange-500');
         if(e.currentHp <= 0) { updateCombatUI(); setTimeout(() => executeEnemyTurns(enemyIdx + 1), 400); return; }
     }
     if(extraTurns === 0 && e.poisonTurns > 0) {
         // Poison: 2% HP per stack per turn, max 2 stacks
-        let poisonStacks = Math.min(2, e.poisonStacks || 1);
-        let poisonDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * poisonStacks)); e.currentHp -= poisonDmg; e.poisonTurns--; if(e.poisonTurns <= 0) e.poisonStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${poisonDmg}☠️`, 'text-green-500');
+        const poisonStacks = Math.min(2, e.poisonStacks || 1);
+        const poisonDmg = Math.max(1, Math.floor(e.maxHp * 0.02 * poisonStacks)); e.currentHp -= poisonDmg; e.poisonTurns--; if(e.poisonTurns <= 0) e.poisonStacks = 0; showFloatText(`enemy-card-${enemyIdx}`, `-${poisonDmg}☠️`, 'text-green-500');
         if(e.currentHp <= 0) { updateCombatUI(); setTimeout(() => executeEnemyTurns(enemyIdx + 1), 400); return; }
     }
     if(extraTurns === 0 && e.dmgTakenTurns > 0) { e.dmgTakenTurns--; if(e.dmgTakenTurns <= 0) e.dmgTakenMult = 1; }
@@ -1691,19 +1691,19 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     try {
     if (action === 'stun') {
         playSound('hit'); triggerAnim(`enemy-card-${enemyIdx}`, 'anim-strike'); setTimeout(() => triggerAnim('combat-player-avatar', 'anim-shake'), 150);
-        let turns = 1;
+        const turns = 1;
         player.stunned = (player.stunned || 0) + turns;
         addLog(`${e.name} used Bash! Stunned for ${turns}t!`, "text-yellow-400 font-bold");
-        let dmg = Math.floor(e.baseDmg * 0.5); 
+        const dmg = Math.floor(e.baseDmg * 0.5); 
         dealDamageToPlayer(dmg, e);
         e.cooldowns['stun'] = 5;
     } 
     else if (action === 'bleed') {
         playSound('hit'); triggerAnim(`enemy-card-${enemyIdx}`, 'anim-strike'); setTimeout(() => triggerAnim('combat-player-avatar', 'anim-shake'), 150);
-        let stacks = 1;
+        const stacks = 1;
         player.bleedStacks = (player.bleedStacks || 0) + stacks; player.bleedTurns = 3;
         addLog(`${e.name} inflicted Rend!`, "text-red-500 font-bold");
-        let dmg = Math.floor(e.baseDmg * 0.8); 
+        const dmg = Math.floor(e.baseDmg * 0.8); 
         dealDamageToPlayer(dmg, e);
         e.cooldowns['bleed'] = 5;
     }
@@ -1714,7 +1714,7 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     else if (action === 'extra_turn') {
         playSound('hit'); triggerAnim(`enemy-card-${enemyIdx}`, 'anim-strike'); setTimeout(() => triggerAnim('combat-player-avatar', 'anim-shake'), 150);
         let frenzyDmg = Math.floor(e.baseDmg * (0.8 + Math.random() * 0.4));
-        let frenzyDmgMult = e.dmgBoostMult || 1;
+        const frenzyDmgMult = e.dmgBoostMult || 1;
         frenzyDmg = Math.floor(frenzyDmg * frenzyDmgMult);
         dealDamageToPlayer(frenzyDmg, e);
         addLog(`${e.name} enters a Frenzy! (${frenzyDmg} dmg + extra turn)`, "text-purple-400 font-bold");
@@ -1730,7 +1730,7 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
         playSound('hit'); triggerAnim(`enemy-card-${enemyIdx}`, 'anim-strike'); setTimeout(() => triggerAnim('combat-player-avatar', 'anim-shake'), 150);
         player.activeBuffs.push({type: 'poison', turns: 2});
         addLog(`${e.name} used Venom!`, "text-green-500 font-bold");
-        let dmg = Math.floor(e.baseDmg * 0.5); 
+        const dmg = Math.floor(e.baseDmg * 0.5); 
         dealDamageToPlayer(dmg, e);
         e.cooldowns['poison'] = 5;
     }
@@ -1742,12 +1742,12 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
         } else {
             addLog(`${e.name} failed to Ignite!`, "text-gray-500");
         }
-        let dmg = Math.floor(e.baseDmg * 0.5);
+        const dmg = Math.floor(e.baseDmg * 0.5);
         dealDamageToPlayer(dmg, e);
         e.cooldowns['burn'] = 5;
     }
     else if (action === 'recover') {
-        playSound('heal'); let healAmt = Math.floor(e.maxHp * 0.1); e.currentHp = Math.min(e.maxHp, e.currentHp + healAmt); addLog(`${e.name} recovers!`, "text-green-400"); showFloatText(`enemy-card-${enemyIdx}`, `+${healAmt}`, 'text-green-400');
+        playSound('heal'); const healAmt = Math.floor(e.maxHp * 0.1); e.currentHp = Math.min(e.maxHp, e.currentHp + healAmt); addLog(`${e.name} recovers!`, "text-green-400"); showFloatText(`enemy-card-${enemyIdx}`, `+${healAmt}`, 'text-green-400');
         e.cooldowns['recover'] = 5;
     }
     else if (action === 'mend') {
@@ -1760,14 +1760,14 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     else if (action === 'boink') {
         playSound('hit'); triggerAnim(`enemy-card-${enemyIdx}`, 'anim-strike'); setTimeout(() => triggerAnim('combat-player-avatar', 'anim-shake'), 150);
         let boinkDmg = Math.floor(e.baseDmg * 2 * (0.8 + Math.random() * 0.4));
-        let boinkDmgMult = e.dmgBoostMult || 1;
+        const boinkDmgMult = e.dmgBoostMult || 1;
         boinkDmg = Math.floor(boinkDmg * boinkDmgMult);
         dealDamageToPlayer(boinkDmg, e);
         addLog(`${e.name} used Boink! Double damage: ${boinkDmg}!`, "text-yellow-300 font-bold");
         e.cooldowns['boink'] = 5;
     }
     else if (action === 'reflect') {
-        let reflectTurns = 2 + Math.floor(Math.random() * 2); // 2 or 3 turns
+        const reflectTurns = 2 + Math.floor(Math.random() * 2); // 2 or 3 turns
         e.enemyReflect = 0.15;
         e.enemyReflectTurns = reflectTurns;
         addLog(`${e.name} activates Reflect! 15% damage reflected for ${reflectTurns} turns!`, "text-cyan-400 font-bold");
@@ -1777,7 +1777,7 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     else if (action === 'silence') {
         // Silence a random skill slot 0-4 (not slot 5/WoH) for 1 turn
         if(!player.silencedSlots) player.silencedSlots = {};
-        let slotToSilence = Math.floor(Math.random() * 5); // slots 0-4
+        const slotToSilence = Math.floor(Math.random() * 5); // slots 0-4
         player.silencedSlots[slotToSilence] = 1;
         addLog(`${e.name} used Silenced! Skill slot ${slotToSilence + 1} is silenced for 1 turn!`, "text-purple-400 font-bold");
         showFloatText('player-avatar-container', `SILENCED!`, 'text-purple-400');
@@ -1789,8 +1789,8 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
         // Apply mend damage boost
         if(e.dmgBoostMult && e.dmgBoostMult > 1) dmg = Math.floor(dmg * e.dmgBoostMult);
         // Enemy crit chance: 5% base
-        let eCritChance = 0.05 + (e.isBoss ? 0.05 : 0) + (e.isMythicBoss ? 0.10 : 0);
-        let eCrit = Math.random() < eCritChance;
+        const eCritChance = 0.05 + (e.isBoss ? 0.05 : 0) + (e.isMythicBoss ? 0.10 : 0);
+        const eCrit = Math.random() < eCritChance;
         if (eCrit) { dmg = Math.floor(dmg * 1.5); playSound('crit'); }
         dealDamageToPlayer(dmg, e, eCrit);
         addLog(`${e.name} hits for ${dmg} dmg${eCrit ? ' (CRIT!)' : ''}!`, eCrit ? "text-red-300 font-black" : "text-red-400 font-bold"); 
@@ -1823,10 +1823,10 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
 
 function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     baseDmg = Number.isFinite(baseDmg) ? Math.max(0, baseDmg) : 0;
-    let a = globalProgression.attributes;
+    const a = globalProgression.attributes;
 
     // Block ALL incoming damage (Stomp block effect)
-    let blockAllBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'block_all') : null;
+    const blockAllBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'block_all') : null;
     if(blockAllBuff) {
         // Block all attacks during this turn — turns decremented by processRegenAndBuffs
         addLog(`Blocked all damage!`, 'text-blue-300 font-bold');
@@ -1838,7 +1838,7 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     // Dodge: resistance 0.25% per point + gear bonusDodge
     let dodgeChance = (a.resistance || 0) * 0.0025 + getEquipBonusStat('bonusDodge');
     // Check percentage dodge buff (Bandaid)
-    let dodgePctBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'dodge_pct') : null;
+    const dodgePctBuff = player.activeBuffs ? player.activeBuffs.find(b => b.type === 'dodge_pct') : null;
     if(dodgePctBuff) dodgeChance += dodgePctBuff.val;
 
     if(player.dodgeTurns > 0 || Math.random() < dodgeChance) {
@@ -1849,7 +1849,7 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     }
 
     // Check for block hit
-    let blockBuff = player.activeBuffs.find(b => b.type === 'block_hit');
+    const blockBuff = player.activeBuffs.find(b => b.type === 'block_hit');
     if(blockBuff) {
         player.activeBuffs = player.activeBuffs.filter(b => b !== blockBuff);
         addLog(`Blocked the hit!`, "text-blue-400 font-bold");
@@ -1859,13 +1859,13 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     }
 
     // Mirror Shard: reflect 100% damage, no damage taken
-    let mirrorBuff = player.activeBuffs.find(b => b.type === 'mirror_shard');
+    const mirrorBuff = player.activeBuffs.find(b => b.type === 'mirror_shard');
     if(mirrorBuff) {
         mirrorBuff.turns--;
         if(mirrorBuff.turns <= 0) player.activeBuffs = player.activeBuffs.filter(b => b !== mirrorBuff);
         if(attackerEnemy) {
             attackerEnemy.currentHp = Math.max(0, attackerEnemy.currentHp - baseDmg);
-            let eIdx = enemies.indexOf(attackerEnemy);
+            const eIdx = enemies.indexOf(attackerEnemy);
             addLog(`🪞 Mirror Shard reflected ${baseDmg} damage to ${attackerEnemy.name}!`, 'text-blue-300 font-bold');
             if(eIdx >= 0) showFloatText('enemy-card-' + eIdx, '-' + baseDmg, 'text-blue-300');
             if(attackerEnemy.currentHp <= 0) {
@@ -1883,14 +1883,14 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     if (player.activeBuffs) player.activeBuffs.filter(b => b.type === 'def' || b.type === 'def_down').forEach(b => buffDefMult *= b.val);
     
     // Damage reduction: tenacity 0.3% per point + gear bonusDmgReduction + title bonus
-    let tenacityReduction = 1 - ((a.tenacity || 0) * 0.003 + getEquipBonusStat('bonusDmgReduction') + getTitleStatBonus());
+    const tenacityReduction = 1 - ((a.tenacity || 0) * 0.003 + getEquipBonusStat('bonusDmgReduction') + getTitleStatBonus());
     let dmg = Math.floor(baseDmg * tenacityReduction);
     
     // Divine Shield enhancement
-    let divineEnh = globalProgression.skillTreeEnhancements ? globalProgression.skillTreeEnhancements.find(e => e.type === 'divineShield') : null;
+    const divineEnh = globalProgression.skillTreeEnhancements ? globalProgression.skillTreeEnhancements.find(e => e.type === 'divineShield') : null;
     if(divineEnh && !player.divineShieldUsed) {
         if(Math.random() < ENHANCEMENT_DEFS.divineShield.vals[divineEnh.rarity]) {
-            let blocked = Math.floor(dmg * ENHANCEMENT_DEFS.divineShield.vals[divineEnh.rarity]);
+            const blocked = Math.floor(dmg * ENHANCEMENT_DEFS.divineShield.vals[divineEnh.rarity]);
             dmg -= blocked;
             addLog(`Divine Shield blocked ${blocked} damage!`, 'text-blue-400');
             player.divineShieldUsed = true;
@@ -1899,7 +1899,7 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     
     if (player.shield > 0) { dmg = Math.floor(dmg * (1 - player.shield)); player.shield = 0; }
     
-    let pDef = getPlayerDef();
+    const pDef = getPlayerDef();
     dmg = Math.max(1, dmg - pDef); 
     dmg = Math.max(1, Math.floor(dmg / buffDefMult));
     
@@ -1908,7 +1908,7 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     }
 
     // Ice Block: reduces incoming damage by 50% for 1 turn
-    let iceBlockBuff = player.activeBuffs.find(b => b.type === 'ice_block');
+    const iceBlockBuff = player.activeBuffs.find(b => b.type === 'ice_block');
     if(iceBlockBuff) {
         dmg = Math.max(1, Math.floor(dmg * 0.5));
         iceBlockBuff.turns--;
@@ -1917,7 +1917,7 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     }
 
     // Double damage taken (Shield Explosion)
-    let doubleBuff = player.activeBuffs.find(b => b.type === 'double_damage_taken');
+    const doubleBuff = player.activeBuffs.find(b => b.type === 'double_damage_taken');
     if(doubleBuff) { dmg = dmg * 2; }
     
     dmg = Number.isFinite(dmg) ? Math.max(1, dmg) : 1;
@@ -1935,15 +1935,15 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     }
     // Track most damage survived (only if player survives the hit)
     if (player.currentHp > 0) {
-        let ps = ensureProgressStats(); if (dmg > (ps.mostDmgSurvived || 0)) ps.mostDmgSurvived = dmg;
+        const ps = ensureProgressStats(); if (dmg > (ps.mostDmgSurvived || 0)) ps.mostDmgSurvived = dmg;
     }
 
-    let reflectBuff = player.activeBuffs.find(b => b.type === 'skill_reflect');
+    const reflectBuff = player.activeBuffs.find(b => b.type === 'skill_reflect');
     if(reflectBuff && attackerEnemy) {
-        let reflectDmg = Math.floor(dmg * reflectBuff.val);
+        const reflectDmg = Math.floor(dmg * reflectBuff.val);
         attackerEnemy.currentHp = Math.max(0, attackerEnemy.currentHp - reflectDmg);
         addLog('Reflected ' + reflectDmg + ' damage!', 'text-orange-400 font-bold');
-        let eIdx = enemies.indexOf(attackerEnemy);
+        const eIdx = enemies.indexOf(attackerEnemy);
         if(eIdx >= 0) showFloatText('enemy-card-' + eIdx, '-' + reflectDmg, 'text-orange-400');
     }
 
@@ -1953,7 +1953,7 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
         triggerAnim('combat-player-avatar', 'anim-crit');
         playSound('crit');
         // Extra screen shake for received crit
-        let screen = document.getElementById('screen-combat');
+        const screen = document.getElementById('screen-combat');
         if(screen) { screen.classList.add('screen-shake'); setTimeout(() => screen.classList.remove('screen-shake'), 500); }
     } else {
         showDamageNumber('player-avatar-container', dmg, false);
@@ -1961,29 +1961,29 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
 
     // Reflect: from gear bonusDmgReflect (tenacity no longer directly provides reflect)
     // Return attribute: reflects 0.25% of damage received per point back to attacker
-    let returnReflectPct = (a['return'] || 0) * 0.0025;
+    const returnReflectPct = (a['return'] || 0) * 0.0025;
     if(returnReflectPct > 0 && attackerEnemy && attackerEnemy.currentHp > 0) {
-        let returnDmg = Math.max(1, Math.floor(dmg * returnReflectPct));
+        const returnDmg = Math.max(1, Math.floor(dmg * returnReflectPct));
         attackerEnemy.currentHp = Math.max(0, attackerEnemy.currentHp - returnDmg);
-        let eIdx = enemies.indexOf(attackerEnemy);
+        const eIdx = enemies.indexOf(attackerEnemy);
         if(eIdx >= 0) showFloatText('enemy-card-' + eIdx, '-' + returnDmg + ' 🔁', 'text-amber-400');
         addLog(`Return! Returned ${returnDmg} dmg back to ${attackerEnemy.name}!`, 'text-amber-400');
     }
 
     // Reflect: from gear bonusDmgReflect (tenacity no longer directly provides reflect)
     let reflectPct = getEquipBonusStat('bonusDmgReflect');
-    let fireShieldActive = player.activeBuffs && player.activeBuffs.some(b => b.type === 'fire_shield');
+    const fireShieldActive = player.activeBuffs && player.activeBuffs.some(b => b.type === 'fire_shield');
     if(fireShieldActive) reflectPct += 1.0; // Fire Shield reflects 100%
 
     // Reflect enhancement
-    let reflectEnh = globalProgression.skillTreeEnhancements ? globalProgression.skillTreeEnhancements.find(e => e.type === 'reflect') : null;
+    const reflectEnh = globalProgression.skillTreeEnhancements ? globalProgression.skillTreeEnhancements.find(e => e.type === 'reflect') : null;
     if(reflectEnh && !player.reflectUsed && Math.random() < ENHANCEMENT_DEFS.reflect.vals[reflectEnh.rarity]) {
         reflectPct += ENHANCEMENT_DEFS.reflect.vals[reflectEnh.rarity];
         player.reflectUsed = true;
     }
 
     if(reflectPct > 0 && attackerEnemy) {
-        let reflectDmg = Math.max(1, Math.floor(dmg * reflectPct));
+        const reflectDmg = Math.max(1, Math.floor(dmg * reflectPct));
         if(attackerEnemy.currentHp > 0) {
             attackerEnemy.currentHp -= reflectDmg;
             showFloatText(`enemy-card-${activeTargetIndex}`, `-${reflectDmg}`, 'text-orange-400');
@@ -1996,11 +1996,11 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
 
     // Counter Attack: agility 0.25% per point + bonusCounterChance from accessories
     if(player.currentHp > 0 && attackerEnemy && attackerEnemy.currentHp > 0) {
-        let counterChance = ((a.agility || 0) * 0.0025) + getEquipBonusStat('bonusCounterChance');
+        const counterChance = ((a.agility || 0) * 0.0025) + getEquipBonusStat('bonusCounterChance');
         if(counterChance > 0 && Math.random() < counterChance) {
-            let counterDmg = Math.max(1, getBaseDamage());
+            const counterDmg = Math.max(1, getBaseDamage());
             attackerEnemy.currentHp = Math.max(0, attackerEnemy.currentHp - counterDmg);
-            let eIdx = enemies.indexOf(attackerEnemy);
+            const eIdx = enemies.indexOf(attackerEnemy);
             if(eIdx >= 0) showFloatText('enemy-card-' + eIdx, '-' + counterDmg + ' ↩️', 'text-yellow-300');
             addLog(`Counter Attack! Dealt ${counterDmg} dmg back to ${attackerEnemy.name}!`, 'text-yellow-300 font-bold');
         }
@@ -2013,7 +2013,7 @@ function startPlayerTurn() {
     if(enemies.length > 0 && enemies.every(e => e.currentHp <= 0)) { endBattle(true); return; }
     
     if(player.bleedTurns > 0) {
-        let bDmg = Math.max(1, Math.floor(player.maxHp * 0.02 * player.bleedStacks));
+        const bDmg = Math.max(1, Math.floor(player.maxHp * 0.02 * player.bleedStacks));
         player.currentHp -= bDmg; player.bleedTurns--; 
         showFloatText(`player-avatar-container`, `-${bDmg}`, 'text-red-600'); addLog(`Bleed damage!`, 'text-red-600');
         if(player.currentHp <= 0) { updateCombatUI(); setTimeout(() => endBattle(false), 500); return; }
@@ -2033,12 +2033,12 @@ function startPlayerTurn() {
 
     // Shuriken Rain: auto-hit random enemy on turn start
     if(player.shurikenRainTurns > 0) {
-        let alive = enemies.filter(e => e.currentHp > 0);
+        const alive = enemies.filter(e => e.currentHp > 0);
         if(alive.length > 0) {
-            let target = alive[Math.floor(Math.random() * alive.length)];
-            let shurikenDmg = getBaseDamage();
+            const target = alive[Math.floor(Math.random() * alive.length)];
+            const shurikenDmg = getBaseDamage();
             target.currentHp = Math.max(0, target.currentHp - shurikenDmg);
-            let tIdx = enemies.indexOf(target);
+            const tIdx = enemies.indexOf(target);
             showFloatText('enemy-card-' + tIdx, `-${shurikenDmg}`, 'text-yellow-300');
             addLog(`🌟 Shuriken Rain hit ${target.name} for ${shurikenDmg}!`, 'text-yellow-400');
         }
@@ -2051,7 +2051,7 @@ function startPlayerTurn() {
         player.stunned--; addLog(`You are Stunned!`, 'text-yellow-400 font-bold');
         // Black Market Tier 3: stun retaliation — deal 50% base damage when stun ends
         if ((globalProgression.blackMarketTier || 0) >= 3 && player.stunned === 0) {
-            let retaliationDmg = Math.max(1, Math.floor(getBaseDamage() * 0.5));
+            const retaliationDmg = Math.max(1, Math.floor(getBaseDamage() * 0.5));
             enemies.forEach((e, eIdx) => {
                 if (e.currentHp > 0) {
                     e.currentHp = Math.max(0, e.currentHp - retaliationDmg);
@@ -2065,7 +2065,7 @@ function startPlayerTurn() {
 
     player.usedConsumableThisTurn = false;
     isPlayerTurn = true; renderSkills(); renderUsableSlots();
-    let autoDelay = 800; 
+    const autoDelay = 800; 
     if(isAutoBattle && currentMode !== 'training') setTimeout(processAutoTurn, autoDelay);
 }
 
@@ -2086,18 +2086,18 @@ function endBattle(playerWon) {
     const rwdCont = document.getElementById('rewards-container');
     
     lvlUp.classList.add('hidden'); spTxt.classList.add('hidden'); rwdCont.classList.add('hidden'); rwdCont.innerHTML = '';
-    let endGoldCont = document.getElementById('end-gold-container'); if(endGoldCont) endGoldCont.style.display = 'none';
+    const endGoldCont = document.getElementById('end-gold-container'); if(endGoldCont) endGoldCont.style.display = 'none';
 
     if (playerWon) {
         playSound('win');
-        let killCount = enemies.length;
+        const killCount = enemies.length;
 
         // Clear persisted enemies for this mode since all were defeated
-        let persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
         if (savedEnemies[persistKey]) delete savedEnemies[persistKey];
 
         // Progress tracking: win
-        let ps = ensureProgressStats();
+        const ps = ensureProgressStats();
         ps.battlesWon++;
         ps.currentWinStreak = (ps.currentWinStreak || 0) + 1;
         if (ps.currentWinStreak > ps.longestWinStreak) ps.longestWinStreak = ps.currentWinStreak;
@@ -2124,22 +2124,22 @@ function endBattle(playerWon) {
         }
 
         // Track enemy kills for codex milestones (skip zombies in invasion mode)
-        if(currentMode !== 'invasion') enemies.forEach(e => {
-            let baseName = e.isMythicBoss ? e.name : e.name.replace(/^(Rare |Epic |Legendary |Mythic )/, '');
+        if(currentMode !== 'invasion') {enemies.forEach(e => {
+            const baseName = e.isMythicBoss ? e.name : e.name.replace(/^(Rare |Epic |Legendary |Mythic )/, '');
             if(!globalProgression.enemyKillCounts) globalProgression.enemyKillCounts = {};
             globalProgression.enemyKillCounts[baseName] = (globalProgression.enemyKillCounts[baseName] || 0) + 1;
-            let milestoneKey = baseName + '_' + globalProgression.enemyKillCounts[baseName];
+            const milestoneKey = baseName + '_' + globalProgression.enemyKillCounts[baseName];
             if((globalProgression.enemyKillCounts[baseName] % 100 === 0) && !((globalProgression.claimedCodexMilestones || {})[milestoneKey])) {
                 if(!globalProgression.claimedCodexMilestones) globalProgression.claimedCodexMilestones = {};
                 globalProgression.claimedCodexMilestones[milestoneKey] = true;
                 globalProgression.gold += 1000;
             }
-        });
+        });}
 
         globalProgression.kills += killCount;
         if(currentMode !== 'invasion') globalProgression.gold += killCount;
         // Track highest gold held
-        { let ps = ensureProgressStats(); if (globalProgression.gold > (ps.highestGold || 0)) ps.highestGold = globalProgression.gold; }
+        { const ps = ensureProgressStats(); if (globalProgression.gold > (ps.highestGold || 0)) ps.highestGold = globalProgression.gold; }
         if(currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop' || currentMode === 'island_defense') {
             globalProgression.storyModeProgress[currentMode]++;
         }
@@ -2154,10 +2154,10 @@ function endBattle(playerWon) {
             invasionTotalKills += killCount;
             zombieSessionKills += killCount;
             // Track total zombie kills in progression
-            let zs = ensureZombieStats();
+            const zs = ensureZombieStats();
             zs.totalKills = (zs.totalKills || 0) + killCount;
             // Per-kill rewards: scaled gold + 1 Magic Stone per kill
-            let invasionGoldGain = killCount * 10;
+            const invasionGoldGain = killCount * 10;
             globalProgression.gold += invasionGoldGain;
             globalProgression.inventory.magic_stone = (globalProgression.inventory.magic_stone || 0) + killCount;
             rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-700 text-green-400 font-bold shadow-md">🧟 +${invasionGoldGain} Gold</div>`;
@@ -2167,40 +2167,40 @@ function endBattle(playerWon) {
             enemies.forEach(() => {
                 if (!rollWithDropRate(0.35)) return; // 35% base chance to drop anything
                 // Pool distribution: 35% consumable, 20% material, 15% usable, 30% gear
-                let poolRoll = Math.random();
+                const poolRoll = Math.random();
                 if (poolRoll < 0.35) {
                     // Consumable drop (35%)
-                    let consumableIds = Object.keys(CONSUMABLES);
-                    let picked = consumableIds[Math.floor(Math.random() * consumableIds.length)];
+                    const consumableIds = Object.keys(CONSUMABLES);
+                    const picked = consumableIds[Math.floor(Math.random() * consumableIds.length)];
                     if ((globalProgression.inventory[picked] || 0) < INVENTORY_STACK_CAP) {
                         globalProgression.inventory[picked] = (globalProgression.inventory[picked] || 0) + 1;
-                        let c = CONSUMABLES[picked];
+                        const c = CONSUMABLES[picked];
                         rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-green-600 text-green-300 font-bold text-xs shadow-md">+1 ${c.icon} ${c.name}</div>`;
                     }
                 } else if (poolRoll < 0.55) {
                     // Material drop (20%)
-                    let matPool = ['herb_red','herb_blue','fish_1','fish_2','fish_3','fish_4','fish_5','fish_6','soul_pebbles','ench_common','ench_rare','ench_epic','ench_legendary','titan_shard','magic_stone'];
-                    let picked = matPool[Math.floor(Math.random() * matPool.length)];
+                    const matPool = ['herb_red','herb_blue','fish_1','fish_2','fish_3','fish_4','fish_5','fish_6','soul_pebbles','ench_common','ench_rare','ench_epic','ench_legendary','titan_shard','magic_stone'];
+                    const picked = matPool[Math.floor(Math.random() * matPool.length)];
                     globalProgression.inventory[picked] = (globalProgression.inventory[picked] || 0) + 1;
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-blue-600 text-blue-300 font-bold text-xs shadow-md">+1 ${MAT_ICONS[picked] || '📦'} ${MAT_NAMES[picked] || picked}</div>`;
                 } else if (poolRoll < 0.70) {
                     // Usable item drop (15%)
-                    let usablePool = Object.keys(USABLE_ITEMS);
-                    let picked = usablePool[Math.floor(Math.random() * usablePool.length)];
-                    let uItem = USABLE_ITEMS[picked];
+                    const usablePool = Object.keys(USABLE_ITEMS);
+                    const picked = usablePool[Math.floor(Math.random() * usablePool.length)];
+                    const uItem = USABLE_ITEMS[picked];
                     if (!globalProgression.usableItems) globalProgression.usableItems = {};
                     globalProgression.usableItems[picked] = (globalProgression.usableItems[picked] || 0) + 1;
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-yellow-600 text-yellow-300 font-bold text-xs shadow-md">+1 ${uItem.icon} ${uItem.name}</div>`;
                 } else {
                     // Gear drop (30%) — rare table matches game rarity weights
-                    let rRoll = Math.random();
+                    const rRoll = Math.random();
                     let rarity;
                     if (rRoll < 0.005) rarity = 'mythic';
                     else if (rRoll < 0.01) rarity = 'legendary';
                     else if (rRoll < 0.05) rarity = 'epic';
                     else if (rRoll < 0.20) rarity = 'rare';
                     else rarity = 'common';
-                    let newEquip = rollEquipment(rarity);
+                    const newEquip = rollEquipment(rarity);
                     globalProgression.equipInventory.push(newEquip);
                     globalProgression.newItems[newEquip.type.startsWith('ring') ? 'ring' : newEquip.type] = true;
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border-2 rarity-${newEquip.rarity} text-gray-300 font-bold text-xs shadow-md">⚔️ ${newEquip.icon} ${newEquip.name}</div>`;
@@ -2229,7 +2229,7 @@ function endBattle(playerWon) {
                     }
                 });
             }
-            let hasEnergy = (globalProgression.energy || 0) >= 1;
+            const hasEnergy = (globalProgression.energy || 0) >= 1;
             title.innerText = "WAVE CLEARED!"; title.className = "text-4xl font-bold mb-2 text-green-400 drop-shadow-lg";
             desc.innerText = `Zombies defeated! Wave ${zombieConsecutiveWaves}. ${hasEnergy ? 'Fight on!' : 'No energy left!'}`;
             if(hasEnergy) {
@@ -2239,7 +2239,7 @@ function endBattle(playerWon) {
                 btnNext.classList.add('hidden');
             }
             // Also show "Return to ZA Menu" button option
-            let btnHub = document.getElementById('btn-end-hub');
+            const btnHub = document.getElementById('btn-end-hub');
             if(btnHub) { btnHub.innerText = '🧟 Zombie Apocalypse Menu'; btnHub.onclick = showInvasion; }
             rwdCont.classList.remove('hidden');
             xpCont.classList.remove('hidden');
@@ -2251,7 +2251,7 @@ function endBattle(playerWon) {
         }
 
         enemies.forEach(e => {
-            let isBoss = e.isBoss;
+            const isBoss = e.isBoss;
             if(isBoss && currentMode !== 'graveyard') {
                 if(!globalProgression.killedBosses) globalProgression.killedBosses = {};
                 globalProgression.killedBosses[e.name] = { name: e.name, avatar: e.avatar, hpMult: e.templateMults?.hpMult || 3, dmgMult: e.templateMults?.dmgMult || 2 };
@@ -2259,7 +2259,7 @@ function endBattle(playerWon) {
 
             // Mythic boss: guaranteed mythic gear drop
             if(e.isMythicBoss) {
-                let mythicEquip = rollEquipment('mythic');
+                const mythicEquip = rollEquipment('mythic');
                 globalProgression.equipInventory.push(mythicEquip);
                 globalProgression.newItems[mythicEquip.type.startsWith('ring') ? 'ring' : mythicEquip.type] = true;
                 rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 rarity-mythic text-pink-300 font-bold shadow-md anim-mythic-gear">✨ MYTHIC DROP: ${mythicEquip.icon} ${mythicEquip.name}!</div>`;
@@ -2269,23 +2269,23 @@ function endBattle(playerWon) {
             if (currentMode === 'hunting') {
                 // Guaranteed drop for mythic/legendary/epic rarity enemies
                 if (e.guaranteedDrop) {
-                    let gEquip = rollEquipment(e.guaranteedDrop);
+                    const gEquip = rollEquipment(e.guaranteedDrop);
                     globalProgression.equipInventory.push(gEquip);
                     globalProgression.newItems[gEquip.type.startsWith('ring') ? 'ring' : gEquip.type] = true;
-                    let gLabel = e.guaranteedDrop === 'mythic' ? '✨ MYTHIC DROP' : e.guaranteedDrop === 'legendary' ? '⭐ LEGENDARY DROP' : '💎 ' + e.guaranteedDrop.toUpperCase() + ' DROP';
+                    const gLabel = e.guaranteedDrop === 'mythic' ? '✨ MYTHIC DROP' : e.guaranteedDrop === 'legendary' ? '⭐ LEGENDARY DROP' : '💎 ' + e.guaranteedDrop.toUpperCase() + ' DROP';
                     rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 rarity-${gEquip.rarity} text-pink-300 font-bold shadow-md">${gLabel}: ${gEquip.icon} ${gEquip.name}!</div>`;
                     return;
                 }
-                let herb = Math.random() < 0.5 ? 'herb_red' : 'herb_blue';
+                const herb = Math.random() < 0.5 ? 'herb_red' : 'herb_blue';
                 globalProgression.inventory[herb]++;
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-700 text-green-400 font-bold shadow-md">+1 ${MAT_ICONS[herb]}</div>`;
                 // 20% chance to drop a random potion
                 if (Math.random() < 0.20) {
-                    let potionIds = ['pot_i1', 'pot_i2', 'pot_i3', 'pot_r1', 'pot_r2', 'pot_r3'];
-                    let droppedPot = potionIds[Math.floor(Math.random() * potionIds.length)];
+                    const potionIds = ['pot_i1', 'pot_i2', 'pot_i3', 'pot_r1', 'pot_r2', 'pot_r3'];
+                    const droppedPot = potionIds[Math.floor(Math.random() * potionIds.length)];
                     if ((globalProgression.inventory[droppedPot] || 0) < INVENTORY_STACK_CAP) {
                         globalProgression.inventory[droppedPot] = (globalProgression.inventory[droppedPot] || 0) + 1;
-                        let potData = CONSUMABLES[droppedPot];
+                        const potData = CONSUMABLES[droppedPot];
                         rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-500 text-green-300 font-bold shadow-md">+1 ${potData.icon} ${potData.name}</div>`;
                     }
                 }
@@ -2293,24 +2293,24 @@ function endBattle(playerWon) {
             else if (currentMode === 'island_defense') {
                 // Guaranteed drop for mythic/legendary/epic rarity enemies
                 if (e.guaranteedDrop) {
-                    let gEquip = rollEquipment(e.guaranteedDrop);
+                    const gEquip = rollEquipment(e.guaranteedDrop);
                     globalProgression.equipInventory.push(gEquip);
                     globalProgression.newItems[gEquip.type.startsWith('ring') ? 'ring' : gEquip.type] = true;
-                    let gLabel = e.guaranteedDrop === 'mythic' ? '✨ MYTHIC DROP' : e.guaranteedDrop === 'legendary' ? '⭐ LEGENDARY DROP' : '💎 ' + e.guaranteedDrop.toUpperCase() + ' DROP';
+                    const gLabel = e.guaranteedDrop === 'mythic' ? '✨ MYTHIC DROP' : e.guaranteedDrop === 'legendary' ? '⭐ LEGENDARY DROP' : '💎 ' + e.guaranteedDrop.toUpperCase() + ' DROP';
                     rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 rarity-${gEquip.rarity} text-pink-300 font-bold shadow-md">${gLabel}: ${gEquip.icon} ${gEquip.name}!</div>`;
                     return;
                 }
-                let fishTypes = [1,2,3,4,5,6];
-                let pick = fishTypes[Math.floor(Math.random()*fishTypes.length)];
+                const fishTypes = [1,2,3,4,5,6];
+                const pick = fishTypes[Math.floor(Math.random()*fishTypes.length)];
                 globalProgression.inventory[`fish_${pick}`] = (globalProgression.inventory[`fish_${pick}`] || 0) + 1;
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-700 text-blue-400 font-bold shadow-md">+1 ${MAT_NAMES['fish_'+pick]}</div>`;
                 // 20% chance to drop a random food buff
                 if (Math.random() < 0.20) {
-                    let foodIds = ['food_d1', 'food_d2', 'food_d3', 'food_df1', 'food_df2', 'food_df3'];
-                    let droppedFood = foodIds[Math.floor(Math.random() * foodIds.length)];
+                    const foodIds = ['food_d1', 'food_d2', 'food_d3', 'food_df1', 'food_df2', 'food_df3'];
+                    const droppedFood = foodIds[Math.floor(Math.random() * foodIds.length)];
                     if ((globalProgression.inventory[droppedFood] || 0) < INVENTORY_STACK_CAP) {
                         globalProgression.inventory[droppedFood] = (globalProgression.inventory[droppedFood] || 0) + 1;
-                        let foodData = CONSUMABLES[droppedFood];
+                        const foodData = CONSUMABLES[droppedFood];
                         rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-500 text-blue-300 font-bold shadow-md">+1 ${foodData.icon} ${foodData.name}</div>`;
                     }
                 }
@@ -2320,7 +2320,7 @@ function endBattle(playerWon) {
                 let shouldDrop = true;
                 
                 if(isBoss) {
-                    let bRoll = Math.random();
+                    const bRoll = Math.random();
                     if(bRoll < 0.40) forceRarity = 'legendary'; else if(bRoll < 0.60) forceRarity = 'epic'; else if (bRoll < 0.70) forceRarity = 'rare';
                 } else {
                     if (e.rarity === 'mythic') { forceRarity = 'mythic'; }
@@ -2329,7 +2329,7 @@ function endBattle(playerWon) {
                     else if (e.rarity === 'rare') forceRarity = 'rare';
                     else if (rollWithDropRate(0.50)) {
                         if (currentMode === 'pillage') {
-                            let rRoll = Math.random();
+                            const rRoll = Math.random();
                             if (rRoll < 0.01) forceRarity = 'legendary';
                             else if (rRoll < 0.20) forceRarity = 'epic';
                             else if (rRoll < 0.40) forceRarity = 'rare';
@@ -2342,7 +2342,7 @@ function endBattle(playerWon) {
                 }
                 
                 if(shouldDrop) {
-                    let newEquip = rollEquipment(forceRarity);
+                    const newEquip = rollEquipment(forceRarity);
                     globalProgression.equipInventory.push(newEquip);
                     globalProgression.newItems[newEquip.type.startsWith('ring') ? 'ring' : newEquip.type] = true; 
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border-2 rarity-${newEquip.rarity} text-gray-300 font-bold shadow-md">+1 Gear (${newEquip.icon})</div>`;
@@ -2352,7 +2352,7 @@ function endBattle(playerWon) {
                 let eTier = 'ench_common';
                 let shouldDrop = true;
                 if(isBoss) {
-                    let bRoll = Math.random();
+                    const bRoll = Math.random();
                     if(bRoll < 0.40) eTier = 'ench_legendary'; else if(bRoll < 0.60) eTier = 'ench_epic'; else if (bRoll < 0.70) eTier = 'ench_rare';
                 } else {
                     if (e.rarity === 'mythic') eTier = 'ench_legendary';
@@ -2373,14 +2373,14 @@ function endBattle(playerWon) {
 
         // 5% pet drop chance from any game mode except invasion
         if(currentMode !== 'invasion' && Math.random() < 0.05) {
-            let allPetIds = PET_DATA.map(p => p.id);
+            const allPetIds = PET_DATA.map(p => p.id);
             if(!globalProgression.petsOwned) globalProgression.petsOwned = [];
-            let ownedPets = globalProgression.petsOwned;
-            let unownedPets = allPetIds.filter(id => !ownedPets.includes(id));
+            const ownedPets = globalProgression.petsOwned;
+            const unownedPets = allPetIds.filter(id => !ownedPets.includes(id));
             if(unownedPets.length > 0) {
-                let newPetId = unownedPets[Math.floor(Math.random() * unownedPets.length)];
+                const newPetId = unownedPets[Math.floor(Math.random() * unownedPets.length)];
                 globalProgression.petsOwned.push(newPetId);
-                let petData = PET_DATA.find(p => p.id === newPetId);
+                const petData = PET_DATA.find(p => p.id === newPetId);
                 if(!globalProgression.discoveredPets) globalProgression.discoveredPets = {};
                 globalProgression.discoveredPets[petData.name] = true;
                 const petNoti = document.getElementById('hub-pet-noti');
@@ -2419,12 +2419,12 @@ function endBattle(playerWon) {
 
         xpCont.classList.remove('hidden');
         let totalXp = 0; 
-        let nextLvlXp = getXpForNextLevel(player.lvl);
+        const nextLvlXp = getXpForNextLevel(player.lvl);
         
         enemies.forEach(e => { 
             if(currentMode === 'invasion') {
                 // Level 500 mob XP (capped to prevent JS precision issues)
-                let lvl500Xp = Math.min(getXpForNextLevel(500), 9007199254740991);
+                const lvl500Xp = Math.min(getXpForNextLevel(500), 9007199254740991);
                 totalXp += Math.floor(Math.min(lvl500Xp * 0.05, 9007199254740991)); // 5% of level 500 XP per mob
             } else if (e.isMythicBoss) {
                 totalXp += Math.floor(nextLvlXp * 2.00); // Mythic boss gives 200% of a level
@@ -2454,7 +2454,7 @@ function endBattle(playerWon) {
         // Gold per kill (not in quest, training, or dungeon mode)
         let endGold = 0;
         if(currentMode !== 'quest' && currentMode !== 'training' && currentMode !== 'dungeon') {
-            let goldPerKill = 2 + Math.floor(player.lvl / 5);
+            const goldPerKill = 2 + Math.floor(player.lvl / 5);
             endGold = enemies.filter(e => e.currentHp <= 0).length * goldPerKill;
             if(currentMode === 'invasion') endGold *= 3;
             globalProgression.gold += endGold;
@@ -2464,7 +2464,7 @@ function endBattle(playerWon) {
 
         consumeWellBattleCharges();
 
-        let xpNeeded = getXpForNextLevel(player.lvl); let endXpBar = document.getElementById('end-xp-bar');
+        const xpNeeded = getXpForNextLevel(player.lvl); const endXpBar = document.getElementById('end-xp-bar');
         endXpBar.style.transition = 'none'; endXpBar.style.width = `${(player.xp / xpNeeded) * 100}%`; void endXpBar.offsetWidth; player.xp += totalXp;
         
         setTimeout(() => {
@@ -2491,7 +2491,7 @@ function endBattle(playerWon) {
     } else {
         playSound('lose');
         consumeWellBattleCharges();
-        let psL = ensureProgressStats();
+        const psL = ensureProgressStats();
         psL.battlesLost++;
         psL.totalDeaths++;
         psL.currentWinStreak = 0;
@@ -2499,7 +2499,7 @@ function endBattle(playerWon) {
         const autoBtn = document.getElementById('btn-auto'); if(autoBtn) autoBtn.classList.remove('auto-on');
         // Save living enemies for persistence on defeat (exclude special modes)
         if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
-            let persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+            const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
             savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
         }
         enemies = [];
@@ -2514,13 +2514,13 @@ function endBattle(playerWon) {
     switchScreen('screen-end');
     // After a graveyard battle, return to town
     if(currentMode === 'graveyard') {
-        let gravBtn = document.getElementById('btn-end-hub');
+        const gravBtn = document.getElementById('btn-end-hub');
         if(gravBtn) { gravBtn.innerText = '🏠 Return to Town'; gravBtn.onclick = returnToTown; }
         setTimeout(() => returnToTown(), 3500);
     }
     // After a zombie apocalypse defeat, return to ZA menu
     if(currentMode === 'invasion' && !playerWon) {
-        let zaBtn = document.getElementById('btn-end-hub');
+        const zaBtn = document.getElementById('btn-end-hub');
         if(zaBtn) { zaBtn.innerText = '🧟 Zombie Apocalypse Menu'; zaBtn.onclick = showInvasion; }
         setTimeout(() => showInvasion(), 3500);
     }

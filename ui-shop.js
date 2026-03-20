@@ -1,16 +1,16 @@
 function showEnchanter() {
-    let p = globalProgression;
+    const p = globalProgression;
     const list = document.getElementById('enchant-modal-list'); list.innerHTML = '';
     document.getElementById('ench-list').innerHTML = '';
     
     let hasGear = false;
     EQUIP_SLOTS.forEach(slot => {
-        let eq = globalProgression.equipped[slot];
+        const eq = globalProgression.equipped[slot];
         if(eq) {
             hasGear = true;
-            let btn = document.createElement('div');
+            const btn = document.createElement('div');
             btn.className = `bg-gray-800 border-2 rarity-${eq.rarity} p-3 rounded-lg flex justify-between items-center shadow-md`;
-            let enchStatus = eq.enchanted ? `<span class="text-xs text-yellow-300 bg-gray-900 px-2 py-1 rounded">(${sanitizeHTML(eq.enchanted)})</span>` : 
+            const enchStatus = eq.enchanted ? `<span class="text-xs text-yellow-300 bg-gray-900 px-2 py-1 rounded">(${sanitizeHTML(eq.enchanted)})</span>` : 
                 `<button onclick="openEnchantModal('${slot}')" class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md">Enchant</button>`;
             
             btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-3xl">${eq.icon}</span><div><div class="font-bold text-white">${sanitizeHTML(eq.name)}</div>${eq.type === 'weapon' && eq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(eq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}</div></div> ${enchStatus}`;
@@ -30,9 +30,9 @@ function showEnchanter() {
             { from: 'ench_epic',       to: 'ench_legendary',  fromName: 'Epic Cores',    toName: 'Legendary Core' }
         ];
         merges.forEach(m => {
-            let amt = globalProgression.inventory[m.from] || 0;
-            let canMerge = amt >= 20;
-            let div = document.createElement('div');
+            const amt = globalProgression.inventory[m.from] || 0;
+            const canMerge = amt >= 20;
+            const div = document.createElement('div');
             div.className = 'bg-gray-800 border border-purple-700 rounded-lg p-3 flex justify-between items-center';
             div.innerHTML = `
                 <div class="flex items-center gap-2">
@@ -50,10 +50,10 @@ function showEnchanter() {
         });
 
         // Legendary Core → Soul Pebble Exchange
-        let legCores = globalProgression.inventory.ench_legendary || 0;
-        let pebbles = globalProgression.inventory.soul_pebbles || 0;
-        let canPebbleExchange = legCores >= 200;
-        let pebbleDiv = document.createElement('div');
+        const legCores = globalProgression.inventory.ench_legendary || 0;
+        const pebbles = globalProgression.inventory.soul_pebbles || 0;
+        const canPebbleExchange = legCores >= 200;
+        const pebbleDiv = document.createElement('div');
         pebbleDiv.className = 'mt-2 bg-gray-800 border border-purple-700 rounded-lg p-3 flex justify-between items-center';
         pebbleDiv.innerHTML = `
             <div>
@@ -100,11 +100,11 @@ function openEnchantModal(slot) {
         statsHtml += `<div class="text-sm font-bold text-white mb-2">📊 ${previewCoreName ? '🔍 Preview — ' + sanitizeHTML(previewCoreName) : 'Current Stats — ' + sanitizeHTML(eq.name)}</div>`;
         statsHtml += '<div class="grid grid-cols-2 gap-1 text-xs">';
         if(eq.weaponBaseDmgPct) {
-            let val = eq.weaponBaseDmgPct;
-            let displayVal = (val * 100).toFixed(1) + '%';
+            const val = eq.weaponBaseDmgPct;
+            const displayVal = (val * 100).toFixed(1) + '%';
             if(previewMult) {
-                let newVal = val * previewMult;
-                let newDisplay = (newVal * 100).toFixed(1) + '%';
+                const newVal = val * previewMult;
+                const newDisplay = (newVal * 100).toFixed(1) + '%';
                 statsHtml += `<div class="text-gray-300"><span class="text-gray-500">⚔️ Weapon Dmg:</span> <span class="text-yellow-300 font-bold">+${displayVal}</span> <span class="text-green-400 font-bold">→ +${newDisplay}</span></div>`;
             } else {
                 statsHtml += `<div class="text-gray-300"><span class="text-gray-500">⚔️ Weapon Dmg:</span> <span class="text-yellow-300 font-bold">+${displayVal}</span></div>`;
@@ -114,12 +114,12 @@ function openEnchantModal(slot) {
             const STAT_LABELS = { dmg: '⚔️ Damage', def: '🛡️ Defense', hp: '❤️ HP', critChance: '🎯 Crit%', critDmg: '💥 Crit Dmg', dodge: '💨 Dodge', armorPierce: '🗡️ Armor Pierce', dmgMitigation: '🛡️ Dmg Mitigation' };
             Object.entries(eq.stats).forEach(([key, val]) => {
                 if(val && val !== 0) {
-                    let label = STAT_LABELS[key] || key;
-                    let isPercent = typeof val === 'number' && val < 1;
-                    let displayVal = isPercent ? (val * 100).toFixed(1) + '%' : val;
+                    const label = STAT_LABELS[key] || key;
+                    const isPercent = typeof val === 'number' && val < 1;
+                    const displayVal = isPercent ? (val * 100).toFixed(1) + '%' : val;
                     if(previewMult) {
-                        let newVal = key === 'hp' ? Math.floor(val * previewMult) + 1 : key === 'dmg' || key === 'def' ? Math.floor(val * previewMult) + 1 : isPercent ? val * previewMult : val;
-                        let newDisplay = isPercent ? (newVal * 100).toFixed(1) + '%' : newVal;
+                        const newVal = key === 'hp' ? Math.floor(val * previewMult) + 1 : key === 'dmg' || key === 'def' ? Math.floor(val * previewMult) + 1 : isPercent ? val * previewMult : val;
+                        const newDisplay = isPercent ? (newVal * 100).toFixed(1) + '%' : newVal;
                         if(newVal !== val) {
                             statsHtml += `<div class="text-gray-300"><span class="text-gray-500">${label}:</span> <span class="text-yellow-300 font-bold">${displayVal}</span> <span class="text-green-400 font-bold">→ ${newDisplay}</span></div>`;
                         } else {
@@ -134,12 +134,12 @@ function openEnchantModal(slot) {
         if(eq.bonusStats && eq.bonusStats.length > 0) {
             eq.bonusStats.forEach(bs => {
                 if(bs.value && bs.value !== 0) {
-                    let label = bs.stat || bs.key || 'Bonus';
-                    let isPercent = typeof bs.value === 'number' && bs.value < 1;
-                    let displayVal = isPercent ? (bs.value * 100).toFixed(1) + '%' : bs.value;
+                    const label = bs.stat || bs.key || 'Bonus';
+                    const isPercent = typeof bs.value === 'number' && bs.value < 1;
+                    const displayVal = isPercent ? (bs.value * 100).toFixed(1) + '%' : bs.value;
                     if(previewMult && bs.stat !== 'bonusCdReduc') {
-                        let newVal = bs.value * previewMult;
-                        let newDisplay = isPercent ? (newVal * 100).toFixed(1) + '%' : newVal.toFixed(2);
+                        const newVal = bs.value * previewMult;
+                        const newDisplay = isPercent ? (newVal * 100).toFixed(1) + '%' : newVal.toFixed(2);
                         statsHtml += `<div class="text-purple-300"><span class="text-gray-500">${label}:</span> <span class="font-bold">+${displayVal}</span> <span class="text-green-400 font-bold">→ +${newDisplay}</span></div>`;
                     } else {
                         statsHtml += `<div class="text-purple-300"><span class="text-gray-500">${label}:</span> <span class="font-bold">+${displayVal}</span></div>`;
@@ -157,9 +157,9 @@ function openEnchantModal(slot) {
         let html = renderStatsPanel(activeCoreId ? cores.find(c => c.id === activeCoreId)?.mult : null,
                                     activeCoreId ? cores.find(c => c.id === activeCoreId)?.name : null);
         cores.forEach(c => {
-            let amt = globalProgression.inventory[c.id] || 0;
-            let canEnch = amt > 0;
-            let isActive = activeCoreId === c.id;
+            const amt = globalProgression.inventory[c.id] || 0;
+            const canEnch = amt > 0;
+            const isActive = activeCoreId === c.id;
             html += `<div data-core="${c.id}" class="bg-gray-900 border-2 border-${c.color}-${isActive ? '400' : '500'} p-3 rounded-lg flex justify-between items-center transition ${canEnch ? 'hover:bg-gray-700 cursor-pointer' : 'opacity-50 cursor-not-allowed'} ${isActive ? 'ring-2 ring-' + c.color + '-300 bg-gray-800' : ''}">
                 <div class="text-left flex items-center gap-3">
                     <span class="text-2xl">${MAT_ICONS[c.id]}</span>
@@ -172,10 +172,10 @@ function openEnchantModal(slot) {
 
         // Attach click handlers to rows (preview) and USE buttons (apply)
         cores.forEach(c => {
-            let amt = globalProgression.inventory[c.id] || 0;
-            let canEnch = amt > 0;
-            let row = list.querySelector(`[data-core="${c.id}"]`);
-            let useBtn = list.querySelector(`[data-use="${c.id}"]`);
+            const amt = globalProgression.inventory[c.id] || 0;
+            const canEnch = amt > 0;
+            const row = list.querySelector(`[data-core="${c.id}"]`);
+            const useBtn = list.querySelector(`[data-use="${c.id}"]`);
             if(row && canEnch) {
                 row.addEventListener('click', (ev) => {
                     if(ev.target.closest('[data-use]')) return; // USE button handled separately
@@ -203,7 +203,7 @@ function openEnchantModal(slot) {
 function closeEnchantModal() { document.getElementById('modal-enchant').style.display = 'none'; document.getElementById('ench-list').innerHTML=''; showEnchanter(); }
 
 function applyEnchant(coreId, mult, coreName) {
-    let eq = globalProgression.equipped[activeEnchantSlot];
+    const eq = globalProgression.equipped[activeEnchantSlot];
     if(eq && !eq.enchanted && globalProgression.inventory[coreId] > 0) {
         globalProgression.inventory[coreId]--;
         eq.enchanted = coreName;
@@ -227,18 +227,18 @@ function applyEnchant(coreId, mult, coreName) {
 
 
 function showShop() {
-    let p = globalProgression; document.getElementById('shop-gold-display').innerText = p.gold; document.getElementById('shop-owned-tickets').innerText = p.tickets || 0;
+    const p = globalProgression; document.getElementById('shop-gold-display').innerText = p.gold; document.getElementById('shop-owned-tickets').innerText = p.tickets || 0;
     
     // Daily Gear Generation
     const gearList = document.getElementById('shop-gear-list'); gearList.innerHTML = '';
-    let now = Date.now();
+    const now = Date.now();
     if(!p.shopGear || p.shopGear.length === 0 || now - (p.shopLastRefresh||0) > 24*60*60*1000) {
         p.shopLastRefresh = now;
         generateShopGear();
     }
     
     p.shopGear.forEach((g, idx) => {
-        let div = document.createElement('div');
+        const div = document.createElement('div');
         if(g.bought) {
             div.className = `bg-gray-900 border-2 border-gray-700 p-3 rounded-lg flex justify-between items-center opacity-50`;
             div.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl">${g.item.icon}</span><span class="text-gray-500 line-through">${sanitizeHTML(g.item.name)}</span></div> <span class="text-xs font-bold text-gray-500">SOLD OUT</span>`;
@@ -252,9 +252,9 @@ function showShop() {
     const sellList = document.getElementById('shop-sell-list'); sellList.innerHTML = '';
     
     // Gear Selling only (grouped by Name+Rarity) — no consumables
-    let gearGroups = {};
+    const gearGroups = {};
     p.equipInventory.forEach(eq => {
-        let key = `${eq.name}_${eq.rarity}`;
+        const key = `${eq.name}_${eq.rarity}`;
         if(!gearGroups[key]) gearGroups[key] = { count: 0, rarity: eq.rarity, name: eq.name, icon: eq.icon, ids: [] };
         gearGroups[key].count++;
         gearGroups[key].ids.push(eq.id);
@@ -262,8 +262,8 @@ function showShop() {
 
     const gearKeys = Object.keys(gearGroups);
     if(gearKeys.length > 0) {
-        let totalGearValue = gearKeys.reduce((sum, key) => sum + (gearGroups[key].count * getGearSellPrice(gearGroups[key].rarity)), 0);
-        let sellAllBtn = document.createElement('button');
+        const totalGearValue = gearKeys.reduce((sum, key) => sum + (gearGroups[key].count * getGearSellPrice(gearGroups[key].rarity)), 0);
+        const sellAllBtn = document.createElement('button');
         sellAllBtn.className = 'w-full bg-red-800 hover:bg-red-700 border border-red-600 text-white font-bold py-2 px-4 rounded text-sm transition active:scale-95 mb-3';
         sellAllBtn.innerHTML = `Sell All Gear (${totalGearValue}G)`;
         sellAllBtn.onclick = () => sellAllGear();
@@ -271,9 +271,9 @@ function showShop() {
     }
 
     gearKeys.forEach(key => {
-        let g = gearGroups[key];
-        let price = getGearSellPrice(g.rarity);
-        let div = document.createElement('div'); div.className = "flex justify-between items-center mb-2 border-b border-gray-700 pb-2 last:border-0";
+        const g = gearGroups[key];
+        const price = getGearSellPrice(g.rarity);
+        const div = document.createElement('div'); div.className = "flex justify-between items-center mb-2 border-b border-gray-700 pb-2 last:border-0";
         div.innerHTML = `<div><span class="text-xl mr-1">${g.icon}</span> <span class="font-bold text-white">${sanitizeHTML(g.name)}</span> <span class="text-yellow-400 font-bold ml-2">x${g.count}</span><br><span class="text-[10px] text-gray-400 uppercase">Sells for ${price}G each</span></div><div class="flex gap-2"><button onclick="sellGear('${key}', 1)" class="bg-gray-700 hover:bg-gray-600 border border-gray-500 px-3 py-1 rounded text-xs font-bold transition active:scale-95">Sell 1</button><button onclick="sellGear('${key}', 'all')" class="bg-yellow-700 hover:bg-yellow-600 border border-yellow-500 px-3 py-1 rounded text-xs font-bold transition active:scale-95">Sell All</button></div>`;
         sellList.appendChild(div);
     });
@@ -285,15 +285,15 @@ function showShop() {
 function generateShopGear() {
     globalProgression.shopGear = [];
     for(let i=0; i<3; i++) {
-        let roll = Math.random();
+        const roll = Math.random();
         let rarity = 'common';
         if(roll < 0.01) rarity = 'mythic';
         else if(roll < 0.02) rarity = 'legendary';
         else if(roll < 0.12) rarity = 'epic';
         else if(roll < 0.32) rarity = 'rare';
         
-        let item = rollEquipment(rarity);
-        let cost = GEAR_BUY_PRICES[rarity] || GEAR_BUY_PRICES.common;
+        const item = rollEquipment(rarity);
+        const cost = GEAR_BUY_PRICES[rarity] || GEAR_BUY_PRICES.common;
         globalProgression.shopGear.push({ item: item, cost: cost, bought: false });
     }
     saveGame();
@@ -312,11 +312,11 @@ function refreshShopGear() {
 }
 
 function buyShopGear(idx) {
-    let sg = globalProgression.shopGear[idx];
+    const sg = globalProgression.shopGear[idx];
     if(!sg.bought && globalProgression.gold >= sg.cost) {
         globalProgression.gold -= sg.cost;
         sg.bought = true;
-        let ps = ensureProgressStats(); ps.goldSpent += sg.cost;
+        const ps = ensureProgressStats(); ps.goldSpent += sg.cost;
         globalProgression.equipInventory.push(sg.item);
         globalProgression.newItems[sg.item.type.startsWith('ring') ? 'ring' : sg.item.type] = true; 
         playSound('win'); saveGame(); showShop();
@@ -327,13 +327,13 @@ function buyShopGear(idx) {
 
 function sellItem(type, amount) {
     if(type.startsWith('pot_') || type.startsWith('food_')) return;
-    let invAmount = globalProgression.inventory[type] || 0; let sellCount = amount === 'all' ? invAmount : amount;
+    const invAmount = globalProgression.inventory[type] || 0; const sellCount = amount === 'all' ? invAmount : amount;
     if (sellCount > 0 && invAmount >= sellCount) { globalProgression.inventory[type] -= sellCount; globalProgression.gold += (sellCount * MAT_PRICES[type]); playSound('click'); saveGame(); showShop(); }
 }
 
 function sellGear(groupKey, amount) {
-    let p = globalProgression;
-    let matchingIds = [];
+    const p = globalProgression;
+    const matchingIds = [];
     let pricePer = 0;
     
     p.equipInventory.forEach(eq => {
@@ -343,9 +343,9 @@ function sellGear(groupKey, amount) {
         }
     });
 
-    let sellCount = amount === 'all' ? matchingIds.length : amount;
+    const sellCount = amount === 'all' ? matchingIds.length : amount;
     if(sellCount > 0 && matchingIds.length >= sellCount) {
-        let idsToRemove = matchingIds.slice(0, sellCount);
+        const idsToRemove = matchingIds.slice(0, sellCount);
         p.equipInventory = p.equipInventory.filter(eq => !idsToRemove.includes(eq.id));
         p.gold += (sellCount * pricePer);
         playSound('click'); saveGame(); showShop();
@@ -357,8 +357,8 @@ function getGearSellPrice(rarity) {
 }
 
 function sellAllGear() {
-    let p = globalProgression;
-    let totalGold = p.equipInventory.reduce((sum, eq) => sum + getGearSellPrice(eq.rarity), 0);
+    const p = globalProgression;
+    const totalGold = p.equipInventory.reduce((sum, eq) => sum + getGearSellPrice(eq.rarity), 0);
     if(totalGold > 0) {
         p.equipInventory = [];
         p.gold += totalGold;
@@ -367,7 +367,7 @@ function sellAllGear() {
 }
 
 function buyTicket(source = 'shop') {
-    if(globalProgression.gold >= 100) { globalProgression.gold -= 100; let ps = ensureProgressStats(); ps.goldSpent += 100; globalProgression.tickets = (globalProgression.tickets||0) + 1; playSound('win'); saveGame(); if(source === 'dungeon') showDungeons(); else if(source === 'invasion') showInvasion(); else showShop(); }
+    if(globalProgression.gold >= 100) { globalProgression.gold -= 100; const ps = ensureProgressStats(); ps.goldSpent += 100; globalProgression.tickets = (globalProgression.tickets||0) + 1; playSound('win'); saveGame(); if(source === 'dungeon') showDungeons(); else if(source === 'invasion') showInvasion(); else showShop(); }
     else { playSound('lose'); }
 }
 
@@ -426,15 +426,15 @@ function showBlackMarket() {
     list.innerHTML = '';
 
     BLACK_MARKET_TIERS.forEach((t) => {
-        let isPurchased = currentTier >= t.tier;
-        let isNext = currentTier === t.tier - 1;
-        let isLocked = !isPurchased && !isNext;
-        let canAfford = player.skillPoints >= t.cost;
+        const isPurchased = currentTier >= t.tier;
+        const isNext = currentTier === t.tier - 1;
+        const isLocked = !isPurchased && !isNext;
+        const canAfford = player.skillPoints >= t.cost;
 
-        let div = document.createElement('div');
+        const div = document.createElement('div');
         div.className = `bg-gray-900 border-2 ${isPurchased ? 'border-green-500' : isNext ? t.color : 'border-gray-700'} rounded-xl p-4 flex flex-col gap-2 shadow-lg ${isLocked ? 'opacity-50' : ''}`;
 
-        let statusBadge = isPurchased
+        const statusBadge = isPurchased
             ? `<span class="text-green-400 font-bold text-sm">✅ Purchased</span>`
             : isNext
                 ? `<span class="text-yellow-300 font-bold text-sm">🎯 Available — ${t.cost} SP</span>`
@@ -459,8 +459,8 @@ function showBlackMarket() {
     // Soul Pebble Exchange section
     const pebbleExchangeEl = document.getElementById('bm-pebble-exchange');
     if (pebbleExchangeEl) {
-        let pebbleCount = globalProgression.inventory.soul_pebbles || 0;
-        let canExchange = pebbleCount >= 50;
+        const pebbleCount = globalProgression.inventory.soul_pebbles || 0;
+        const canExchange = pebbleCount >= 50;
         pebbleExchangeEl.innerHTML = `
             <div class="bg-gray-900 border-2 border-purple-700 rounded-xl p-4 flex flex-col gap-2 shadow-lg">
                 <h3 class="font-bold text-purple-300 text-center uppercase tracking-widest text-sm">🔮 Soul Pebble Exchange</h3>
@@ -476,10 +476,10 @@ function showBlackMarket() {
     // Pebble bonus stats table
     const pebbleStatsEl = document.getElementById('bm-pebble-stats');
     if (pebbleStatsEl) {
-        let dmg = globalProgression.pebbleBonusDmg || 0;
-        let pierce = globalProgression.pebbleBonusArmorPierce || 0;
-        let hp = globalProgression.pebbleBonusHp || 0;
-        let def = globalProgression.pebbleBonusDef || 0;
+        const dmg = globalProgression.pebbleBonusDmg || 0;
+        const pierce = globalProgression.pebbleBonusArmorPierce || 0;
+        const hp = globalProgression.pebbleBonusHp || 0;
+        const def = globalProgression.pebbleBonusDef || 0;
         pebbleStatsEl.innerHTML = `
             <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg">
                 <h3 class="font-bold text-gray-300 text-center uppercase tracking-widest text-xs mb-3">Pebble Exchange Bonuses</h3>
@@ -527,7 +527,7 @@ function exchangeLegendaryCoresForPebble(refreshFn) {
 }
 
 function buyBlackMarketTier(tier) {
-    let t = BLACK_MARKET_TIERS[tier - 1];
+    const t = BLACK_MARKET_TIERS[tier - 1];
     if (!t) return;
     if ((globalProgression.blackMarketTier || 0) !== tier - 1) return; // must be next tier
     if (player.skillPoints < t.cost) { playSound('lose'); return; }

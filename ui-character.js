@@ -145,7 +145,7 @@ function showCharacter() {
     const skillSlots = document.getElementById('char-skill-slots');
     skillSlots.innerHTML = '';
     // Determine how many skill slots to show (5 base, +1 if Black Market tier 2 unlocked)
-    let maxSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
+    const maxSlots = ((globalProgression.blackMarketTier || 0) >= 2) ? 6 : 5;
     // Ensure equippedSkills array is large enough
     while (player.equippedSkills.length < maxSlots) player.equippedSkills.push(null);
     for (let i = 0; i < maxSlots; i++) {
@@ -169,7 +169,7 @@ function showCharacter() {
                 btn.innerHTML = '+';
                 btn.onclick = () => openSkillModal(i);
             } else {
-                let slotColor = SLOT_FIXED_COLORS[i] || (i === 5 ? 'bg-purple-700' : 'bg-green-700');
+                const slotColor = SLOT_FIXED_COLORS[i] || (i === 5 ? 'bg-purple-700' : 'bg-green-700');
                 btn.className = `p-1 rounded-lg font-bold text-white shadow-lg active:scale-95 flex flex-col items-center justify-center ${slotColor} h-12 w-full text-[10px] truncate leading-tight`;
                 btn.textContent = sInfo.name;
                 btn.onclick = () => openSkillModal(i);
