@@ -940,6 +940,7 @@ window.onload = () => {
         // Auto-resume the saved game so the player is never left on a stale screen
         loadGameAndContinue();
     } else {
+        switchScreen('screen-menu');
         updateEnergy();
         updateHp();
     }
