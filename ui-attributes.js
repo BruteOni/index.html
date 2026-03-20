@@ -148,10 +148,10 @@ function respecAttributes() {
     const { classBase } = getPlayerClassBase();
     let totalRefund = 0;
     ATTRIBUTE_KEYS.forEach(stat => {
-        let currentVal = globalProgression.attributes[stat] !== undefined ? globalProgression.attributes[stat] : 0;
-        let baseVal = classBase[stat] !== undefined ? classBase[stat] : 0;
-        let cheapLevels = Math.max(0, Math.min(ATTRIBUTE_EXPENSIVE_THRESHOLD, currentVal) - baseVal);
-        let expensiveLevels = Math.max(0, currentVal - Math.max(ATTRIBUTE_EXPENSIVE_THRESHOLD, baseVal));
+        const currentVal = globalProgression.attributes[stat] !== undefined ? globalProgression.attributes[stat] : 0;
+        const baseVal = classBase[stat] !== undefined ? classBase[stat] : 0;
+        const cheapLevels = Math.max(0, Math.min(ATTRIBUTE_EXPENSIVE_THRESHOLD, currentVal) - baseVal);
+        const expensiveLevels = Math.max(0, currentVal - Math.max(ATTRIBUTE_EXPENSIVE_THRESHOLD, baseVal));
         totalRefund += cheapLevels + expensiveLevels * 2;
         globalProgression.attributes[stat] = baseVal;
     });
@@ -177,12 +177,12 @@ function getTotalSpentPoints() {
     const { classBase } = getPlayerClassBase();
     let total = 0;
     ATTRIBUTE_KEYS.forEach(stat => {
-        let cur = globalProgression.attributes[stat] || 0;
-        let base = classBase[stat] || 0;
+        const cur = globalProgression.attributes[stat] || 0;
+        const base = classBase[stat] || 0;
         // Levels from base up to ATTRIBUTE_EXPENSIVE_THRESHOLD cost 1 SP each
-        let cheapLevels = Math.max(0, Math.min(ATTRIBUTE_EXPENSIVE_THRESHOLD, cur) - base);
+        const cheapLevels = Math.max(0, Math.min(ATTRIBUTE_EXPENSIVE_THRESHOLD, cur) - base);
         // Levels from ATTRIBUTE_EXPENSIVE_THRESHOLD up to cur cost 2 SP each
-        let expensiveLevels = Math.max(0, cur - Math.max(ATTRIBUTE_EXPENSIVE_THRESHOLD, base));
+        const expensiveLevels = Math.max(0, cur - Math.max(ATTRIBUTE_EXPENSIVE_THRESHOLD, base));
         total += cheapLevels + expensiveLevels * 2;
     });
     return total;
@@ -193,16 +193,16 @@ function getMaxAttributePoints() {
 }
 
 function clampAttributes() {
-    let maxPoints = getMaxAttributePoints();
+    const maxPoints = getMaxAttributePoints();
     const { classBase } = getPlayerClassBase();
 
-    let spent = getTotalSpentPoints();
-    let totalUsed = spent + Math.max(0, player.statPoints);
+    const spent = getTotalSpentPoints();
+    const totalUsed = spent + Math.max(0, player.statPoints);
 
     if (totalUsed > maxPoints) {
         // First, reduce unspent points
         let excess = totalUsed - maxPoints;
-        let reducedFromUnspent = Math.min(player.statPoints, excess);
+        const reducedFromUnspent = Math.min(player.statPoints, excess);
         player.statPoints -= reducedFromUnspent;
         excess -= reducedFromUnspent;
 
@@ -210,13 +210,13 @@ function clampAttributes() {
         while (excess > 0) {
             let highest = null, highestVal = 0;
             ATTRIBUTE_KEYS.forEach(stat => {
-                let cur = globalProgression.attributes[stat] || 0;
-                let base = classBase[stat] || 0;
+                const cur = globalProgression.attributes[stat] || 0;
+                const base = classBase[stat] || 0;
                 if (cur - base > highestVal) { highestVal = cur - base; highest = stat; }
             });
             if (!highest) break;
-            let curLevel = globalProgression.attributes[highest] || 0;
-            let trimCost = curLevel > ATTRIBUTE_EXPENSIVE_THRESHOLD ? 2 : 1;
+            const curLevel = globalProgression.attributes[highest] || 0;
+            const trimCost = curLevel > ATTRIBUTE_EXPENSIVE_THRESHOLD ? 2 : 1;
             globalProgression.attributes[highest]--;
             excess -= trimCost;
         }

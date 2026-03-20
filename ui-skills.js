@@ -8,25 +8,25 @@ const ENHANCEMENT_RARITY_BORDERS = { normal: 'border-gray-600', rare: 'border-bl
 
 const ENHANCEMENT_DEFS = {
     rage: { name: 'Rage', icon: '😤', type: 'passive', stackable: false,
-        desc: (r) => { let vals = { normal: 5, rare: 8, epic: 13, legendary: 17 }; return `+${vals[r]}% damage when HP < 30% (2 turns, once per battle)`; },
+        desc: (r) => { const vals = { normal: 5, rare: 8, epic: 13, legendary: 17 }; return `+${vals[r]}% damage when HP < 30% (2 turns, once per battle)`; },
         vals: { normal: 0.05, rare: 0.08, epic: 0.13, legendary: 0.17 } },
     divineShield: { name: 'Divine Shield', icon: '🛡️', type: 'passive', stackable: false,
-        desc: (r) => { let vals = { normal: 20, rare: 22, epic: 30, legendary: 40 }; return `Block ${vals[r]}% damage with ${vals[r]}% chance (once per battle)`; },
+        desc: (r) => { const vals = { normal: 20, rare: 22, epic: 30, legendary: 40 }; return `Block ${vals[r]}% damage with ${vals[r]}% chance (once per battle)`; },
         vals: { normal: 0.20, rare: 0.22, epic: 0.30, legendary: 0.40 } },
     reflect: { name: 'Reflect', icon: '🔄', type: 'passive', stackable: false,
-        desc: (r) => { let vals = { normal: 20, rare: 24, epic: 34, legendary: 44 }; return `${vals[r]}% chance to reflect ${vals[r]}% damage (once per battle)`; },
+        desc: (r) => { const vals = { normal: 20, rare: 24, epic: 34, legendary: 44 }; return `${vals[r]}% chance to reflect ${vals[r]}% damage (once per battle)`; },
         vals: { normal: 0.20, rare: 0.24, epic: 0.34, legendary: 0.44 } },
     damageBoost: { name: 'Damage Boost', icon: '⚔️', type: 'passive', stackable: true,
-        desc: (r) => { let vals = { normal: 3, rare: 5, epic: 10, legendary: 15 }; return `+${vals[r]}% all damage dealt`; },
+        desc: (r) => { const vals = { normal: 3, rare: 5, epic: 10, legendary: 15 }; return `+${vals[r]}% all damage dealt`; },
         vals: { normal: 0.03, rare: 0.05, epic: 0.10, legendary: 0.15 } },
     hpBoost: { name: 'HP Boost', icon: '❤️', type: 'passive', stackable: true,
-        desc: (r) => { let vals = { normal: 10, rare: 12, epic: 18, legendary: 27 }; return `+${vals[r]}% max HP`; },
+        desc: (r) => { const vals = { normal: 10, rare: 12, epic: 18, legendary: 27 }; return `+${vals[r]}% max HP`; },
         vals: { normal: 0.10, rare: 0.12, epic: 0.18, legendary: 0.27 } },
     xpIncrease: { name: 'XP Increase', icon: '⭐', type: 'passive', stackable: true,
-        desc: (r) => { let vals = { normal: 2, rare: 3, epic: 5, legendary: 9 }; return `+${vals[r]}% XP gain`; },
+        desc: (r) => { const vals = { normal: 2, rare: 3, epic: 5, legendary: 9 }; return `+${vals[r]}% XP gain`; },
         vals: { normal: 0.02, rare: 0.03, epic: 0.05, legendary: 0.09 } },
     dropRate: { name: 'Drop Rate', icon: '💎', type: 'passive', stackable: true,
-        desc: (r) => { let vals = { normal: 1, rare: 2, epic: 3, legendary: 4 }; return `+${vals[r]}% drop rate`; },
+        desc: (r) => { const vals = { normal: 1, rare: 2, epic: 3, legendary: 4 }; return `+${vals[r]}% drop rate`; },
         vals: { normal: 0.01, rare: 0.02, epic: 0.03, legendary: 0.04 } },
     skillCDReduc: { name: 'Skill CD Reduc', icon: '⏱️', type: 'passive', stackable: false,
         desc: (r) => `-1 Turn Cooldown for skills`,
@@ -43,16 +43,16 @@ function openSkillModal(slotIndex) {
     const list = document.getElementById('skill-modal-list'); list.innerHTML = '';
 
     player.unlockedSkills.forEach(skillIdx => {
-        let isEquipped = player.equippedSkills.includes(skillIdx);
-        let skill = player.data.skills[skillIdx];
-        let btn = document.createElement('button');
+        const isEquipped = player.equippedSkills.includes(skillIdx);
+        const skill = player.data.skills[skillIdx];
+        const btn = document.createElement('button');
         btn.className = `p-3 rounded-lg flex justify-between items-center text-left ${isEquipped ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600 transition active:scale-95 border border-gray-500'}`;
         btn.disabled = isEquipped;
         btn.innerHTML = `<div><div class="font-bold text-white">${sanitizeHTML(skill.name)}</div><div class="text-xs text-gray-300">${sanitizeHTML(skill.desc)}</div><div class="text-[10px] text-yellow-400">CD: ${skill.cd} turns</div></div> <div class="text-2xl">${isEquipped?'✅':''}</div>`;
-        if(!isEquipped) btn.onclick = () => {
+        if(!isEquipped) {btn.onclick = () => {
             player.equippedSkills[activeSkillSlot] = skillIdx;
             playSound('click'); saveGame(); closeSkillModal();
-        };
+        };}
         list.appendChild(btn);
     });
 
@@ -66,11 +66,11 @@ function closeSkillModal() { document.getElementById('modal-skills').style.displ
 // --- SKILL UNLOCK POPUP ---
 function showSkillUnlockPopup(skillIdx) {
     if (!player || !player.data || !player.data.skills) return;
-    let skill = player.data.skills[skillIdx];
+    const skill = player.data.skills[skillIdx];
     if(!skill) return;
-    let existing = document.getElementById('skill-unlock-popup');
+    const existing = document.getElementById('skill-unlock-popup');
     if(existing) existing.remove();
-    let popup = document.createElement('div');
+    const popup = document.createElement('div');
     popup.id = 'skill-unlock-popup';
     popup.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;';
     popup.innerHTML = `
@@ -94,7 +94,7 @@ const SKILL_MENU_SKILL_NODES = [4, 9, 14, 19, 24];
 const SKILL_MENU_TOTAL = 25;
 
 function getSkillMenuNodeInfo(index) {
-    let skillPos = SKILL_MENU_SKILL_NODES.indexOf(index);
+    const skillPos = SKILL_MENU_SKILL_NODES.indexOf(index);
     if (skillPos !== -1) return { type: 'skill', skillIdx: 3 + skillPos };
     return { type: 'stat' };
 }
@@ -112,24 +112,24 @@ function showSkillMenu() {
     if (player.skillMenuConsecutiveSameCount === undefined) player.skillMenuConsecutiveSameCount = 0;
 
     // Update SP counter
-    let spEl = document.getElementById('tree-sp');
+    const spEl = document.getElementById('tree-sp');
     if (spEl) spEl.innerText = player.skillPoints;
 
     // Update summary bar
-    let smsDmg = document.getElementById('sms-dmg');
-    let smsDef = document.getElementById('sms-def');
-    let smsHp = document.getElementById('sms-hp');
+    const smsDmg = document.getElementById('sms-dmg');
+    const smsDef = document.getElementById('sms-def');
+    const smsHp = document.getElementById('sms-hp');
     if (smsDmg) smsDmg.innerText = player.skillMenuBonusDmgPct;
     if (smsDef) smsDef.innerText = player.skillMenuBonusDefPct;
     if (smsHp) smsHp.innerText = player.skillMenuBonusHpPct;
 
-    let container = document.getElementById('skill-menu-nodes');
+    const container = document.getElementById('skill-menu-nodes');
     if (!container) return;
     container.innerHTML = '';
 
-    let progress = player.skillMenuProgress || 0;
-    let lastStat = player.skillMenuLastStatChoice || null;
-    let sameCount = player.skillMenuConsecutiveSameCount || 0;
+    const progress = player.skillMenuProgress || 0;
+    const lastStat = player.skillMenuLastStatChoice || null;
+    const sameCount = player.skillMenuConsecutiveSameCount || 0;
 
     // Helper: get display value for a stat option on the next node
     function getStatDisplayValue(statKey) {
@@ -140,19 +140,19 @@ function showSkillMenu() {
     }
 
     for (let i = 0; i < SKILL_MENU_TOTAL; i++) {
-        let nodeInfo = getSkillMenuNodeInfo(i);
-        let isUnlocked = i < progress;
-        let isNext = i === progress;
+        const nodeInfo = getSkillMenuNodeInfo(i);
+        const isUnlocked = i < progress;
+        const isNext = i === progress;
 
-        let card = document.createElement('div');
+        const card = document.createElement('div');
         card.id = `skill-menu-node-${i}`;
         card.style.transition = 'all 0.3s';
 
         if (nodeInfo.type === 'skill') {
-            let skillName = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].name : '???';
-            let skillDesc = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].desc : '';
-            let safeSkillName = sanitizeHTML(skillName);
-            let safeSkillDesc = sanitizeHTML(skillDesc);
+            const skillName = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].name : '???';
+            const skillDesc = player.data.skills[nodeInfo.skillIdx] ? player.data.skills[nodeInfo.skillIdx].desc : '';
+            const safeSkillName = sanitizeHTML(skillName);
+            const safeSkillDesc = sanitizeHTML(skillDesc);
             if (isUnlocked) {
                 card.className = 'w-full rounded-xl border-2 px-3 py-2 bg-indigo-900 border-indigo-500 text-indigo-100 shadow';
                 card.innerHTML = `
@@ -184,10 +184,10 @@ function showSkillMenu() {
         } else {
             // Stat choice node
             let choiceIcon = '', choiceLabel = '';
-            let stored = player.skillMenuNodeChoices ? player.skillMenuNodeChoices[i] : null;
+            const stored = player.skillMenuNodeChoices ? player.skillMenuNodeChoices[i] : null;
             // Handle both old string format and new object format
-            let storedStat = stored && typeof stored === 'object' ? stored.stat : stored;
-            let storedVal = stored && typeof stored === 'object' ? stored.value : 1;
+            const storedStat = stored && typeof stored === 'object' ? stored.stat : stored;
+            const storedVal = stored && typeof stored === 'object' ? stored.value : 1;
             if (storedStat === 'dmg') { choiceIcon = '⚔️'; choiceLabel = `+${storedVal}% DMG`; }
             else if (storedStat === 'def') { choiceIcon = '🛡️'; choiceLabel = `+${storedVal}% DEF`; }
             else if (storedStat === 'hp') { choiceIcon = '❤️'; choiceLabel = `+${storedVal}% HP`; }
@@ -203,11 +203,11 @@ function showSkillMenu() {
                     </div>`;
             } else if (isNext) {
                 card.className = 'w-full rounded-xl border-2 px-3 py-3 shadow-lg bg-gray-700 border-yellow-400 text-white skill-menu-next-glow';
-                let hasPoints = player.skillPoints >= 1;
-                let btnClass = hasPoints ? 'hover:bg-opacity-80 active:scale-95 cursor-pointer' : 'opacity-50 cursor-not-allowed';
-                let dmgVal = getStatDisplayValue('dmg');
-                let defVal = getStatDisplayValue('def');
-                let hpVal = getStatDisplayValue('hp');
+                const hasPoints = player.skillPoints >= 1;
+                const btnClass = hasPoints ? 'hover:bg-opacity-80 active:scale-95 cursor-pointer' : 'opacity-50 cursor-not-allowed';
+                const dmgVal = getStatDisplayValue('dmg');
+                const defVal = getStatDisplayValue('def');
+                const hpVal = getStatDisplayValue('hp');
                 card.innerHTML = `
                     <div class="font-bold text-sm mb-2">Node ${i+1} — Choose your bonus (1 SP)</div>
                     <div class="grid grid-cols-3 gap-2">
@@ -232,14 +232,14 @@ function showSkillMenu() {
 
     // Scroll to next node
     setTimeout(() => {
-        let nextNode = document.getElementById(`skill-menu-node-${progress < SKILL_MENU_TOTAL ? progress : SKILL_MENU_TOTAL - 1}`);
+        const nextNode = document.getElementById(`skill-menu-node-${progress < SKILL_MENU_TOTAL ? progress : SKILL_MENU_TOTAL - 1}`);
         if (nextNode) nextNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
 
     // Show Black Market button when tree is maxed (25 nodes done) and player has excess SP
-    let bmBtn = document.getElementById('btn-black-market-access');
+    const bmBtn = document.getElementById('btn-black-market-access');
     if (bmBtn) {
-        let treeMaxed = (player.skillMenuProgress || 0) >= SKILL_MENU_TOTAL;
+        const treeMaxed = (player.skillMenuProgress || 0) >= SKILL_MENU_TOTAL;
         bmBtn.classList.toggle('hidden', !treeMaxed);
     }
 }
@@ -248,8 +248,8 @@ function unlockSkillMenuNode(choice) {
     if (!player) return;
     if (player.skillPoints < 1) { return; }
 
-    let progress = player.skillMenuProgress || 0;
-    let nodeInfo = getSkillMenuNodeInfo(progress);
+    const progress = player.skillMenuProgress || 0;
+    const nodeInfo = getSkillMenuNodeInfo(progress);
 
     if (progress >= SKILL_MENU_TOTAL) return;
 
@@ -262,7 +262,7 @@ function unlockSkillMenuNode(choice) {
 
     if (nodeInfo.type === 'skill') {
         // Unlock the skill
-        let skillIdx = nodeInfo.skillIdx;
+        const skillIdx = nodeInfo.skillIdx;
         if (!player.unlockedSkills.includes(skillIdx)) {
             player.unlockedSkills.push(skillIdx);
         }
@@ -280,8 +280,8 @@ function unlockSkillMenuNode(choice) {
     if (player.skillMenuLastStatChoice === undefined) player.skillMenuLastStatChoice = null;
     if (player.skillMenuConsecutiveSameCount === undefined) player.skillMenuConsecutiveSameCount = 0;
 
-    let lastStat = player.skillMenuLastStatChoice;
-    let sameCount = player.skillMenuConsecutiveSameCount;
+    const lastStat = player.skillMenuLastStatChoice;
+    const sameCount = player.skillMenuConsecutiveSameCount;
     let bonus;
 
     if (choice === lastStat) {
@@ -321,8 +321,8 @@ function unlockSkillMenuNode(choice) {
 
 function resetSkillMenu() {
     if (!player) return;
-    let totalRefund = (player.skillMenuProgress || 0);
-    let confirmed = confirm(`Reset Skill Menu?\nAll % bonuses and unlocked skills (after the first 3) will be reset.\nYou'll get back ${totalRefund} Skill Point${totalRefund !== 1 ? 's' : ''}.`);
+    const totalRefund = (player.skillMenuProgress || 0);
+    const confirmed = confirm(`Reset Skill Menu?\nAll % bonuses and unlocked skills (after the first 3) will be reset.\nYou'll get back ${totalRefund} Skill Point${totalRefund !== 1 ? 's' : ''}.`);
     if (!confirmed) return;
 
     player.skillPoints = (player.skillPoints || 0) + totalRefund;
@@ -353,10 +353,10 @@ function resetSkillMenu() {
 
 // Sparkle animation helper
 function _spawnSkillMenuSparkles(nodeId) {
-    let el = document.getElementById(nodeId);
+    const el = document.getElementById(nodeId);
     if (!el) return;
     for (let s = 0; s < 8; s++) {
-        let spark = document.createElement('div');
+        const spark = document.createElement('div');
         spark.style.cssText = `position:absolute;pointer-events:none;z-index:999;font-size:18px;animation:skillMenuSparkle 0.8s ease-out forwards;left:${20+Math.random()*60}%;top:${20+Math.random()*60}%;`;
         spark.textContent = ['✨','⭐','💫','🌟'][Math.floor(Math.random()*4)];
         el.style.position = 'relative';
