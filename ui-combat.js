@@ -5,6 +5,9 @@ if (typeof structuredClone === 'undefined') {
     };
 }
 
+// Tracks the last rendered enemy state to prevent full DOM rebuilds on every turn.
+let _lastEnemyStateString = "";
+
 // --- MAIN MENU & SCREEN NAVIGATION ---
 // Note: confirmNewGame, closeConfirmNewGame, confirmNewGameYes, and switchScreen are defined in game.js.
 
@@ -187,8 +190,7 @@ function generateEnemies() {
     }
 
     enemies = [];
-    
-    if (currentMode === 'quest') { 
+    _lastEnemyStateString = ""; // Force a full enemy card rebuild for the new wave 
         for(let i=0; i<4; i++) { let e = Object.assign(createBaseEnemy(), { lvl: 1, name: 'Weak Target', avatar: '🎯', maxHp: 1, baseDmg: 0, currentHp: 1 }); assignEnemySkills(e); enemies.push(e); } 
         activeTargetIndex = 0; return; 
     }
@@ -737,75 +739,95 @@ function updateCombatUI() {
 
     const eContainer = ui.eContainer; 
     if (eContainer) {
-        eContainer.innerHTML = '';
         if(enemies[activeTargetIndex] && enemies[activeTargetIndex].currentHp <= 0) { activeTargetIndex = enemies.findIndex(e => e.currentHp > 0); if(activeTargetIndex === -1) activeTargetIndex = 0; }
 
+        // Build a structural state string: detects enemy deaths, new spawns, target shifts, and status effect changes.
+        // HP values are intentionally excluded so health-only updates skip the full rebuild.
+        const currentEnemyState = enemies.slice(0, 4).map(e => {
+            const statusKey = `${e.shield > 0 ? 1 : 0}${e.healBlock > 0 ? 1 : 0}${e.defReduction > 0 ? 1 : 0}${e.bleedStacks || 0}${e.dodgeTurns > 0 ? 1 : 0}${e.stunned > 0 ? 1 : 0}${e.dmgBoostTurns > 0 ? 1 : 0}${e.enemyReflectTurns > 0 ? 1 : 0}${e.burnTurns || e.burnStacks || 0}${e.poisonStacks || 0}${e.darknessTurns || 0}${e.missStacks || 0}${e.skipTurns || 0}${e.dmgTakenMult > 1 && e.dmgTakenTurns > 0 ? 1 : 0}`;
+            return `${e.name}-${e.currentHp <= 0 ? 0 : 1}-${statusKey}`;
+        }).join('|') + `|t${activeTargetIndex}`;
+
         const slotPositions = [{col:'2',row:'1'},{col:'1',row:'1'},{col:'1',row:'2'},{col:'2',row:'2'}];
-        enemies.slice(0, 4).forEach((e, idx) => {
-            let isDead = e.currentHp <= 0; let isTarget = idx === activeTargetIndex && !isDead;
-            let card = document.createElement('div'); card.id = `enemy-card-${idx}`;
-            
-            let borderClass = 'border-2 border-gray-600 shadow-md';
-            let rarityColor = 'text-gray-300';
-            let animClass = '';
-            if(e.rarity === 'mythic' || e.isMythicBoss) { borderClass = 'border-2 border-white shadow-[0_0_25px_rgba(255,255,255,0.8),0_0_50px_rgba(200,200,255,0.5)]'; rarityColor = 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] font-black'; animClass = 'anim-mythic-boss'; }
-            else if(e.rarity === 'legendary') { borderClass = 'border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)]'; rarityColor = 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]'; animClass = 'anim-legendary'; }
-            else if(e.rarity === 'epic') { borderClass = 'border-2 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]'; rarityColor = 'text-purple-400 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]'; animClass = 'anim-epic'; }
-            else if(e.rarity === 'rare') { borderClass = 'border-2 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]'; rarityColor = 'text-blue-400'; }
-            else if(e.isBoss) { borderClass = 'border-2 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]'; rarityColor = 'text-red-400'; animClass = 'anim-legendary';}
 
-            if(isTarget) borderClass += ' enemy-target';
+        if (currentEnemyState !== _lastEnemyStateString) {
+            // Structural change (death, spawn, or target shift): do a full rebuild.
+            eContainer.innerHTML = '';
+            enemies.slice(0, 4).forEach((e, idx) => {
+                let isDead = e.currentHp <= 0; let isTarget = idx === activeTargetIndex && !isDead;
+                let card = document.createElement('div'); card.id = `enemy-card-${idx}`;
+                
+                let borderClass = 'border-2 border-gray-600 shadow-md';
+                let rarityColor = 'text-gray-300';
+                let animClass = '';
+                if(e.rarity === 'mythic' || e.isMythicBoss) { borderClass = 'border-2 border-white shadow-[0_0_25px_rgba(255,255,255,0.8),0_0_50px_rgba(200,200,255,0.5)]'; rarityColor = 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,1)] font-black'; animClass = 'anim-mythic-boss'; }
+                else if(e.rarity === 'legendary') { borderClass = 'border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)]'; rarityColor = 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]'; animClass = 'anim-legendary'; }
+                else if(e.rarity === 'epic') { borderClass = 'border-2 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]'; rarityColor = 'text-purple-400 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]'; animClass = 'anim-epic'; }
+                else if(e.rarity === 'rare') { borderClass = 'border-2 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]'; rarityColor = 'text-blue-400'; }
+                else if(e.isBoss) { borderClass = 'border-2 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]'; rarityColor = 'text-red-400'; animClass = 'anim-legendary';}
 
-            // Dynamic grid placement and sizing based on enemy count
-            let avatarSizeClass, nameSizeClass, bossLabelSizeClass;
-            if (enemies.length === 1) {
-                avatarSizeClass = 'text-6xl'; nameSizeClass = 'text-sm'; bossLabelSizeClass = 'text-xs';
-            } else if (enemies.length === 2) {
-                avatarSizeClass = 'text-5xl'; nameSizeClass = 'text-xs'; bossLabelSizeClass = 'text-[9px]';
-            } else if (enemies.length === 3) {
-                avatarSizeClass = 'text-4xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
-            } else {
-                avatarSizeClass = 'text-3xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
+                if(isTarget) borderClass += ' enemy-target';
+
+                // Dynamic grid placement and sizing based on enemy count
+                let avatarSizeClass, nameSizeClass, bossLabelSizeClass;
+                if (enemies.length === 1) {
+                    avatarSizeClass = 'text-6xl'; nameSizeClass = 'text-sm'; bossLabelSizeClass = 'text-xs';
+                } else if (enemies.length === 2) {
+                    avatarSizeClass = 'text-5xl'; nameSizeClass = 'text-xs'; bossLabelSizeClass = 'text-[9px]';
+                } else if (enemies.length === 3) {
+                    avatarSizeClass = 'text-4xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
+                } else {
+                    avatarSizeClass = 'text-3xl'; nameSizeClass = 'text-[10px]'; bossLabelSizeClass = 'text-[8px]';
+                }
+                card.style.gridColumn = slotPositions[idx].col;
+                card.style.gridRow = slotPositions[idx].row;
+
+                card.className = `enemy-card bg-gray-800 p-1.5 rounded-lg cursor-pointer flex flex-col items-center overflow-visible ${borderClass} ${isDead ? 'enemy-dead' : ''}`;
+                card.onclick = () => selectTarget(idx);
+                
+                let eStatus = '';
+                if(e.shield > 0) eStatus += `🛡️`;
+                if(e.healBlock > 0) eStatus += `🚫`;
+                if(e.defReduction > 0) eStatus += `📉`;
+                if(e.bleedStacks > 0) eStatus += `<span class="text-[10px] text-red-500">🩸${e.bleedStacks}</span>`;
+                if(e.dodgeTurns > 0) eStatus += `💨`;
+                if(e.stunned > 0) eStatus += `😵`;
+                if(e.dmgBoostTurns > 0) eStatus += `<span class="text-[10px] text-orange-400">⚔️+</span>`;
+                if(e.enemyReflectTurns > 0) eStatus += `<span class="text-[10px] text-cyan-400">🔄</span>`;
+                if(e.burnTurns > 0 || e.burnStacks > 0) eStatus += `<span class="text-[10px] text-orange-400">🔥${e.burnTurns || e.burnStacks || ''}</span>`;
+                if(e.poisonStacks > 0 || e.poisonTurns > 0) eStatus += `<span class="text-[10px] text-green-400">🧪${e.poisonStacks || ''}</span>`;
+                if(e.darknessTurns > 0) eStatus += `<span class="text-[10px] text-purple-400">🌑${e.darknessTurns}</span>`;
+                if(e.missStacks > 0) eStatus += `<span class="text-[10px] text-gray-400">🌫️</span>`;
+                if(e.skipTurns > 0) eStatus += `<span class="text-[10px] text-yellow-400">⏭️${e.skipTurns}</span>`;
+                if(e.dmgTakenMult > 1 && e.dmgTakenTurns > 0) eStatus += `<span class="text-[10px] text-red-400">💥</span>`;
+
+                let bossLabel = '';
+                if (e.isMythicBoss) {
+                    bossLabel = `<div class="${bossLabelSizeClass} font-black text-white bg-gradient-to-r from-purple-600 to-pink-500 px-1.5 py-0.5 rounded-full shadow-lg mt-0.5 inline-block">✨ MYTHIC BOSS</div>`;
+                } else if (e.isBoss) {
+                    bossLabel = `<div class="${bossLabelSizeClass} font-black text-yellow-200 bg-red-700 px-1.5 py-0.5 rounded-full shadow-lg mt-0.5 inline-block">👑 Boss</div>`;
+                }
+                card.innerHTML = `<div class="relative w-full text-center overflow-hidden"><div class="absolute -top-1 -right-2 text-sm flex gap-1 z-10">${eStatus}</div><div class="${avatarSizeClass} enemy-avatar mb-1 mt-1 ${animClass} leading-none" style="max-height:5rem;">${e.avatar}</div></div>${bossLabel}<div class="${nameSizeClass} font-bold leading-tight break-words w-full text-center ${rarityColor}">Lv.${e.lvl} ${e.name}</div><div class="health-bar-container !h-1.5 !mt-1"><div id="enemy-hp-bar-${idx}" class="health-bar" style="width: ${(Math.max(0, e.currentHp) / e.maxHp) * 100}%"></div></div><div id="enemy-hp-text-${idx}" class="text-[9px] text-gray-400 mt-0.5 text-center leading-tight">HP: ${Math.max(0,e.currentHp)}/${e.maxHp} | DMG: ${e.baseDmg}</div>${isDead ? '<div class="enemy-death-overlay">💀</div>' : ''}`;
+                eContainer.appendChild(card);
+            });
+            // Add empty placeholder slots for unused grid positions
+            const numSlots = Math.min(enemies.length, 4);
+            for (let s = numSlots; s < 4; s++) {
+                const placeholder = document.createElement('div');
+                placeholder.style.gridColumn = slotPositions[s].col;
+                placeholder.style.gridRow = slotPositions[s].row;
+                placeholder.className = 'border-2 border-gray-700 rounded-lg bg-gray-900/30';
+                eContainer.appendChild(placeholder);
             }
-            card.style.gridColumn = slotPositions[idx].col;
-            card.style.gridRow = slotPositions[idx].row;
-
-            card.className = `enemy-card bg-gray-800 p-1.5 rounded-lg cursor-pointer flex flex-col items-center overflow-visible ${borderClass} ${isDead ? 'enemy-dead' : ''}`;
-            card.onclick = () => selectTarget(idx);
-            
-            let eStatus = '';
-            if(e.shield > 0) eStatus += `🛡️`;
-            if(e.healBlock > 0) eStatus += `🚫`;
-            if(e.defReduction > 0) eStatus += `📉`;
-            if(e.bleedStacks > 0) eStatus += `<span class="text-[10px] text-red-500">🩸${e.bleedStacks}</span>`;
-            if(e.dodgeTurns > 0) eStatus += `💨`;
-            if(e.stunned > 0) eStatus += `😵`;
-            if(e.dmgBoostTurns > 0) eStatus += `<span class="text-[10px] text-orange-400">⚔️+</span>`;
-            if(e.enemyReflectTurns > 0) eStatus += `<span class="text-[10px] text-cyan-400">🔄</span>`;
-            if(e.burnTurns > 0 || e.burnStacks > 0) eStatus += `<span class="text-[10px] text-orange-400">🔥${e.burnTurns || e.burnStacks || ''}</span>`;
-            if(e.poisonStacks > 0 || e.poisonTurns > 0) eStatus += `<span class="text-[10px] text-green-400">🧪${e.poisonStacks || ''}</span>`;
-            if(e.darknessTurns > 0) eStatus += `<span class="text-[10px] text-purple-400">🌑${e.darknessTurns}</span>`;
-            if(e.missStacks > 0) eStatus += `<span class="text-[10px] text-gray-400">🌫️</span>`;
-            if(e.skipTurns > 0) eStatus += `<span class="text-[10px] text-yellow-400">⏭️${e.skipTurns}</span>`;
-            if(e.dmgTakenMult > 1 && e.dmgTakenTurns > 0) eStatus += `<span class="text-[10px] text-red-400">💥</span>`;
-
-            let bossLabel = '';
-            if (e.isMythicBoss) {
-                bossLabel = `<div class="${bossLabelSizeClass} font-black text-white bg-gradient-to-r from-purple-600 to-pink-500 px-1.5 py-0.5 rounded-full shadow-lg mt-0.5 inline-block">✨ MYTHIC BOSS</div>`;
-            } else if (e.isBoss) {
-                bossLabel = `<div class="${bossLabelSizeClass} font-black text-yellow-200 bg-red-700 px-1.5 py-0.5 rounded-full shadow-lg mt-0.5 inline-block">👑 Boss</div>`;
-            }
-            card.innerHTML = `<div class="relative w-full text-center overflow-hidden"><div class="absolute -top-1 -right-2 text-sm flex gap-1 z-10">${eStatus}</div><div class="${avatarSizeClass} enemy-avatar mb-1 mt-1 ${animClass} leading-none" style="max-height:5rem;">${e.avatar}</div></div>${bossLabel}<div class="${nameSizeClass} font-bold leading-tight break-words w-full text-center ${rarityColor}">Lv.${e.lvl} ${e.name}</div><div class="health-bar-container !h-1.5 !mt-1"><div class="health-bar" style="width: ${(Math.max(0, e.currentHp) / e.maxHp) * 100}%"></div></div><div class="text-[9px] text-gray-400 mt-0.5 text-center leading-tight">HP: ${Math.max(0,e.currentHp)}/${e.maxHp} | DMG: ${e.baseDmg}</div>${isDead ? '<div class="enemy-death-overlay">💀</div>' : ''}`;
-            eContainer.appendChild(card);
-        });
-        // Add empty placeholder slots for unused grid positions
-        const numSlots = Math.min(enemies.length, 4);
-        for (let s = numSlots; s < 4; s++) {
-            const placeholder = document.createElement('div');
-            placeholder.style.gridColumn = slotPositions[s].col;
-            placeholder.style.gridRow = slotPositions[s].row;
-            placeholder.className = 'border-2 border-gray-700 rounded-lg bg-gray-900/30';
-            eContainer.appendChild(placeholder);
+            _lastEnemyStateString = currentEnemyState;
+        } else {
+            // Composition unchanged: update only health bar widths and HP text in-place.
+            enemies.slice(0, 4).forEach((e, idx) => {
+                const bar = document.getElementById(`enemy-hp-bar-${idx}`);
+                if (bar) bar.style.width = `${(Math.max(0, e.currentHp) / e.maxHp) * 100}%`;
+                const hpText = document.getElementById(`enemy-hp-text-${idx}`);
+                if (hpText) hpText.textContent = `HP: ${Math.max(0,e.currentHp)}/${e.maxHp} | DMG: ${e.baseDmg}`;
+            });
         }
         // Show Next Battle button when all enemies are dead and combat still active
         if (ui.nextBattleBtn) ui.nextBattleBtn.style.display = (combatActive && enemies.length > 0 && enemies.every(e => e.currentHp <= 0)) ? 'flex' : 'none';

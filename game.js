@@ -3,6 +3,14 @@ let audioCtx = null;
 let activeOscillators = [];
 let musicLoopTimeoutId = null;
 
+// --- DIRTY FLAG: only write to localStorage when state has changed ---
+let needsSave = false;
+function queueSave() { needsSave = true; }
+
+// --- DOM THRASH PREVENTION: cache last rendered values ---
+let lastRenderedEnergy = -1;
+let lastRenderedHp = -1;
+
 // Legacy save key priority list (newest → oldest) used for backwards-compatible save loading
 const LEGACY_SAVE_KEYS = [
     'EternalAscensionSaveDataV1',
@@ -327,8 +335,8 @@ function stopMusic() {
     activeOscillators.forEach(o => {
         try { 
             o.gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
-            setTimeout(() => { try { o.osc.stop(); if(o.lfo) o.lfo.stop(); } catch(e){} }, 1000);
-        } catch(e){}
+            setTimeout(() => { try { o.osc.stop(); if(o.lfo) o.lfo.stop(); } catch(e){ console.warn('Audio stop error:', e); } }, 1000);
+        } catch(e){ console.warn('Audio ramp error:', e); }
     });
     activeOscillators = [];
 }
@@ -436,19 +444,23 @@ function updateEnergy() {
         if (ticksPassed > 0) {
             globalProgression.energy = Math.min(maxEnergy, globalProgression.energy + ticksPassed);
             globalProgression.lastEnergyTime = now - (msPassed % ENERGY_REGEN_INTERVAL_MS);
+            queueSave();
         }
     } else {
         globalProgression.lastEnergyTime = now;
     }
 
-    const eEl = getEl('hub-energy');
-    if (eEl) eEl.innerText = globalProgression.energy;
-    const eMxEl = getEl('hub-energy-max');
-    if (eMxEl) eMxEl.innerText = maxEnergy;
-    const eBar = getEl('hub-energy-bar');
-    if (eBar) eBar.style.width = (maxEnergy > 0 ? Math.round((globalProgression.energy / maxEnergy) * 100) : 0) + '%';
-    const seEl = getEl('story-energy');
-    if (seEl) seEl.innerText = globalProgression.energy;
+    if (Math.floor(globalProgression.energy) !== Math.floor(lastRenderedEnergy)) {
+        const eEl = getEl('hub-energy');
+        if (eEl) eEl.innerText = globalProgression.energy;
+        const eMxEl = getEl('hub-energy-max');
+        if (eMxEl) eMxEl.innerText = maxEnergy;
+        const eBar = getEl('hub-energy-bar');
+        if (eBar) eBar.style.width = (maxEnergy > 0 ? Math.round((globalProgression.energy / maxEnergy) * 100) : 0) + '%';
+        const seEl = getEl('story-energy');
+        if (seEl) seEl.innerText = globalProgression.energy;
+        lastRenderedEnergy = Math.floor(globalProgression.energy);
+    }
 
     // Show/hide energy cap upgrade indicator in well button
     const wellNoti = getEl('hub-well-energy-noti');
@@ -484,16 +496,20 @@ function updateHp() {
             const regenAmt = Math.min(player.maxHp - player.currentHp, minutesPassed * 10);
             player.currentHp = Math.min(player.maxHp, player.currentHp + regenAmt);
             globalProgression.lastHpRegenTime = now - (msPassed % 60000);
+            queueSave();
         }
     } else {
         globalProgression.lastHpRegenTime = now;
     }
-    const hpCur = getEl('hub-hp-current');
-    if (hpCur) hpCur.innerText = Math.ceil(Math.max(0, player.currentHp));
-    const hpMax = getEl('hub-hp-max');
-    if (hpMax) hpMax.innerText = player.maxHp;
-    const hpBar = getEl('hub-hp-bar');
-    if (hpBar) hpBar.style.width = (player.maxHp > 0 ? Math.round((Math.max(0, player.currentHp) / player.maxHp) * 100) : 0) + '%';
+    if (Math.ceil(Math.max(0, player.currentHp)) !== Math.ceil(Math.max(0, lastRenderedHp))) {
+        const hpCur = getEl('hub-hp-current');
+        if (hpCur) hpCur.innerText = Math.ceil(Math.max(0, player.currentHp));
+        const hpMax = getEl('hub-hp-max');
+        if (hpMax) hpMax.innerText = player.maxHp;
+        const hpBar = getEl('hub-hp-bar');
+        if (hpBar) hpBar.style.width = (player.maxHp > 0 ? Math.round((Math.max(0, player.currentHp) / player.maxHp) * 100) : 0) + '%';
+        lastRenderedHp = player.currentHp;
+    }
     const hpTimer = getEl('hub-hp-timer');
     if (hpTimer) {
         if (player.currentHp >= player.maxHp) {
@@ -507,9 +523,8 @@ function updateHp() {
     }
 }
 setInterval(updateHp, 1000);
-// Auto-save every 30 seconds to capture regen progress without blocking the UI
-// on every single regen tick. Explicit user actions still call saveGame() directly.
-setInterval(saveGame, 30000);
+// Auto-save every 30 seconds, but only if state has changed since the last save.
+setInterval(() => { if (needsSave) { saveGame(); needsSave = false; } }, 30000);
 
 function consumeEnergy(amount) {
     if (!Number.isFinite(amount) || amount <= 0) return false;
