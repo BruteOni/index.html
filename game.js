@@ -1,7 +1,28 @@
 // --- HTML SANITIZATION ---
+/**
+ * Escapes HTML special characters to prevent XSS when inserting untrusted strings into innerHTML.
+ * @param {*} str - The value to sanitize (non-strings are coerced via String()).
+ * @returns {string} The HTML-escaped string.
+ */
 function sanitizeHTML(str) {
     if (typeof str !== 'string') return String(str);
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+/**
+ * Computes a simple 32-bit integer hash of a string and returns it as a base64-encoded value.
+ * Used to generate and verify save-data checksums.
+ * @param {string} str - The string to hash.
+ * @returns {string} Base64-encoded hash.
+ */
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const chr = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0; // Convert to 32-bit integer
+    }
+    return btoa(hash.toString());
 }
 
 // --- WEB AUDIO API & MUSIC ---
@@ -439,7 +460,6 @@ function getTitleStatBonus() {
     return ((zs && zs.titlesEarned) ? zs.titlesEarned.length : 0) * 0.01;
 }
 
-const ENERGY_REGEN_INTERVAL_MS = 300000; // 1 energy per 5 minutes
 
 function updateEnergy() {
     const maxEnergy = getMaxEnergy();
@@ -503,12 +523,12 @@ setInterval(updateEnergy, 1000);
 function updateHp() {
     const now = Date.now();
     const msPassed = now - (globalProgression.lastHpRegenTime || now);
-    const minutesPassed = Math.floor(msPassed / 60000);
+    const minutesPassed = Math.floor(msPassed / HP_REGEN_INTERVAL_MS);
     if (player.currentHp < player.maxHp) {
         if (minutesPassed > 0) {
-            const regenAmt = Math.min(player.maxHp - player.currentHp, minutesPassed * 10);
+            const regenAmt = Math.min(player.maxHp - player.currentHp, minutesPassed * HP_REGEN_AMOUNT);
             player.currentHp = Math.min(player.maxHp, player.currentHp + regenAmt);
-            globalProgression.lastHpRegenTime = now - (msPassed % 60000);
+            globalProgression.lastHpRegenTime = now - (msPassed % HP_REGEN_INTERVAL_MS);
             queueSave();
         }
     } else {
@@ -529,16 +549,21 @@ function updateHp() {
             hpTimer.innerText = 'Full';
         } else {
             const timeSinceLast = now - (globalProgression.lastHpRegenTime || now);
-            const timeToNext = 60000 - (timeSinceLast % 60000);
+            const timeToNext = HP_REGEN_INTERVAL_MS - (timeSinceLast % HP_REGEN_INTERVAL_MS);
             const sec = Math.ceil(timeToNext / 1000);
-            hpTimer.innerText = `+10 in ${sec}s`;
+            hpTimer.innerText = `+${HP_REGEN_AMOUNT} in ${sec}s`;
         }
     }
 }
 setInterval(updateHp, 1000);
 // Auto-save every 30 seconds, but only if state has changed since the last save.
-setInterval(() => { if (needsSave) { saveGame(); needsSave = false; } }, 30000);
+setInterval(() => { if (needsSave) { saveGame(); needsSave = false; } }, AUTOSAVE_INTERVAL_MS);
 
+/**
+ * Attempts to spend the given amount of energy from the player's pool.
+ * @param {number} amount - The positive integer amount of energy to consume.
+ * @returns {boolean} `true` if energy was successfully consumed, `false` if insufficient.
+ */
 function consumeEnergy(amount) {
     if (!Number.isFinite(amount) || amount <= 0) return false;
     // Defensive: ensure energy is a valid number (can be undefined/NaN on file:// protocol)
@@ -577,6 +602,14 @@ function ensureProgressStats() {
 }
 
 // --- SAVE / LOAD SYSTEM ---
+/**
+ * Persists the current game state to localStorage.
+ * Writes three entries:
+ *  - 'EternalAscensionSaveBackup': a copy of the previous save (before overwriting)
+ *  - 'EternalAscensionSaveDataV1': the main save (JSON + simpleHash checksum)
+ *  - 'EternalAscensionClassSave_<classId>': a per-class save so each class has its own slot
+ * Also persists `savedEnemies` so active encounters survive page reloads.
+ */
 function saveGame() {
     // Accumulate play time on each save
     if (player.progressStats) {
@@ -587,7 +620,7 @@ function saveGame() {
     }
     if (typeof clampAttributes === 'function') clampAttributes();
     const data = JSON.stringify({ global: globalProgression, pState: player });
-    const checksum = btoa(data.length.toString());
+    const checksum = simpleHash(data);
     const saveString = data + "|" + checksum;
     try {
         const existing = localStorage.getItem('EternalAscensionSaveDataV1');
@@ -738,6 +771,15 @@ function makeInitialPlayerState() {
     };
 }
 
+/**
+ * Loads the most recent save from localStorage and resumes the game.
+ * Applies schema migrations in order:
+ *  1. `applyDefaults()` fills fields missing in older saves.
+ *  2. Deletion migrations remove attributes that were removed from the schema.
+ *  3. progressStats migration normalises legacy flat stat keys.
+ *  4. PatchV1 resets attributes for saves created before the attribute rework.
+ *  5. Re-derives `player.data` from CLASSES to pick up any data-file changes.
+ */
 function loadGameAndContinue() {
     try {
         if (typeof CLASSES === 'undefined') {
@@ -833,7 +875,7 @@ function loadGameAndContinue() {
                 // Safety guard: warn if patch fires on a save that already has significant progress.
                 // Point budget formula: 1 point per level up to 50, then 2 points per level above 50.
                 const spentPoints = (player.statPoints !== undefined && player.lvl > 0)
-                    ? (player.lvl * 2) - (player.statPoints || 0)
+                    ? (player.lvl * STAT_POINTS_PER_LEVEL) - (player.statPoints || 0)
                     : 0;
                 if (spentPoints > 5 || (player.skillMenuProgress || 0) > 3) {
                     console.warn('PatchV1: firing on save with significant progress — statPoints spent:', spentPoints, 'skillMenuProgress:', player.skillMenuProgress || 0);
@@ -884,6 +926,12 @@ window.onload = () => {
 };
 
 // --- UTILS & MATH ---
+/**
+ * Returns the total XP required to advance from the given level to the next.
+ * Uses a bracket-based staircase curve: each 100-level segment increases the XP requirement.
+ * @param {number} lvl - The current player level (0-based).
+ * @returns {number} XP needed to reach level `lvl + 1`.
+ */
 function getXpForNextLevel(lvl) { 
     // Bracket-based staircase XP curve
     // battlesPerLevel = 4 + segment*10 + ceil(offset/10)
@@ -940,6 +988,11 @@ function hasBetterGear(slot) {
     return betterInInv;
 }
 
+/**
+ * Calculates the player's maximum HP from class base, level, attributes, tree bonuses,
+ * skill-tree enhancements, equipment bonuses, pebble exchanges, and zombie titles.
+ * @returns {number} The computed maximum HP value (floored).
+ */
 function calculateMaxHp() {
     let a = globalProgression.attributes;
     // Base HP from class, level scaling, and tree bonus
@@ -963,6 +1016,11 @@ function calculateMaxHp() {
     return Math.floor(base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01) * (1 + getTitleStatBonus()));
 }
 
+/**
+ * Calculates the player's base damage from class base, Raw Power attribute, tree bonuses,
+ * Willpower multiplier, weapon enhancements, skill menu bonuses, and pebble/title bonuses.
+ * @returns {number} The computed base damage value (floored).
+ */
 function getBaseDamage() {
     let a = globalProgression.attributes;
     // Raw Power: +2 base dmg per point; tree bonus flat dmg
@@ -994,6 +1052,11 @@ function getBaseDamage() {
     return baseDmg;
 }
 
+/**
+ * Calculates the player's total defense from the base value, Defense attribute, tree bonus,
+ * skill menu bonus percentage, pebble bonuses, and zombie title bonuses.
+ * @returns {number} The computed defense value (floored).
+ */
 function getPlayerDef() {
     let a = globalProgression.attributes;
     return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01) * (1 + getTitleStatBonus()));
@@ -1870,13 +1933,13 @@ function checkLevelUp() {
     let levelsGained = 0;
     // Cap at 5 levels per call to prevent huge jumps from large XP gains (e.g. quest rewards)
     const MAX_LEVELS_PER_CHECK = 5;
-    while (player.lvl < 500 && levelsGained < MAX_LEVELS_PER_CHECK) {
+    while (player.lvl < MAX_LEVEL && levelsGained < MAX_LEVELS_PER_CHECK) {
         const xpNeeded = getXpForNextLevel(player.lvl);
         if (player.xp < xpNeeded) break;
         player.lvl++;
         player.xp -= xpNeeded;
         // Levels 1-50 give 1 stat point each; levels above 50 give 2 stat points each
-        player.statPoints += 2;
+        player.statPoints += STAT_POINTS_PER_LEVEL;
         player.skillPoints++;
         levelsGained++;
     }

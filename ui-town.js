@@ -980,15 +980,15 @@ function showWell() {
     const energy50Btn = document.getElementById('well-energy50-btn');
     const energy100Btn = document.getElementById('well-energy100-btn');
     const energyCapBtn = document.getElementById('well-energy-cap-btn');
-    healBtn.disabled = p.gold < 50;
-    xpBtn.disabled = !canUseXp || p.gold < 20;
-    dropBtn.disabled = !canUseDrop || p.gold < 20;
-    energy50Btn.disabled = !canUseEnergy50 || p.gold < 50;
-    energy100Btn.disabled = !canUseEnergy100 || p.gold < 100;
-    energyCapBtn.disabled = p.energyCapUnlocked || p.gold < 300 || getMaxEnergy() < 50;
+    healBtn.disabled = p.gold < WELL_HEAL_COST;
+    xpBtn.disabled = !canUseXp || p.gold < WELL_BLESSING_COST;
+    dropBtn.disabled = !canUseDrop || p.gold < WELL_BLESSING_COST;
+    energy50Btn.disabled = !canUseEnergy50 || p.gold < WELL_ENERGY50_COST;
+    energy100Btn.disabled = !canUseEnergy100 || p.gold < WELL_ENERGY100_COST;
+    energyCapBtn.disabled = p.energyCapUnlocked || p.gold < WELL_ENERGY_CAP_COST || getMaxEnergy() < WELL_ENERGY_CAP_MIN_ENERGY;
 
     let btn250 = document.getElementById('well-energy250-btn');
-    if(btn250) { btn250.disabled = p.gold < 250; }
+    if(btn250) { btn250.disabled = p.gold < WELL_ENERGY250_COST; }
     let status250 = document.getElementById('well-energy250-status');
     if(status250) { status250.innerText = 'Always Available'; status250.className = 'font-bold text-emerald-300'; }
 
@@ -998,9 +998,9 @@ function showWell() {
 
 function useWellHeal() {
     const log = document.getElementById('well-log');
-    if(globalProgression.gold < 50) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
+    if(globalProgression.gold < WELL_HEAL_COST) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
 
-    globalProgression.gold -= 50;
+    globalProgression.gold -= WELL_HEAL_COST;
     player.maxHp = calculateMaxHp();
     player.currentHp = player.maxHp;
     log.innerText = 'You feel renewed. HP fully restored!';
@@ -1013,8 +1013,8 @@ function buyWellXpBuff() {
     const today = new Date().toDateString();
     const log = document.getElementById('well-log');
     if((globalProgression.wellLastXpDate || '') === today) { log.innerText = 'XP Blessing already used today.'; playSound('lose'); return; }
-    if(globalProgression.gold < 20) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
-    globalProgression.gold -= 20;
+    if(globalProgression.gold < WELL_BLESSING_COST) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
+    globalProgression.gold -= WELL_BLESSING_COST;
     globalProgression.wellXpBattles = 10;
     globalProgression.wellLastXpDate = today;
     log.innerText = '2x XP blessing is active for 10 battles!';
@@ -1027,8 +1027,8 @@ function buyWellDropBuff() {
     const today = new Date().toDateString();
     const log = document.getElementById('well-log');
     if((globalProgression.wellLastDropDate || '') === today) { log.innerText = 'Drop Blessing already used today.'; playSound('lose'); return; }
-    if(globalProgression.gold < 20) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
-    globalProgression.gold -= 20;
+    if(globalProgression.gold < WELL_BLESSING_COST) { log.innerText = 'Not enough Gold.'; playSound('lose'); return; }
+    globalProgression.gold -= WELL_BLESSING_COST;
     globalProgression.wellDropBattles = 10;
     globalProgression.wellLastDropDate = today;
     log.innerText = '2x drop blessing is active for 10 battles!';
@@ -1040,9 +1040,9 @@ function useWellEnergy50() {
     const p = globalProgression; const today = new Date().toDateString();
     const log = document.getElementById('well-log');
     if((p.wellLastEnergy50Date || '') === today) { log.innerText = 'Energy refill (50g) already used today.'; playSound('lose'); return; }
-    if(p.gold < 50) { log.innerText = 'Not enough Gold!'; playSound('lose'); return; }
+    if(p.gold < WELL_ENERGY50_COST) { log.innerText = 'Not enough Gold!'; playSound('lose'); return; }
     let maxEnergy = getMaxEnergy();
-    p.gold -= 50; p.energy = maxEnergy; p.wellLastEnergy50Date = today; saveGame(); updateEnergy();
+    p.gold -= WELL_ENERGY50_COST; p.energy = maxEnergy; p.wellLastEnergy50Date = today; saveGame(); updateEnergy();
     log.innerText = `⚡ Energy refilled to ${maxEnergy}!`; playSound('chest');
     showWell();
 }
@@ -1050,9 +1050,9 @@ function useWellEnergy100() {
     const p = globalProgression; const today = new Date().toDateString();
     const log = document.getElementById('well-log');
     if((p.wellLastEnergy100Date || '') === today) { log.innerText = 'Energy refill (100g) already used today.'; playSound('lose'); return; }
-    if(p.gold < 100) { log.innerText = 'Not enough Gold!'; playSound('lose'); return; }
+    if(p.gold < WELL_ENERGY100_COST) { log.innerText = 'Not enough Gold!'; playSound('lose'); return; }
     let maxEnergy = getMaxEnergy();
-    p.gold -= 100; p.energy = maxEnergy; p.wellLastEnergy100Date = today; saveGame(); updateEnergy();
+    p.gold -= WELL_ENERGY100_COST; p.energy = maxEnergy; p.wellLastEnergy100Date = today; saveGame(); updateEnergy();
     log.innerText = `⚡ Energy refilled to ${maxEnergy}!`; playSound('chest');
     showWell();
 }
@@ -1060,10 +1060,10 @@ function useWellEnergy100() {
 function useWellEnergy250() {
     const p = globalProgression;
     const log = document.getElementById('well-log');
-    if(p.gold < 250) { if(log) log.innerText = 'Not enough Gold! (Need 250)'; playSound('lose'); return; }
+    if(p.gold < WELL_ENERGY250_COST) { if(log) log.innerText = `Not enough Gold! (Need ${WELL_ENERGY250_COST})`; playSound('lose'); return; }
     let maxEnergy = getMaxEnergy();
-    p.gold -= 250; p.energy = maxEnergy;
-    let ps = ensureProgressStats(); ps.goldSpent = (ps.goldSpent || 0) + 250;
+    p.gold -= WELL_ENERGY250_COST; p.energy = maxEnergy;
+    let ps = ensureProgressStats(); ps.goldSpent = (ps.goldSpent || 0) + WELL_ENERGY250_COST;
     saveGame(); updateEnergy();
     if(log) log.innerText = `⚡ Energy refilled to ${maxEnergy}!`; playSound('heal');
     showWell();
@@ -1073,9 +1073,9 @@ function unlockEnergyCapUpgrade() {
     const p = globalProgression;
     const log = document.getElementById('well-log');
     if(p.energyCapUnlocked) { log.innerText = 'Energy cap already unlocked!'; return; }
-    if(getMaxEnergy() < 50) { log.innerText = `Reach 50 Energy first! (You currently have ${getMaxEnergy()} max energy)`; playSound('lose'); return; }
-    if(p.gold < 300) { log.innerText = 'Not enough Gold! (Need 300)'; playSound('lose'); return; }
-    p.gold -= 300;
+    if(getMaxEnergy() < WELL_ENERGY_CAP_MIN_ENERGY) { log.innerText = `Reach ${WELL_ENERGY_CAP_MIN_ENERGY} Energy first! (You currently have ${getMaxEnergy()} max energy)`; playSound('lose'); return; }
+    if(p.gold < WELL_ENERGY_CAP_COST) { log.innerText = `Not enough Gold! (Need ${WELL_ENERGY_CAP_COST})`; playSound('lose'); return; }
+    p.gold -= WELL_ENERGY_CAP_COST;
     p.energyCapUnlocked = true;
     log.innerText = '❗ Energy cap upgraded to 100! Level up to reach energies 51-100.';
     playSound('win');

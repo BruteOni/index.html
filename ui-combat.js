@@ -1,4 +1,7 @@
-// structuredClone polyfill for older browsers
+// structuredClone polyfill for older browsers (Safari < 15.4, older mobile browsers).
+// NOTE: This fallback uses JSON round-tripping, which drops undefined values, functions,
+// Date objects, RegExp, Map, Set, and circular references. This is acceptable because
+// all cloned game objects (enemies, player state) are plain JSON-serializable data.
 if (typeof structuredClone === 'undefined') {
     window.structuredClone = function(obj) {
         return JSON.parse(JSON.stringify(obj));
@@ -42,6 +45,12 @@ const ENEMY_SKILL_POOL = [
     { id: 'silence', name: 'Silenced', cd: 5, desc: 'Silences 1 random hero skill slot (1-5) for 1 turn' }
 ];
 
+/**
+ * Returns the base HP, damage, and defense stats for enemies at the given level,
+ * using a bracket-based scaling curve (5 brackets up to level 80, then open-ended).
+ * @param {number} level - The enemy's level.
+ * @returns {{ hp: number, dmg: number, def: number }} The computed base stats.
+ */
 function getEnemyBracketStats(level) {
     // Returns { baseHp, baseDmg, baseDef, perLevelMult } for the given level bracket
     let bracket;
@@ -164,6 +173,13 @@ function getHealingMultipliers() {
     return { healMult, healingBuffMult };
 }
 
+/**
+ * Generates the enemy roster for the current encounter.
+ * - If persisted enemies exist for this mode (from a previous page load), they are restored.
+ * - Otherwise, rolls enemy count (1-4), rarity, level scaling, skills, and drops.
+ * - Has a MYTHIC_BOSS_SPAWN_CHANCE chance to replace the encounter with a secret mythic boss
+ *   in non-boss, non-graveyard modes.
+ */
 function generateEnemies() {
     // Check for persisted enemies in this mode (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode)) {
@@ -257,9 +273,9 @@ function generateEnemies() {
         isBossFight = true; count = 1;
     } else {
         let countRoll = Math.random();
-        if(countRoll < 0.05) count = 4;       // 5% chance
-        else if(countRoll < 0.10) count = 3;  // 5% chance
-        else if(countRoll < 0.50) count = 2;  // 40% chance
+        if(countRoll < ENEMY_COUNT_4_CHANCE) count = 4;       // 5% chance
+        else if(countRoll < ENEMY_COUNT_3_CHANCE) count = 3;  // 5% chance
+        else if(countRoll < ENEMY_COUNT_2_CHANCE) count = 2;  // 40% chance
         else count = 1;                        // 50% chance
     }
 
@@ -269,8 +285,8 @@ function generateEnemies() {
     if(currentMode === 'dungeon') pool = ENEMIES_DUNGEON;
     if(currentMode === 'island_defense') pool = ENEMIES_ISLAND_DEFENSE;
 
-    // 0.5% chance to spawn the secret mythic boss in any non-boss, non-graveyard mode
-    if(!isBossFight && Math.random() < 0.005) {
+    // MYTHIC_BOSS_SPAWN_CHANCE to spawn the secret mythic boss in any non-boss, non-graveyard mode
+    if(!isBossFight && Math.random() < MYTHIC_BOSS_SPAWN_CHANCE) {
         let mythicPrefixes = ['Void', 'Celestial', 'Primordial', 'Abyssal', 'Eternal', 'Cosmic', 'Ancient', 'Infernal', 'Divine', 'Sovereign'];
         let mythicSuffixes = ['Harbinger', 'Annihilator', 'Devourer', 'Destroyer', 'Colossus', 'Overlord', 'Titan', 'Ravager', 'Obliterator', 'God'];
         let mName = mythicPrefixes[Math.floor(Math.random() * mythicPrefixes.length)] + ' ' + mythicSuffixes[Math.floor(Math.random() * mythicSuffixes.length)];
@@ -366,6 +382,12 @@ function getEnemySkillsText(e) {
     return e.skills.map(s => ENEMY_SKILL_POOL.find(x => x.id === s)?.name || s).join(', ');
 }
 
+/**
+ * Initialises and starts a combat encounter.
+ * @param {boolean} [isNewEncounter=false] - If `true`, validates player HP, resets buffs,
+ *   and auto-equips better gear before generating enemies. If `false` (e.g. page reload),
+ *   resumes the existing encounter without resetting state.
+ */
 function startBattle(isNewEncounter = false) {
     // Do not start battle if player HP is 0 (dead) — they must heal first
     if (isNewEncounter && player.currentHp <= 0) {
@@ -688,6 +710,11 @@ function getCombatUIElements() {
     return _combatUICache;
 }
 
+/**
+ * Re-renders the combat HUD: player stats panel, enemy cards, action buttons,
+ * and buff/debuff indicators. Uses cached element references and state diffing
+ * to avoid unnecessary DOM updates on every call.
+ */
 function updateCombatUI() {
     if (!player || !player.data) return;
     var ui = getCombatUIElements();
