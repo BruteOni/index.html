@@ -224,12 +224,12 @@ function showSkillGuide() {
             card.innerHTML = `
                 <div class="flex items-center justify-between mb-1">
                     <div class="flex items-center gap-2">
-                        <span class="font-bold text-white text-sm">${skill.name}</span>
+                        <span class="font-bold text-white text-sm">${sanitizeHTML(skill.name)}</span>
                         <span class="text-xs font-bold ${lockColor}">${lockIcon}</span>
                     </div>
                     <div class="flex gap-1 flex-wrap justify-end text-[10px]">${cdInfo}${dmgInfo ? ' ' + dmgInfo : ''}</div>
                 </div>
-                <div class="text-[11px] text-gray-300">${skill.desc}</div>
+                <div class="text-[11px] text-gray-300">${sanitizeHTML(skill.desc)}</div>
             `;
             list.appendChild(card);
         });

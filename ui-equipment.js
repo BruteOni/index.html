@@ -56,9 +56,9 @@ function openEquipModal(slot) {
     if (currentEq) {
         let eqCard = document.createElement('div');
         eqCard.className = `bg-gray-800 border-2 rarity-${currentEq.rarity} p-3 rounded-lg flex justify-between items-center mb-2`;
-        let enchTxt = currentEq.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${currentEq.enchanted})</span>` : '';
+        let enchTxt = currentEq.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${sanitizeHTML(currentEq.enchanted)})</span>` : '';
         let bonusTxt = renderBonusStatsHtml(currentEq.bonusStats) + renderSetBonusHtml(currentEq);
-        eqCard.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl">${currentEq.icon}</span><div><div class="font-bold text-white">${currentEq.name} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${currentEq.rarity}</span></div>${currentEq.type === 'weapon' && currentEq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(currentEq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button onclick="unequipCurrent()" class="bg-red-900 hover:bg-red-800 text-red-200 px-3 py-2 rounded text-xs font-bold transition active:scale-95 border border-red-700">Unequip</button>`;
+        eqCard.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl">${currentEq.icon}</span><div><div class="font-bold text-white">${sanitizeHTML(currentEq.name)} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${sanitizeHTML(currentEq.rarity)}</span></div>${currentEq.type === 'weapon' && currentEq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(currentEq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button onclick="unequipCurrent()" class="bg-red-900 hover:bg-red-800 text-red-200 px-3 py-2 rounded text-xs font-bold transition active:scale-95 border border-red-700">Unequip</button>`;
         eqSection.appendChild(eqCard);
     } else {
         eqSection.innerHTML += `<div class="text-gray-400 text-center py-2 text-sm italic bg-gray-900 rounded-lg">Nothing Equipped</div>`;
@@ -80,10 +80,10 @@ function openEquipModal(slot) {
             btn.className = `bg-gray-900 border-2 rarity-${item.rarity} p-3 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-700 transition mb-2 relative`;
             
             let upgradeBadge = isUpgrade ? `<span class="absolute -top-2 -left-2 bg-green-600 text-white text-[10px] px-1 rounded shadow border border-green-400 font-bold tracking-widest">UPGRADE</span>` : '';
-            let enchTxt = item.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${item.enchanted})</span>` : '';
+            let enchTxt = item.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${sanitizeHTML(item.enchanted)})</span>` : '';
             let bonusTxt = renderBonusStatsHtml(item.bonusStats) + renderSetBonusHtml(item);
             
-            btn.innerHTML = `${upgradeBadge}<div class="flex items-center gap-2"><span class="text-2xl">${item.icon || '📦'}</span><div><div class="font-bold text-white">${item.name} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${item.rarity}</span></div>${item.type === 'weapon' && item.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(item.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button class="bg-blue-800 hover:bg-blue-700 text-blue-200 px-4 py-2 rounded text-xs font-bold border border-blue-600 transition active:scale-95">Equip</button>`;
+            btn.innerHTML = `${upgradeBadge}<div class="flex items-center gap-2"><span class="text-2xl">${item.icon || '📦'}</span><div><div class="font-bold text-white">${sanitizeHTML(item.name)} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${sanitizeHTML(item.rarity)}</span></div>${item.type === 'weapon' && item.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(item.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button class="bg-blue-800 hover:bg-blue-700 text-blue-200 px-4 py-2 rounded text-xs font-bold border border-blue-600 transition active:scale-95">Equip</button>`;
             btn.onclick = (e) => { if(e.target.tagName !== 'BUTTON') return; equipItem(item.id); }; 
             invSection.appendChild(btn);
         });

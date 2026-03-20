@@ -60,8 +60,8 @@ function showMagicalEnhancer() {
         let header = `<div class="flex items-center gap-2 mb-2">
             <span class="text-2xl">${item.icon || '⚔️'}</span>
             <div class="flex-1">
-                <div class="font-black text-white text-sm drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">${item.name}</div>
-                <div class="text-xs text-gray-400">${item.type} ${isEquipped ? '(Equipped)' : '(Inventory)'}</div>
+                <div class="font-black text-white text-sm drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">${sanitizeHTML(item.name)}</div>
+                <div class="text-xs text-gray-400">${sanitizeHTML(item.type)} ${isEquipped ? '(Equipped)' : '(Inventory)'}</div>
             </div>
         </div>`;
 

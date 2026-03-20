@@ -31,45 +31,45 @@ function showAttributes() {
     ];
 
     attrDefs.forEach(a => {
-        let currentVal = globalProgression.attributes[a.id] !== undefined ? globalProgression.attributes[a.id] : 0;
+        const currentVal = globalProgression.attributes[a.id] !== undefined ? globalProgression.attributes[a.id] : 0;
         const { classId, classBase } = getPlayerClassBase();
-        let minVal = classBase[a.id] !== undefined ? classBase[a.id] : 0;
-        let attrCap = getClassAttrCap(classId, a.id);
+        const minVal = classBase[a.id] !== undefined ? classBase[a.id] : 0;
+        const attrCap = getClassAttrCap(classId, a.id);
         const cost = currentVal >= 50 ? 2 : 1;
 
         // + button: disabled if can't afford or at cap
-        let plusDisabled = (player.statPoints < cost) || (currentVal >= attrCap) ? 'disabled' : '';
+        const plusDisabled = (player.statPoints < cost) || (currentVal >= attrCap) ? 'disabled' : '';
 
         // +5 button disabled logic (some levels may cross the 50 threshold)
-        let cheap5 = Math.max(0, Math.min(5, 50 - currentVal));
-        let plus5Cost = cheap5 + (5 - cheap5) * 2;
-        let plus5Disabled = (currentVal >= attrCap || player.statPoints < plus5Cost) ? 'disabled' : '';
+        const cheap5 = Math.max(0, Math.min(5, 50 - currentVal));
+        const plus5Cost = cheap5 + (5 - cheap5) * 2;
+        const plus5Disabled = (currentVal >= attrCap || player.statPoints < plus5Cost) ? 'disabled' : '';
 
         // +50 button disabled logic (some levels may cross the 50 threshold)
-        let cheap50 = Math.max(0, Math.min(50, 50 - currentVal));
-        let plus50Cost = cheap50 + (50 - cheap50) * 2;
-        let plus50Disabled = (currentVal >= attrCap || player.statPoints < plus50Cost) ? 'disabled' : '';
+        const cheap50 = Math.max(0, Math.min(50, 50 - currentVal));
+        const plus50Cost = cheap50 + (50 - cheap50) * 2;
+        const plus50Disabled = (currentVal >= attrCap || player.statPoints < plus50Cost) ? 'disabled' : '';
 
         // - button: disabled if at class minimum (permanent base)
-        let minusDisabled = currentVal <= minVal ? 'disabled' : '';
+        const minusDisabled = currentVal <= minVal ? 'disabled' : '';
 
         // -5 button: disabled if fewer than 5 levels above minimum
-        let minus5Disabled = (currentVal - 5) < minVal ? 'disabled' : '';
+        const minus5Disabled = (currentVal - 5) < minVal ? 'disabled' : '';
 
         // -50 button: disabled if fewer than 50 levels above minimum
-        let minus50Disabled = (currentVal - 50) < minVal ? 'disabled' : '';
+        const minus50Disabled = (currentVal - 50) < minVal ? 'disabled' : '';
 
-        let capDisplay = ` / ${attrCap}`;
-        let levelDisplay = `Lv. ${currentVal}${capDisplay}`;
-        let baseNote = (minVal > 0) ? ` <span class="text-yellow-500 text-[9px]">(base ${minVal})</span>` : '';
+        const capDisplay = ` / ${attrCap}`;
+        const levelDisplay = `Lv. ${currentVal}${capDisplay}`;
+        const baseNote = (minVal > 0) ? ` <span class="text-yellow-500 text-[9px]">(base ${minVal})</span>` : '';
 
-        let btn = document.createElement('div');
+        const btn = document.createElement('div');
         btn.className = "flex flex-col bg-gray-900 p-2 rounded-lg border border-gray-700 shadow-sm";
 
         btn.innerHTML = `
             <div class="w-full mb-2">
-                <div class="font-bold ${a.color} text-sm">${a.name} <span class="text-white ml-2 text-xs">${levelDisplay}</span>${baseNote} <span class="text-xs text-yellow-400 ml-1">Cost: ${cost} SP</span></div>
-                <div class="text-[10px] text-gray-400 leading-tight mt-0.5">${a.desc}</div>
+                <div class="font-bold ${a.color} text-sm">${sanitizeHTML(a.name)} <span class="text-white ml-2 text-xs">${levelDisplay}</span>${baseNote} <span class="text-xs text-yellow-400 ml-1">Cost: ${cost} SP</span></div>
+                <div class="text-[10px] text-gray-400 leading-tight mt-0.5">${sanitizeHTML(a.desc)}</div>
             </div>
             <div class="flex gap-2 w-full items-stretch">
                 <div class="flex flex-col gap-1 flex-1">
@@ -91,19 +91,20 @@ function showAttributes() {
 }
 
 function allocateAttribute(id, count) {
+    if (!ATTRIBUTE_KEYS.includes(id)) return;
     count = count || 1;
     const { classId, classBase } = getPlayerClassBase();
-    let attrCap = getClassAttrCap(classId, id);
+    const attrCap = getClassAttrCap(classId, id);
 
-    let defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
-    let currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : defaultMin;
+    const defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
+    const currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : defaultMin;
 
     // Determine how many levels we can afford, accounting for threshold at 50
     let affordable;
     if (currentVal >= 50) {
         affordable = Math.floor(player.statPoints / 2);
     } else {
-        let cheapCapacity = 50 - currentVal; // levels available at cost 1 SP
+        const cheapCapacity = 50 - currentVal; // levels available at cost 1 SP
         if (player.statPoints <= cheapCapacity) {
             affordable = player.statPoints;
         } else {
@@ -111,13 +112,13 @@ function allocateAttribute(id, count) {
         }
     }
 
-    let canAllocate = Math.min(count, attrCap - currentVal, affordable);
+    const canAllocate = Math.min(count, attrCap - currentVal, affordable);
     if (canAllocate <= 0) return;
 
     // Calculate actual SP cost, accounting for threshold crossing
-    let cheap = Math.max(0, Math.min(canAllocate, 50 - currentVal));
-    let expensive = Math.max(0, canAllocate - cheap);
-    let totalCost = cheap + expensive * 2;
+    const cheap = Math.max(0, Math.min(canAllocate, 50 - currentVal));
+    const expensive = Math.max(0, canAllocate - cheap);
+    const totalCost = cheap + expensive * 2;
 
     player.statPoints -= totalCost;
     globalProgression.attributes[id] = currentVal + canAllocate;
@@ -129,18 +130,19 @@ function allocateAttribute(id, count) {
 }
 
 function deallocateAttribute(id, count) {
+    if (!ATTRIBUTE_KEYS.includes(id)) return;
     count = count || 1;
     const { classBase } = getPlayerClassBase();
-    let defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
-    let minVal = defaultMin;
-    let currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : minVal;
-    let canRemove = Math.min(count, currentVal - minVal);
+    const defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
+    const minVal = defaultMin;
+    const currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : minVal;
+    const canRemove = Math.min(count, currentVal - minVal);
     if (canRemove <= 0) return;
 
     // Calculate refund: levels above 50 refund 2 SP each, levels at/below 50 refund 1 SP each
-    let expensiveRemoved = Math.min(canRemove, Math.max(0, currentVal - 50));
-    let cheapRemoved = canRemove - expensiveRemoved;
-    let totalRefund = cheapRemoved + expensiveRemoved * 2;
+    const expensiveRemoved = Math.min(canRemove, Math.max(0, currentVal - 50));
+    const cheapRemoved = canRemove - expensiveRemoved;
+    const totalRefund = cheapRemoved + expensiveRemoved * 2;
 
     globalProgression.attributes[id] = currentVal - canRemove;
     player.statPoints += totalRefund;

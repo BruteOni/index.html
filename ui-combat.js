@@ -90,13 +90,17 @@ function assignEnemySkills(enemy) {
 }
 
 // --- COMBAT & ANIMATIONS ---
+let autoToggleLock = false;
 function toggleAuto() { 
+    if(autoToggleLock) return;
     if(currentMode === 'training') return; // No auto in training ground
+    autoToggleLock = true;
     isAutoBattle = !isAutoBattle; 
     const btn = document.getElementById('btn-auto'); 
     if(isAutoBattle) btn.classList.add('auto-on');
     else btn.classList.remove('auto-on');
     if(isAutoBattle && isPlayerTurn && combatActive) processAutoTurn(); 
+    setTimeout(() => { autoToggleLock = false; }, 100);
 }
 function returnToTown() {
     combatActive = false;
@@ -503,26 +507,26 @@ function openUsableSlotPicker(slotIdx) {
     let hasAny = false;
     // Show USABLE_ITEMS first (burglar items)
     Object.keys(USABLE_ITEMS).forEach(key => {
-        let amt = (globalProgression.usableItems || {})[key] || 0;
+        const amt = (globalProgression.usableItems || {})[key] || 0;
         if(amt > 0) {
             hasAny = true;
-            let item = USABLE_ITEMS[key];
-            let btn = document.createElement('button');
+            const item = USABLE_ITEMS[key];
+            const btn = document.createElement('button');
             btn.className = 'w-full bg-gray-900 border border-red-800 p-2 rounded flex justify-between items-center mb-1 active:scale-95 transition';
-            btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-xl">${item.icon}</span><div><b class="text-red-300 text-sm">${item.name}</b><div class="text-[10px] text-gray-400">${item.desc}</div></div></div><span class="text-yellow-400 font-bold">x${amt}</span>`;
+            btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-xl">${item.icon}</span><div><b class="text-red-300 text-sm">${sanitizeHTML(item.name)}</b><div class="text-[10px] text-gray-400">${sanitizeHTML(item.desc)}</div></div></div><span class="text-yellow-400 font-bold">x${amt}</span>`;
             btn.onclick = () => { if(!player.equippedUsables) player.equippedUsables = [null,null,null,null,null,null,null]; player.equippedUsables[_usablePickerSlot] = key; closeCombatBag(); renderUsableSlots(); };
             cont.appendChild(btn);
         }
     });
     // Then show CONSUMABLES (potions, food)
     Object.keys(CONSUMABLES).forEach(key => {
-        let amt = globalProgression.inventory[key] || 0;
+        const amt = globalProgression.inventory[key] || 0;
         if(amt > 0) {
             hasAny = true;
-            let c = CONSUMABLES[key];
-            let btn = document.createElement('button');
+            const c = CONSUMABLES[key];
+            const btn = document.createElement('button');
             btn.className = 'w-full bg-gray-900 border border-gray-700 p-2 rounded flex justify-between items-center mb-1 active:scale-95 transition';
-            btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-xl">${c.icon}</span><div><b class="text-white text-sm">${c.name}</b><div class="text-[10px] text-gray-400">${c.desc}</div></div></div><span class="text-yellow-400 font-bold">x${amt}</span>`;
+            btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-xl">${c.icon}</span><div><b class="text-white text-sm">${sanitizeHTML(c.name)}</b><div class="text-[10px] text-gray-400">${sanitizeHTML(c.desc)}</div></div></div><span class="text-yellow-400 font-bold">x${amt}</span>`;
             btn.onclick = () => { if(!player.equippedUsables) player.equippedUsables = [null,null,null,null,null,null,null]; player.equippedUsables[_usablePickerSlot] = key; closeCombatBag(); renderUsableSlots(); };
             cont.appendChild(btn);
         }
@@ -804,7 +808,7 @@ function updateCombatUI() {
                 } else if (e.isBoss) {
                     bossLabel = `<div class="${bossLabelSizeClass} font-black text-yellow-200 bg-red-700 px-1.5 py-0.5 rounded-full shadow-lg mt-0.5 inline-block">👑 Boss</div>`;
                 }
-                card.innerHTML = `<div class="relative w-full text-center overflow-hidden"><div class="absolute -top-1 -right-2 text-sm flex gap-1 z-10">${eStatus}</div><div class="${avatarSizeClass} enemy-avatar mb-1 mt-1 ${animClass} leading-none" style="max-height:5rem;">${e.avatar}</div></div>${bossLabel}<div class="${nameSizeClass} font-bold leading-tight break-words w-full text-center ${rarityColor}">Lv.${e.lvl} ${e.name}</div><div class="health-bar-container !h-1.5 !mt-1"><div id="enemy-hp-bar-${idx}" class="health-bar" style="width: ${(Math.max(0, e.currentHp) / e.maxHp) * 100}%"></div></div><div id="enemy-hp-text-${idx}" class="text-[9px] text-gray-400 mt-0.5 text-center leading-tight">HP: ${Math.max(0,e.currentHp)}/${e.maxHp} | DMG: ${e.baseDmg}</div>${isDead ? '<div class="enemy-death-overlay">💀</div>' : ''}`;
+                card.innerHTML = `<div class="relative w-full text-center overflow-hidden"><div class="absolute -top-1 -right-2 text-sm flex gap-1 z-10">${eStatus}</div><div class="${avatarSizeClass} enemy-avatar mb-1 mt-1 ${animClass} leading-none" style="max-height:5rem;">${e.avatar}</div></div>${bossLabel}<div class="${nameSizeClass} font-bold leading-tight break-words w-full text-center ${rarityColor}">Lv.${e.lvl} ${sanitizeHTML(e.name)}</div><div class="health-bar-container !h-1.5 !mt-1"><div id="enemy-hp-bar-${idx}" class="health-bar" style="width: ${(Math.max(0, e.currentHp) / e.maxHp) * 100}%"></div></div><div id="enemy-hp-text-${idx}" class="text-[9px] text-gray-400 mt-0.5 text-center leading-tight">HP: ${Math.max(0,e.currentHp)}/${e.maxHp} | DMG: ${e.baseDmg}</div>${isDead ? '<div class="enemy-death-overlay">💀</div>' : ''}`;
                 eContainer.appendChild(card);
             });
             // Add empty placeholder slots for unused grid positions
@@ -883,10 +887,10 @@ function renderSkills() {
                 }
             } else if (showDesc) {
                 btn.className = `${slotClass} skill-btn flex-1 p-2 rounded-lg font-bold text-white shadow-lg active:scale-95 flex flex-col items-center justify-center ${slotColor}`;
-                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${skill.name}</div><div class="text-[9px] md:text-[10px] opacity-60 w-full px-1 mt-0.5 font-normal">${skill.desc || ''}</div><div class="text-[10px] md:text-xs opacity-75 mt-0.5">${cd > 0 ? `(CD:${cd})` : ''}</div>`;
+                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${sanitizeHTML(skill.name)}</div><div class="text-[9px] md:text-[10px] opacity-60 w-full px-1 mt-0.5 font-normal">${sanitizeHTML(skill.desc || '')}</div><div class="text-[10px] md:text-xs opacity-75 mt-0.5">${cd > 0 ? `(CD:${cd})` : ''}</div>`;
             } else {
                 btn.className = `${slotClass} skill-btn flex-1 p-2 rounded-lg font-bold text-white shadow-lg active:scale-95 flex flex-col items-center justify-center ${slotColor}`;
-                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${skill.name}</div><div class="text-[10px] md:text-xs opacity-75">${cd > 0 ? `(CD:${cd})` : ''}</div>`;
+                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${sanitizeHTML(skill.name)}</div><div class="text-[10px] md:text-xs opacity-75">${cd > 0 ? `(CD:${cd})` : ''}</div>`;
             }
             btn.disabled = cd > 0 || !isPlayerTurn || isAutoBattle || !combatActive || player.stunned > 0 || (player.silencedSlots && player.silencedSlots[slotIndex] > 0);
             btn.onmouseenter = () => { if (descDisplay && skill.desc) descDisplay.innerText = skill.desc; };
@@ -2103,7 +2107,6 @@ function endBattle(playerWon) {
             // Track zombie wave
             zombieWaveCount++;
             zombieConsecutiveWaves++;
-            let zs = ensureZombieStats();
             zs.maxWavesSurvived = Math.max(zs.maxWavesSurvived || 0, zombieConsecutiveWaves);
             // Check every-10-wave potion reward
             if(zombieConsecutiveWaves > 0 && zombieConsecutiveWaves % 10 === 0) {
