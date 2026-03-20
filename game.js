@@ -136,9 +136,7 @@ function playOscillator(oscType, startFreq, endFreq, startGain, duration, now, o
 }
 
 function playSound(type) {
-    if(typeof globalProgression === 'undefined') window.globalProgression = {};
-    if(!globalProgression.settings) globalProgression.settings = { sound: true, music: true };
-    if(!globalProgression.settings.sound) return;
+    if(typeof globalProgression === 'undefined' || !globalProgression.settings || !globalProgression.settings.sound) return;
     if (!audioCtx || audioCtx.state !== 'running') return;
     const now = audioCtx.currentTime;
 
@@ -319,7 +317,7 @@ function playBossSong1() {
     bass.connect(bassGain); bassGain.connect(audioCtx.destination);
     bassGain.gain.setValueAtTime(0, now); bassGain.gain.linearRampToValueAtTime(0.04, now + 3);
     bass.start(now); const bassEntry = {osc: bass, gain: bassGain}; activeOscillators.push(bassEntry);
-    bass.onended = () => { const i = activeOscillators.indexOf(bassEntry); if (i !== -1) activeOscillators.splice(i, 1); bassGain.disconnect(); };
+    bass.onended = () => { const i = activeOscillators.indexOf(bassEntry); if (i !== -1) activeOscillators.splice(i, 1); bass.disconnect(); bassGain.disconnect(); };
     // Slow melody
     const mel = audioCtx.createOscillator(); const melGain = audioCtx.createGain();
     mel.type = 'sine';
@@ -328,7 +326,7 @@ function playBossSong1() {
     mel.connect(melGain); melGain.connect(audioCtx.destination);
     melGain.gain.setValueAtTime(0, now); melGain.gain.linearRampToValueAtTime(0.025, now + 4);
     mel.start(now); const melEntry = {osc: mel, gain: melGain}; activeOscillators.push(melEntry);
-    mel.onended = () => { const i = activeOscillators.indexOf(melEntry); if (i !== -1) activeOscillators.splice(i, 1); melGain.disconnect(); };
+    mel.onended = () => { const i = activeOscillators.indexOf(melEntry); if (i !== -1) activeOscillators.splice(i, 1); mel.disconnect(); melGain.disconnect(); };
     const totalDur = melody.reduce((s, [f,d]) => s+d, 0);
     musicLoopTimeoutId = setTimeout(() => { if(globalProgression.settings.music && activeOscillators.length > 0) playBossSong1(); }, totalDur * 1000);
 }
@@ -345,7 +343,7 @@ function playBossSong2() {
     osc.connect(gain); gain.connect(audioCtx.destination);
     gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.035, now + 3);
     osc.start(now); const oscEntry = {osc, gain}; activeOscillators.push(oscEntry);
-    osc.onended = () => { const i = activeOscillators.indexOf(oscEntry); if (i !== -1) activeOscillators.splice(i, 1); gain.disconnect(); };
+    osc.onended = () => { const i = activeOscillators.indexOf(oscEntry); if (i !== -1) activeOscillators.splice(i, 1); osc.disconnect(); gain.disconnect(); };
     const totalDur = penta.reduce((s, [f,d]) => s+d, 0);
     musicLoopTimeoutId = setTimeout(() => { if(globalProgression.settings.music && activeOscillators.length > 0) playBossSong2(); }, totalDur * 1000);
 }
@@ -359,13 +357,14 @@ function playBossMusic() {
 function stopMusic() {
     if (musicLoopTimeoutId !== null) { clearTimeout(musicLoopTimeoutId); musicLoopTimeoutId = null; }
     if (!audioCtx) { activeOscillators = []; return; }
-    activeOscillators.forEach(o => {
+    const toStop = activeOscillators.slice();
+    activeOscillators = [];
+    toStop.forEach(o => {
         try { 
             o.gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
             setTimeout(() => { try { o.osc.stop(); if(o.lfo) o.lfo.stop(); } catch(e){ console.warn('Audio stop error:', e); } }, 1000);
         } catch(e){ console.warn('Audio ramp error:', e); }
     });
-    activeOscillators = [];
 }
 
 // --- GLOBAL & PLAYER STATE ---
@@ -792,7 +791,15 @@ function loadGameAndContinue() {
         const saved = savedKey ? localStorage.getItem(savedKey) : null;
 
         if (saved) {
-            const savedJson = saved.includes('|') ? saved.split('|')[0] : saved;
+            const parts = saved.includes('|') ? saved.split('|') : [saved];
+            const savedJson = parts[0];
+            if (parts.length >= 2) {
+                const storedChecksum = parts[1];
+                const computedChecksum = simpleHash(savedJson);
+                if (storedChecksum !== computedChecksum) {
+                    console.warn('loadGameAndContinue: checksum mismatch — save data may be corrupted (stored:', storedChecksum, 'computed:', computedChecksum, ')');
+                }
+            }
             const data = JSON.parse(savedJson);
             globalProgression = data.global;
             player = data.pState;
@@ -912,6 +919,10 @@ function loadGameAndContinue() {
             }
 
             showHub();
+        } else {
+            // No save found — return to main menu
+            console.warn('loadGameAndContinue: no save data found');
+            switchScreen('screen-menu');
         }
     } catch (err) {
         console.error('loadGameAndContinue: failed to load game:', err);
@@ -1064,8 +1075,9 @@ function getPlayerDef() {
     return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01) * (1 + getTitleStatBonus()));
 }
 
-// Returns the permanent base attributes for each class (cannot go below these)
-function getClassBaseAttributes(classId) {
+// Returns the permanent base attributes for each class (cannot go below these).
+// All classes share the same all-zero base; the parameter is unused but kept for API clarity.
+function getClassBaseAttributes(_classId) {
     return { hp: 0, tenacity: 0, agility: 0, willpower: 0, resistance: 0, reflexes: 0, fury: 0, happiness: 0, rawPower: 0, force: 0, revival: 0, return: 0, vampire: 0, defense: 0 };
 }
 
@@ -1113,12 +1125,12 @@ function showClassSelect() { switchScreen('screen-class-select'); }
 
 function confirmNewGame() {
     const modal = document.getElementById('modal-confirm-new-game');
-    modal.style.display = 'flex';
+    if (modal) modal.style.display = 'flex';
 }
 
 function closeConfirmNewGame() {
     const modal = document.getElementById('modal-confirm-new-game');
-    modal.style.display = 'none';
+    if (modal) modal.style.display = 'none';
 }
 
 function confirmNewGameYes() {
@@ -1143,16 +1155,21 @@ function changeClass() {
     const saveKey = 'EternalAscensionClassSave_' + player.classId;
     const data = JSON.stringify({ global: globalProgression, pState: player });
     const checksum = simpleHash(data);
-    localStorage.setItem(saveKey, data + "|" + checksum);
-    // Save current class's enemies to a class-specific key
-    if (savedEnemies && Object.keys(savedEnemies).length > 0) {
-        localStorage.setItem('EternalAscensionSavedEnemies_' + player.classId, JSON.stringify(savedEnemies));
-    } else {
-        localStorage.removeItem('EternalAscensionSavedEnemies_' + player.classId);
+    try {
+        localStorage.setItem(saveKey, data + "|" + checksum);
+        // Save current class's enemies to a class-specific key
+        if (savedEnemies && Object.keys(savedEnemies).length > 0) {
+            localStorage.setItem('EternalAscensionSavedEnemies_' + player.classId, JSON.stringify(savedEnemies));
+        } else {
+            localStorage.removeItem('EternalAscensionSavedEnemies_' + player.classId);
+        }
+        localStorage.removeItem('EternalAscensionSavedEnemies');
+    } catch(e) {
+        console.error('changeClass: localStorage write failed:', e);
+        alert('Warning: Could not save current class progress due to a storage error. Ensure you have storage space available and try again.');
     }
     // Clear in-memory savedEnemies so the next class starts clean
     savedEnemies = {};
-    localStorage.removeItem('EternalAscensionSavedEnemies');
     pendingNewGame = false;
     switchScreen('screen-class-select');
 }
@@ -1307,17 +1324,25 @@ function selectGenderAndStart(gender, chosenAvatar) {
 
         if (!isNewGame && classSave) {
             // Load existing class-specific save — restore both globalProgression and player
-            const savedJson = classSave.includes('|') ? classSave.split('|')[0] : classSave;
+            const classParts = classSave.includes('|') ? classSave.split('|') : [classSave];
+            const savedJson = classParts[0];
+            if (classParts.length >= 2) {
+                const storedChecksum = classParts[1];
+                const computedChecksum = simpleHash(savedJson);
+                if (storedChecksum !== computedChecksum) {
+                    console.warn('selectGenderAndStart: checksum mismatch on class save (stored:', storedChecksum, 'computed:', computedChecksum, ')');
+                }
+            }
             const data = JSON.parse(savedJson);
             globalProgression = data.global;
             player = data.pState;
-            // Apply defaults for any missing fields (same as loadGameAndContinue)
-            applyDefaults(globalProgression, { petFavorites: [] });
+            // Apply full defaults for all missing fields (same as loadGameAndContinue)
+            applyDefaults(globalProgression, makeInitialGlobalProgression());
+            applyDefaults(player, makeInitialPlayerState());
             // Preserve patchV1Applied so the migration never re-fires after class switch
             if (data.global.patchV1Applied) globalProgression.patchV1Applied = true;
             if(!globalProgression.inventory) globalProgression.inventory = {};
             if(globalProgression.inventory.magic_stone === undefined) globalProgression.inventory.magic_stone = 0;
-            applyDefaults(player, { nodeEnhancements: {} });
             player.classId = pendingClassId;
             player.data = CLASSES[player.classId];
             globalProgression.gender = gender;
@@ -1393,10 +1418,10 @@ function showHub() {
     if(heroMenu) heroMenu.classList.add('hidden');
 
     try {
-        document.getElementById('hub-gold').innerText = globalProgression.gold;
-        document.getElementById('hub-tickets').innerText = globalProgression.tickets || 0;
-        document.getElementById('hub-lvl').innerText = player.lvl;
-        document.getElementById('hub-class').innerText = player.data.name;
+        const elGold = getEl('hub-gold'); if (elGold) elGold.innerText = globalProgression.gold;
+        const elTickets = getEl('hub-tickets'); if (elTickets) elTickets.innerText = globalProgression.tickets || 0;
+        const elLvl = getEl('hub-lvl'); if (elLvl) elLvl.innerText = player.lvl;
+        const elClass = getEl('hub-class'); if (elClass) elClass.innerText = player.data.name;
         setAvatarDisplay('hub-avatar', player.data.avatar);
         // Apply Black Market Tier 1 avatar glow
         const hubAvatar = document.getElementById('hub-avatar');
@@ -1407,7 +1432,8 @@ function showHub() {
                 hubAvatar.classList.remove('bm-avatar-glow');
             }
         }
-        document.getElementById('hub-level-up-noti').classList.toggle('hidden', player.statPoints <= 0);
+        const elLvlUpNoti = getEl('hub-level-up-noti');
+        if (elLvlUpNoti) elLvlUpNoti.classList.toggle('hidden', player.statPoints <= 0);
 
         // Show highest earned zombie title badge
         const zs = globalProgression.zombieStats;
@@ -1528,11 +1554,17 @@ window.startGame = function(classId = 'warrior') {
 
 // --- SETTINGS ---
 function showSettings() {
-    document.getElementById('toggle-sound-btn').innerText = globalProgression.settings.sound ? 'ON' : 'OFF';
-    document.getElementById('toggle-sound-btn').className = `px-6 py-2 rounded font-bold text-white transition active:scale-95 ${globalProgression.settings.sound ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`;
-    
-    document.getElementById('toggle-music-btn').innerText = globalProgression.settings.music ? 'ON' : 'OFF';
-    document.getElementById('toggle-music-btn').className = `px-6 py-2 rounded font-bold text-white transition active:scale-95 ${globalProgression.settings.music ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`;
+    const soundBtn = document.getElementById('toggle-sound-btn');
+    if (soundBtn) {
+        soundBtn.innerText = globalProgression.settings.sound ? 'ON' : 'OFF';
+        soundBtn.className = `px-6 py-2 rounded font-bold text-white transition active:scale-95 ${globalProgression.settings.sound ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`;
+    }
+
+    const musicBtn = document.getElementById('toggle-music-btn');
+    if (musicBtn) {
+        musicBtn.innerText = globalProgression.settings.music ? 'ON' : 'OFF';
+        musicBtn.className = `px-6 py-2 rounded font-bold text-white transition active:scale-95 ${globalProgression.settings.music ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`;
+    }
 
     const gender = globalProgression.gender || 'male';
     const genderBtn = document.getElementById('toggle-gender-btn');
@@ -1679,7 +1711,7 @@ function showCodex() {
             html += `<div class="text-[10px] text-gray-300 mb-1">⚠️ MYTHIC BOSS</div>`;
             html += `<div class="text-[10px] text-pink-300 mb-1">Kills: ${kills}</div>`;
             if(!isClaimed) {
-                html += `<button onclick="claimCodexReward('${safeName}')" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 100G</button>`;
+                html += `<button onclick="claimCodexReward(${sanitizeHTML(JSON.stringify(bossName))})" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 100G</button>`;
             } else {
                 html += `<div class="text-xs text-gray-500 italic mt-auto">Claimed ✓</div>`;
             }
@@ -1720,7 +1752,7 @@ function showCodex() {
             const milestoneProgress = kills % 100;
             html += `<div class="text-4xl mb-1 drop-shadow-lg">${e.avatar}</div><div class="font-bold text-sm text-white">${safeName}</div><div class="text-[10px] text-gray-400 mb-1">HPx${e.hpMult} Dmgx${e.dmgMult}</div><div class="text-[10px] text-blue-400 mb-1">Kills: ${kills} (${milestoneProgress}/100)</div>`;
             if (!isClaimed) {
-                html += `<button onclick="claimCodexReward('${safeName}')" class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 20G</button>`;
+                html += `<button onclick="claimCodexReward(${sanitizeHTML(JSON.stringify(e.name))})" class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs py-1 rounded shadow-lg animate-pulse transition">Claim 20G</button>`;
             } else {
                 html += `<div class="text-xs text-gray-500 italic mt-auto">Claimed ✓</div>`;
             }
@@ -1932,9 +1964,13 @@ function gatherAction(type) {
         // Remove overlay
         const ol = document.getElementById('gather-overlay');
         if(ol) ol.remove();
-        if(herbBtn) herbBtn.disabled = false;
-        if(fishBtn) fishBtn.disabled = false;
-        if(enchBtn) enchBtn.disabled = false;
+        // Re-query buttons to avoid stale references after navigation
+        const hBtn = document.getElementById('btn-gather-herbs');
+        const fBtn = document.getElementById('btn-gather-fish');
+        const eBtn = document.getElementById('btn-gather-enchants');
+        if(hBtn) hBtn.disabled = false;
+        if(fBtn) fBtn.disabled = false;
+        if(eBtn) eBtn.disabled = false;
         
         const log = document.getElementById('story-log'); playSound('heal');
         
@@ -1948,8 +1984,8 @@ function gatherAction(type) {
 
         if(type === 'herbs') {
             const r1 = (Math.floor(Math.random()*3)+1) * 5; const r2 = (Math.floor(Math.random()*3)+1) * 5;
-            addToInventory('herb_red', r1); addToInventory('herb_blue', r2);
-            if(log) log.innerHTML = `<span class="text-green-400">Gathered ${r1} Crimson & ${r2} Azure Herbs! (+${gatherGold}G, +${xpGain}XP)</span>`;
+            const actualR1 = addToInventory('herb_red', r1); const actualR2 = addToInventory('herb_blue', r2);
+            if(log) log.innerHTML = `<span class="text-green-400">Gathered ${actualR1} Crimson & ${actualR2} Azure Herbs! (+${gatherGold}G, +${xpGain}XP)</span>`;
         } else if (type === 'fish') {
             const types = [1,2,3,4,5,6];
             const pick1 = types.splice(Math.floor(Math.random()*types.length), 1)[0]; const pick2 = types.splice(Math.floor(Math.random()*types.length), 1)[0];
@@ -2011,8 +2047,7 @@ function gambleGold(amount) {
 
 function checkLevelUp() {
     let levelsGained = 0;
-    // Cap at 5 levels per call to prevent huge jumps from large XP gains (e.g. quest rewards)
-    const MAX_LEVELS_PER_CHECK = 5;
+    const MAX_LEVELS_PER_CHECK = 100;
     while (player.lvl < MAX_LEVEL && levelsGained < MAX_LEVELS_PER_CHECK) {
         const xpNeeded = getXpForNextLevel(player.lvl);
         if (player.xp < xpNeeded) break;
@@ -2028,7 +2063,8 @@ function checkLevelUp() {
         player.currentHp = player.maxHp;
         if (typeof clampAttributes === 'function') clampAttributes();
         playSound('win');
-        document.getElementById('hub-level-up-noti').classList.remove('hidden');
+        const lvlUpNoti = document.getElementById('hub-level-up-noti');
+        if (lvlUpNoti) lvlUpNoti.classList.remove('hidden');
     }
 }
 
