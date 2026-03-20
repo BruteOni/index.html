@@ -399,7 +399,7 @@ let activeDungeonTier = 1; let activeDungeonRoom = 1;
 let isPlayerTurn = true; let combatLog = []; let isAutoBattle = false; let combatActive = false; let battleEnding = false;
 let activeGraveyardBoss = null;
 // Invasion state
-let invasionTotalKills = 0; let invasionKillGoal = 10; let invasionMaxOnScreen = 4; let invasionSpawned = 0;
+let invasionTotalKills = 0; let invasionKillGoal = 10; let invasionMaxOnScreen = 5; let invasionSpawned = 0;
 // Zombie Apocalypse wave state
 let zombieWaveCount = 0;
 let zombieConsecutiveWaves = 0;

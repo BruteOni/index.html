@@ -1996,8 +1996,8 @@ function endBattle(playerWon) {
             return; 
         }
 
-        // Track enemy kills for codex milestones
-        enemies.forEach(e => {
+        // Track enemy kills for codex milestones (skip zombies in invasion mode)
+        if(currentMode !== 'invasion') enemies.forEach(e => {
             let baseName = e.isMythicBoss ? e.name : e.name.replace(/^(Rare |Epic |Legendary |Mythic )/, '');
             if(!globalProgression.enemyKillCounts) globalProgression.enemyKillCounts = {};
             globalProgression.enemyKillCounts[baseName] = (globalProgression.enemyKillCounts[baseName] || 0) + 1;

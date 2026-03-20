@@ -459,7 +459,7 @@ function startInvasion() {
     invasionTotalKills = 0;
     invasionSpawned = 0;
     invasionKillGoal = 0; // 0 = unlimited (continuous until player leaves or energy runs out)
-    invasionMaxOnScreen = 4;
+    invasionMaxOnScreen = 5;
     currentMode = 'invasion';
     saveGame();
     startBattle(true);
