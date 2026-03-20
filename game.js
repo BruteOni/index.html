@@ -414,7 +414,7 @@ let zombieConsecutiveWaves = 0;
 let zombieSessionKills = 0;
 // Pet battle state
 let petBattlePlayerPet = null; let petBattleEnemyPet = null; let petBattleActive = false;
-let petBattlePlayerHp = 10; let petBattleEnemyHp = 10; let petBattleLastAction = null; let petBattleEnemyLastAction = null;
+let petBattlePlayerHp = 5; let petBattleEnemyHp = 5; let petBattleLastAction = null; let petBattleEnemyLastAction = null;
 let petBattleAutoMode = false; let petBattleAutoTimer = null;
 
 // --- ENERGY SYSTEM ---
@@ -438,6 +438,13 @@ const ENERGY_REGEN_INTERVAL_MS = 300000; // 1 energy per 5 minutes
 function updateEnergy() {
     const maxEnergy = getMaxEnergy();
     const now = Date.now();
+    // Defensive: ensure energy values are valid numbers (can be undefined/NaN on file:// protocol)
+    if (typeof globalProgression.energy !== 'number' || isNaN(globalProgression.energy)) {
+        globalProgression.energy = maxEnergy;
+    }
+    if (typeof globalProgression.lastEnergyTime !== 'number' || isNaN(globalProgression.lastEnergyTime)) {
+        globalProgression.lastEnergyTime = now;
+    }
     const msPassed = now - globalProgression.lastEnergyTime;
     const ticksPassed = Math.floor(msPassed / ENERGY_REGEN_INTERVAL_MS);
     if (globalProgression.energy < maxEnergy) {
@@ -528,6 +535,10 @@ setInterval(() => { if (needsSave) { saveGame(); needsSave = false; } }, 30000);
 
 function consumeEnergy(amount) {
     if (!Number.isFinite(amount) || amount <= 0) return false;
+    // Defensive: ensure energy is a valid number (can be undefined/NaN on file:// protocol)
+    if (typeof globalProgression.energy !== 'number' || isNaN(globalProgression.energy)) {
+        globalProgression.energy = getMaxEnergy();
+    }
     if(globalProgression.energy >= amount) { globalProgression.energy -= amount; let maxEnergy = getMaxEnergy(); if(globalProgression.energy === maxEnergy - amount) globalProgression.lastEnergyTime = Date.now(); saveGame(); updateEnergy(); return true; }
     return false;
 }
@@ -816,7 +827,7 @@ function loadGameAndContinue() {
                 // Safety guard: warn if patch fires on a save that already has significant progress.
                 // Point budget formula: 1 point per level up to 50, then 2 points per level above 50.
                 const spentPoints = (player.statPoints !== undefined && player.lvl > 0)
-                    ? Math.min(player.lvl, 50) + Math.max(0, player.lvl - 50) * 2 - (player.statPoints || 0)
+                    ? (player.lvl * 2) - (player.statPoints || 0)
                     : 0;
                 if (spentPoints > 5 || (player.skillMenuProgress || 0) > 3) {
                     console.warn('PatchV1: firing on save with significant progress — statPoints spent:', spentPoints, 'skillMenuProgress:', player.skillMenuProgress || 0);
@@ -844,7 +855,7 @@ function loadGameAndContinue() {
                 player.unlockedSkills = [0, 1, 2];
                 player.equippedSkills = [0, 1, 2, null, null];
                 // Recalculate stat points based on new formula
-                let newMaxBudget = Math.min(player.lvl || 0, 50) + Math.max(0, (player.lvl || 0) - 50) * 2;
+                let newMaxBudget = (player.lvl || 0) * 2;
                 player.statPoints = Math.max(0, newMaxBudget);
                 player.skillPoints = (player.skillPoints || 0) + skillTreeRefund;
                 globalProgression.patchV1Applied = true;
@@ -1859,7 +1870,7 @@ function checkLevelUp() {
         player.lvl++;
         player.xp -= xpNeeded;
         // Levels 1-50 give 1 stat point each; levels above 50 give 2 stat points each
-        player.statPoints += (player.lvl <= 50 ? 1 : 2);
+        player.statPoints += 2;
         player.skillPoints++;
         levelsGained++;
     }

@@ -579,8 +579,8 @@ function startPetBattle(playerPetId) {
     // Random enemy pet from full pool
     petBattleEnemyPet = PET_DATA[Math.floor(Math.random() * PET_DATA.length)];
     petBattleActive = true;
-    petBattlePlayerHp = 10;
-    petBattleEnemyHp = 10;
+    petBattlePlayerHp = 5;
+    petBattleEnemyHp = 5;
     petBattleLastAction = null;
     petBattleEnemyLastAction = null;
 
@@ -605,10 +605,10 @@ function startPetBattle(playerPetId) {
 function updatePetBattleUI() {
     document.getElementById('pb-player-hp').innerText = Math.max(0, petBattlePlayerHp).toFixed(1);
     document.getElementById('pb-enemy-hp').innerText = Math.max(0, petBattleEnemyHp).toFixed(1);
-    document.getElementById('pb-player-hp-bar').style.width = Math.max(0, (petBattlePlayerHp / 10) * 100) + '%';
-    document.getElementById('pb-enemy-hp-bar').style.width = Math.max(0, (petBattleEnemyHp / 10) * 100) + '%';
-    document.getElementById('pb-player-hp-bar').className = `h-2 rounded-full transition-all ${petBattlePlayerHp > 5 ? 'bg-green-500' : petBattlePlayerHp > 2 ? 'bg-yellow-500' : 'bg-red-500'}`;
-    document.getElementById('pb-enemy-hp-bar').className = `h-2 rounded-full transition-all ${petBattleEnemyHp > 5 ? 'bg-green-500' : petBattleEnemyHp > 2 ? 'bg-yellow-500' : 'bg-red-500'}`;
+    document.getElementById('pb-player-hp-bar').style.width = Math.max(0, (petBattlePlayerHp / 5) * 100) + '%';
+    document.getElementById('pb-enemy-hp-bar').style.width = Math.max(0, (petBattleEnemyHp / 5) * 100) + '%';
+    document.getElementById('pb-player-hp-bar').className = `h-2 rounded-full transition-all ${petBattlePlayerHp > 2.5 ? 'bg-green-500' : petBattlePlayerHp > 1 ? 'bg-yellow-500' : 'bg-red-500'}`;
+    document.getElementById('pb-enemy-hp-bar').className = `h-2 rounded-full transition-all ${petBattleEnemyHp > 2.5 ? 'bg-green-500' : petBattleEnemyHp > 1 ? 'bg-yellow-500' : 'bg-red-500'}`;
 
     // Update cooldown info and button visuals
     let cdText = (petBattleLastAction && petBattleLastAction !== 'attack') ? `⏱ ${petBattleLastAction.charAt(0).toUpperCase() + petBattleLastAction.slice(1)} is on cooldown for 1 turn` : '';
@@ -767,8 +767,8 @@ function petBattleRoundEnd(playerWon) {
         document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
         // Heal and start next round
         setTimeout(() => {
-            petBattlePlayerHp = 10;
-            petBattleEnemyHp = 10;
+            petBattlePlayerHp = 5;
+            petBattleEnemyHp = 5;
             petBattleLastAction = null;
             petBattleEnemyLastAction = null;
             // Check energy for next round
@@ -805,8 +805,8 @@ function petBattleRoundEnd(playerWon) {
         // Draw
         document.getElementById('pb-result-text').innerText = "Draw! Both pets fell — healing for next round.";
         setTimeout(() => {
-            petBattlePlayerHp = 10;
-            petBattleEnemyHp = 10;
+            petBattlePlayerHp = 5;
+            petBattleEnemyHp = 5;
             petBattleLastAction = null;
             petBattleEnemyLastAction = null;
             updatePetBattleUI();

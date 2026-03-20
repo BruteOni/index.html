@@ -1997,7 +1997,7 @@ function endBattle(playerWon) {
         ps.currentWinStreak = (ps.currentWinStreak || 0) + 1;
         if (ps.currentWinStreak > ps.longestWinStreak) ps.longestWinStreak = ps.currentWinStreak;
         ps.totalKills += killCount;
-        enemies.forEach(e => { if (e.isBoss) ps.bossesDefeated++; if (e.isMythicBoss) ps.mythicBossFound++; });
+        enemies.forEach(e => { if (e.isBoss) ps.bossesDefeated++; if (e.isMythicBoss) { ps.mythicBossKilled = (ps.mythicBossKilled || 0) + 1; } });
         if (currentMode === 'dungeon' && activeDungeonRoom === 5 && activeDungeonTier > (ps.maxDungeonCleared || 0)) ps.maxDungeonCleared = activeDungeonTier;
         if (player.lvl > (ps.levelReached || 0)) ps.levelReached = player.lvl;
         if (globalProgression.gold > (ps.highestGold || 0)) ps.highestGold = globalProgression.gold;

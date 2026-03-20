@@ -319,8 +319,11 @@
     <!-- MAGICAL ENHANCER SCREEN -->
     <div id="screen-magical-enhancer" class="screen py-8" style="overflow-y:auto;">
         <div class="w-full max-w-xl px-4 flex flex-col pb-8">
-            <div class="flex justify-between items-center mb-6">
-                <button onclick="showMerchants()" class="btn-back self-start text-blue-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button>
+            <div class="flex flex-col gap-2 mb-6">
+                <div class="flex gap-2">
+                    <button onclick="showMerchants()" class="btn-back self-start text-blue-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button>
+                    <button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button>
+                </div>
                 <div class="flex gap-2">
                     <div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-yellow-700 shadow-md">💰 <span id="me-gold-display">0</span></div>
                     <div class="text-sm font-bold text-blue-300 bg-gray-800 px-3 py-1 rounded-full border border-blue-700 shadow-md">💎 <span id="me-stones-display">0</span></div>
@@ -726,10 +729,10 @@
     </div>
 
     <!-- ALCHEMIST (Crafting Potions) -->
-    <div id="screen-alchemist" class="screen py-8"><div class="w-full max-w-xl px-4 flex flex-col h-full"><div class="flex justify-between items-center mb-6"><div class="flex gap-2"><button onclick="showMerchants()" class="btn-back self-start text-green-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button><button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button></div><div class="flex gap-2"><div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-gray-700 shadow-md">💰 <span id="alch-gold-display">0</span></div><div class="text-sm font-bold text-green-400 bg-gray-800 px-3 py-1 rounded-full border border-gray-700 shadow-md">🌺 <span id="alch-herb-red">0</span> | 💠 <span id="alch-herb-blue">0</span></div></div></div><h2 class="text-3xl font-bold mb-4 text-green-400 text-center tracking-widest">THE ALCHEMIST</h2><p class="text-xs text-gray-400 text-center mb-6">Use herbs gathered from the Wilds to craft potent elixirs.</p><div id="alch-craft-list" class="grid grid-cols-1 gap-3"></div></div></div>
+    <div id="screen-alchemist" class="screen py-8"><div class="w-full max-w-xl px-4 flex flex-col h-full"><div class="flex flex-col gap-2 mb-6"><div class="flex gap-2"><button onclick="showMerchants()" class="btn-back self-start text-green-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button><button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button></div><div class="flex gap-2"><div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-gray-700 shadow-md">💰 <span id="alch-gold-display">0</span></div><div class="text-sm font-bold text-green-400 bg-gray-800 px-3 py-1 rounded-full border border-gray-700 shadow-md">🌺 <span id="alch-herb-red">0</span> | 💠 <span id="alch-herb-blue">0</span></div></div></div><h2 class="text-3xl font-bold mb-4 text-green-400 text-center tracking-widest">THE ALCHEMIST</h2><p class="text-xs text-gray-400 text-center mb-6">Use herbs gathered from the Wilds to craft potent elixirs.</p><div id="alch-craft-list" class="grid grid-cols-1 gap-3"></div></div></div>
 
     <!-- CHEF (Crafting Foods) -->
-    <div id="screen-chef" class="screen py-8"><div class="w-full max-w-xl px-4 flex flex-col h-full"><div class="flex justify-between items-center mb-6"><div class="flex gap-2"><button onclick="showMerchants()" class="btn-back self-start text-orange-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button><button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button></div><div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-gray-700 shadow-md">💰 <span id="chef-gold-display">0</span></div></div><h2 class="text-3xl font-bold mb-2 text-orange-400 text-center tracking-widest">THE CHEF</h2><p class="text-xs text-gray-400 text-center mb-6">Bring fresh fish and Gold to cook powerful combat buffs!</p><div id="chef-craft-list" class="grid grid-cols-1 gap-3"></div><div id="chef-log" class="text-center text-yellow-400 font-bold mt-4 h-6"></div></div></div>
+    <div id="screen-chef" class="screen py-8"><div class="w-full max-w-xl px-4 flex flex-col h-full"><div class="flex flex-col gap-2 mb-6"><div class="flex gap-2"><button onclick="showMerchants()" class="btn-back self-start text-orange-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button><button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button></div><div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-gray-700 shadow-md self-start">💰 <span id="chef-gold-display">0</span></div></div><h2 class="text-3xl font-bold mb-2 text-orange-400 text-center tracking-widest">THE CHEF</h2><p class="text-xs text-gray-400 text-center mb-6">Bring fresh fish and Gold to cook powerful combat buffs!</p><div id="chef-craft-list" class="grid grid-cols-1 gap-3"></div><div id="chef-log" class="text-center text-yellow-400 font-bold mt-4 h-6"></div></div></div>
 
     <div id="screen-well" class="screen py-8">
         <div class="w-full max-w-xl px-4 flex flex-col h-full">
@@ -785,12 +788,12 @@
     <!-- EQUIPMENT SHOP -->
     <div id="screen-shop" class="screen py-8">
         <div class="w-full max-w-xl px-4 flex flex-col h-full">
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex flex-col gap-2 mb-6">
                 <div class="flex gap-2">
                     <button onclick="showMerchants()" class="btn-back self-start text-gray-300 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button>
                     <button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button>
                 </div>
-                <div class="text-xl font-bold text-yellow-500 bg-gray-800 px-4 py-1 rounded-full border border-gray-700 shadow-md">💰 <span id="shop-gold-display">0</span></div>
+                <div class="text-xl font-bold text-yellow-500 bg-gray-800 px-4 py-1 rounded-full border border-gray-700 shadow-md self-start">💰 <span id="shop-gold-display">0</span></div>
             </div>
             <h2 class="text-3xl font-bold mb-4 text-gray-300 text-center tracking-widest">GEAR SHOP</h2>
             
@@ -1044,7 +1047,7 @@
     <!-- BURGLAR SCREEN -->
     <div id="screen-burglar" class="screen py-8" style="overflow-y:auto;">
         <div class="w-full max-w-xl px-4 flex flex-col pb-8">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex flex-col gap-2 mb-4">
                 <div class="flex gap-2">
                     <button onclick="showMerchants()" class="btn-back text-red-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button>
                     <button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button>
@@ -1064,7 +1067,7 @@
     <!-- WEAPON SMITH SCREEN -->
     <div id="screen-weaponsmith" class="screen py-8">
         <div class="w-full max-w-xl px-4 flex flex-col pb-8">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex flex-col gap-2 mb-4">
                 <div class="flex gap-2">
                     <button onclick="showMerchants()" class="btn-back text-yellow-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Merchants</button>
                     <button onclick="showHub()" class="btn-back text-gray-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>🏠</span> Town</button>
@@ -1195,7 +1198,7 @@
                         <div class="text-center flex-1">
                             <div id="pb-player-emoji" class="text-5xl mb-1">🐾</div>
                             <div id="pb-player-name" class="font-bold text-pink-300 text-sm">Your Pet</div>
-                            <div class="text-xs text-gray-400 mt-1">HP: <span id="pb-player-hp" class="text-green-400 font-bold">10</span>/10</div>
+                            <div class="text-xs text-gray-400 mt-1">HP: <span id="pb-player-hp" class="text-green-400 font-bold">5</span>/5</div>
                             <div class="w-full bg-gray-700 rounded-full h-2 mt-1"><div id="pb-player-hp-bar" class="bg-green-500 h-2 rounded-full transition-all" style="width:100%"></div></div>
                             <div id="pb-player-record" class="text-xs text-gray-400 mt-1">W: 0 / L: 0</div>
                         </div>
@@ -1203,7 +1206,7 @@
                         <div class="text-center flex-1">
                             <div id="pb-enemy-emoji" class="text-5xl mb-1">❓</div>
                             <div id="pb-enemy-name" class="font-bold text-orange-300 text-sm">Enemy Pet</div>
-                            <div class="text-xs text-gray-400 mt-1">HP: <span id="pb-enemy-hp" class="text-green-400 font-bold">10</span>/10</div>
+                            <div class="text-xs text-gray-400 mt-1">HP: <span id="pb-enemy-hp" class="text-green-400 font-bold">5</span>/5</div>
                             <div class="w-full bg-gray-700 rounded-full h-2 mt-1"><div id="pb-enemy-hp-bar" class="bg-green-500 h-2 rounded-full transition-all" style="width:100%"></div></div>
                             <div id="pb-enemy-record" class="text-xs text-gray-400 mt-1">W: 0 / L: 0</div>
                         </div>

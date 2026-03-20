@@ -196,8 +196,7 @@ function getTotalSpentPoints() {
 }
 
 function getMaxAttributePoints() {
-    // Levels 1-50 contribute 1 point each; levels above 50 contribute 2 points each
-    return Math.min(player.lvl, 50) + Math.max(0, player.lvl - 50) * 2;
+    return player.lvl * 2;
 }
 
 function clampAttributes() {
