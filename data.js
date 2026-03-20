@@ -249,8 +249,8 @@ const CLASSES = {
             { name: 'Face Kick', type: 'attack', mult: 2.0, effect: { stunChance: 1.0 }, self_effect: { vampPct: 0.10, vampTurns: 3 }, cd: 7, color: 'bg-green-700', desc: 'Base damage +100% + Stun (1t) + 10% Vamp (3t)' },
             // Index 2: Backhand Slap - base+250% + 1 burn + Ruthless buff +20% dmg 3t, 8 CD
             { name: 'Backhand Slap', type: 'attack', mult: 3.5, effect: { burnStacks: 1, burnTurns: 3 }, self_effect: { dmgBuff: 0.20, dmgBuffTurns: 3 }, cd: 8, color: 'bg-purple-700', desc: 'Base damage +250% + Burn (3t) + Ruthless: +20% damage (3t)' },
-            // Index 3: Kunai Swarm - base+60% AOE + 1 burn all enemies, 7 CD
-            { name: 'Kunai Swarm', type: 'attack', mult: 1.60, target: 'all', effect: { burnStacks: 1, burnTurns: 3 }, cd: 7, color: 'bg-orange-700', desc: 'Base damage +60% AOE + Burn all enemies (3t)' },
+            // Index 3: Kunai Swarm - base+60% AOE + 1 burn all enemies, 8 CD
+            { name: 'Kunai Swarm', type: 'attack', mult: 1.60, target: 'all', effect: { burnStacks: 1, burnTurns: 3 }, cd: 8, color: 'bg-orange-700', desc: 'Base damage +60% AOE + Burn all enemies (3t)' },
             // Index 4: Giant Shuriken - base+350% + 2 bleed stacks + ninja-turn dodge 2t, 9 CD
             { name: 'Giant Shuriken', type: 'attack', mult: 4.50, effect: { bleedStacks: 2, bleedTurns: 5 }, self_effect: { ninjaDodgeTurns: 2 }, cd: 9, color: 'bg-lime-700', desc: 'Base damage +350% + 2 Bleed stacks + Dodge all attacks (2 ninja turns)' },
             // Index 5: Shuriken Rain - base+70% AOE + 10% vamp 4t + Rain free hit 4t, 8 CD
@@ -258,9 +258,7 @@ const CLASSES = {
             // Index 6: Throw - base+80% + stun 1t, 5 CD
             { name: 'Throw', type: 'attack', mult: 1.80, effect: { stunChance: 1.0 }, cd: 5, color: 'bg-purple-700', desc: 'Base damage +80% + Stun (1t)' },
             // Index 7: Bloodbath - 40% vamp 4t + bleed all enemies 4t, 8 CD
-            { name: 'Bloodbath', type: 'buff', special: 'bloodbath', self_effect: { vampPct: 0.40, vampTurns: 4 }, cd: 8, color: 'bg-red-800', desc: '40% Vamp (4t) + Inflict Bleed on all enemies (4t)' },
-            // Index 8: Dismemberment - base+70% + 10% HP damage + enemy DEF to 0 for 3t, 8 CD
-            { name: 'Dismemberment', type: 'attack', mult: 1.70, special: 'dismemberment', hpDamagePct: 0.10, defZeroTurns: 3, cd: 8, color: 'bg-yellow-400', desc: 'Base damage +70% + 10% enemy HP damage + Enemy DEF to 0 (3t)' }
+            { name: 'Bloodbath', type: 'buff', special: 'bloodbath', self_effect: { vampPct: 0.40, vampTurns: 4 }, cd: 8, color: 'bg-red-800', desc: '40% Vamp (4t) + Inflict Bleed on all enemies (4t)' }
         ]
     },
     cleric: {
