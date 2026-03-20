@@ -430,21 +430,21 @@ let player = {
     skillMenuProgress: 0, skillMenuBonusDmgPct: 0, skillMenuBonusDefPct: 0, skillMenuBonusHpPct: 0, skillMenuInfiniteAtk: 0
 };
 
-const enemies = []; let savedEnemies = {}; const activeTargetIndex = 0; const currentMode = 'none'; 
+let enemies = []; let savedEnemies = {}; let activeTargetIndex = 0; let currentMode = 'none'; 
 const NON_PERSIST_MODES = ['quest', 'training', 'graveyard', 'invasion', 'dungeon'];
-const activeDungeonTier = 1; const activeDungeonRoom = 1; 
-const isPlayerTurn = true; const combatLog = []; const isAutoBattle = false; const combatActive = false; const battleEnding = false;
-const activeGraveyardBoss = null;
+let activeDungeonTier = 1; let activeDungeonRoom = 1; 
+let isPlayerTurn = true; let combatLog = []; let isAutoBattle = false; let combatActive = false; let battleEnding = false;
+let activeGraveyardBoss = null;
 // Invasion state
-const invasionTotalKills = 0; const invasionKillGoal = 10; const invasionMaxOnScreen = 5; const invasionSpawned = 0;
+let invasionTotalKills = 0; let invasionKillGoal = 10; let invasionMaxOnScreen = 5; let invasionSpawned = 0;
 // Zombie Apocalypse wave state
-const zombieWaveCount = 0;
-const zombieConsecutiveWaves = 0;
-const zombieSessionKills = 0;
+let zombieWaveCount = 0;
+let zombieConsecutiveWaves = 0;
+let zombieSessionKills = 0;
 // Pet battle state
-const petBattlePlayerPet = null; const petBattleEnemyPet = null; const petBattleActive = false;
-const petBattlePlayerHp = 5; const petBattleEnemyHp = 5; const petBattleLastAction = null; const petBattleEnemyLastAction = null;
-const petBattleAutoMode = false; const petBattleAutoTimer = null;
+let petBattlePlayerPet = null; let petBattleEnemyPet = null; let petBattleActive = false;
+let petBattlePlayerHp = 5; let petBattleEnemyHp = 5; let petBattleLastAction = null; let petBattleEnemyLastAction = null;
+let petBattleAutoMode = false; let petBattleAutoTimer = null;
 
 // --- ENERGY SYSTEM ---
 
