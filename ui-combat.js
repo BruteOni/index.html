@@ -2071,10 +2071,19 @@ function startPlayerTurn() {
 
 // --- BATTLE REWARDS ---
 function endBattle(playerWon) {
-    if(!combatActive || battleEnding) return;  // Already ended or ending — prevent double-fire
+    if(!combatActive || battleEnding) {
+        // Ensure the town button always works even when guard fires on a stale end screen
+        const btnHub = document.getElementById('btn-end-hub');
+        if(btnHub) { btnHub.innerText = 'Return to Goldcrest Town'; btnHub.onclick = returnToTown; }
+        return;  // Already ended or ending — prevent double-fire
+    }
     battleEnding = true;
     stopMusic();
-    combatActive = false; 
+    combatActive = false;
+
+    // Reset the hub button to its default state; mode-specific overrides happen below
+    const btnEndHub = document.getElementById('btn-end-hub');
+    if(btnEndHub) { btnEndHub.innerText = 'Return to Goldcrest Town'; btnEndHub.onclick = returnToTown; }
     
     if(!playerWon) {
         isAutoBattle = false; const autoBtn = document.getElementById('btn-auto'); if(autoBtn) autoBtn.classList.remove('auto-on');

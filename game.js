@@ -918,6 +918,11 @@ function loadGameAndContinue() {
                 globalProgression.patchV1Applied = true;
             }
 
+            // Ensure clean state — prevent stale combat flags from a previous session
+            combatActive = false;
+            battleEnding = false;
+            enemies = [];
+
             showHub();
         } else {
             // No save found — return to main menu
@@ -932,10 +937,12 @@ function loadGameAndContinue() {
 }
 window.onload = () => {
     if (LEGACY_SAVE_KEYS.some(k => localStorage.getItem(k))) {
-        document.getElementById('btn-continue-save').classList.remove('hidden');
+        // Auto-resume the saved game so the player is never left on a stale screen
+        loadGameAndContinue();
+    } else {
+        updateEnergy();
+        updateHp();
     }
-    updateEnergy();
-    updateHp();
 };
 
 // --- UTILS & MATH ---
@@ -1087,6 +1094,11 @@ function getClassAttrCap(classId, attrId) {
 }
 
 function switchScreen(screenId) {
+    // Safety net: if screen-end is requested but no battle is actively ending, go to hub instead
+    if (screenId === 'screen-end' && !combatActive && !battleEnding &&
+            typeof player !== 'undefined' && player && player.classId) {
+        if (typeof showHub === 'function') { showHub(); return; }
+    }
     if (typeof clampAttributes === 'function' && typeof player !== 'undefined' && player && player.classId && typeof globalProgression !== 'undefined' && globalProgression && globalProgression.attributes) {
         try { clampAttributes(); player.maxHp = calculateMaxHp(); player.currentHp = Math.min(player.currentHp, player.maxHp); } catch(e) { console.error('switchScreen: clampAttributes failed', e); }
     }
@@ -1221,10 +1233,10 @@ function showGenderSelect(classId) {
             const attemptPlay = () => {
                 video.play().then(() => {
                     removeTapOverlay();
-                    // On mobile: video is now playing muted — try to unmute
-                    if (isMobile && video.muted) {
-                        video.muted = false;
-                    }
+                    // On mobile: video is playing muted — do NOT immediately unmute.
+                    // Attempting video.muted = false right after play() can pause playback
+                    // on iOS Safari and some Android browsers. The tap-to-play overlay
+                    // (shown on autoplay block) already handles unmuting on user gesture.
                 }).catch(err => {
                     console.warn('Autoplay blocked:', err);
                     if (!video.muted) {
