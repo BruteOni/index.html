@@ -881,7 +881,7 @@ function loadGameAndContinue() {
                     console.warn('PatchV1: firing on save with significant progress — statPoints spent:', spentPoints, 'skillMenuProgress:', player.skillMenuProgress || 0);
                 }
                 // Respec all attributes to base values and refund points
-                const patchAttrs = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','vampire','defense','happiness'];
+                const patchAttrs = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','return','vampire','defense','happiness'];
                 let patchClassBase = getClassBaseAttributes(player.classId || 'warrior');
                 let patchRefund = 0;
                 patchAttrs.forEach(stat => {
@@ -1064,7 +1064,7 @@ function getPlayerDef() {
 
 // Returns the permanent base attributes for each class (cannot go below these)
 function getClassBaseAttributes(classId) {
-    return { hp: 0, tenacity: 0, agility: 0, willpower: 0, resistance: 0, reflexes: 0, fury: 0, happiness: 0, rawPower: 0, force: 0, revival: 0, vampire: 0, defense: 0 };
+    return { hp: 0, tenacity: 0, agility: 0, willpower: 0, resistance: 0, reflexes: 0, fury: 0, happiness: 0, rawPower: 0, force: 0, revival: 0, return: 0, vampire: 0, defense: 0 };
 }
 
 // Returns the per-class attribute caps

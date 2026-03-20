@@ -1909,6 +1909,17 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     }
 
     // Reflect: from gear bonusDmgReflect (tenacity no longer directly provides reflect)
+    // Return attribute: reflects 0.25% of damage received per point back to attacker
+    let returnReflectPct = (a['return'] || 0) * 0.0025;
+    if(returnReflectPct > 0 && attackerEnemy && attackerEnemy.currentHp > 0) {
+        let returnDmg = Math.max(1, Math.floor(dmg * returnReflectPct));
+        attackerEnemy.currentHp = Math.max(0, attackerEnemy.currentHp - returnDmg);
+        let eIdx = enemies.indexOf(attackerEnemy);
+        if(eIdx >= 0) showFloatText('enemy-card-' + eIdx, '-' + returnDmg + ' 🔁', 'text-amber-400');
+        addLog(`Return! Returned ${returnDmg} dmg back to ${attackerEnemy.name}!`, 'text-amber-400');
+    }
+
+    // Reflect: from gear bonusDmgReflect (tenacity no longer directly provides reflect)
     let reflectPct = getEquipBonusStat('bonusDmgReflect');
     let fireShieldActive = player.activeBuffs && player.activeBuffs.some(b => b.type === 'fire_shield');
     if(fireShieldActive) reflectPct += 1.0; // Fire Shield reflects 100%

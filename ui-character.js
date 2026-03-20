@@ -99,6 +99,8 @@ function showCharacter() {
     setStat('char-stat-dmgred', `${(((a.tenacity || 0) * 0.003 + getEquipBonusStat('bonusDmgReduction')) * 100).toFixed(1)}%`);
     // Dmg Reflect: gear bonusDmgReflect only (tenacity no longer directly gives reflect)
     setStat('char-stat-reflect', `${(getEquipBonusStat('bonusDmgReflect') * 100).toFixed(2)}%`);
+    // Return: return attr 0.25% per point
+    setStat('char-stat-return', `${(((a['return'] || 0) * 0.0025) * 100).toFixed(2)}%`);
     // Skill Dmg: gear bonusSkillDmg
     setStat('char-stat-skilldmg', `${(getEquipBonusStat('bonusSkillDmg') * 100).toFixed(1)}%`);
     // Armor Pierce: reflexes 0.3% per point + gear bonusArmorPierce

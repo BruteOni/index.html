@@ -1,5 +1,5 @@
 // --- ATTRIBUTE CONSTANTS ---
-const ATTRIBUTE_KEYS = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','vampire','defense','happiness'];
+const ATTRIBUTE_KEYS = ['hp','tenacity','agility','willpower','resistance','reflexes','fury','rawPower','force','revival','return','vampire','defense','happiness'];
 
 function getPlayerClassBase() {
     const classId = player.classId || 'warrior';
@@ -28,6 +28,7 @@ function showAttributes() {
         { id: 'force',      name: 'Force',        desc: '+0.5% crit rate per point', color: 'text-cyan-400' },
         { id: 'fury',       name: 'Fury',         desc: '+0.25% crit damage per point', color: 'text-red-500' },
         { id: 'revival',    name: 'Revival',      desc: '+0.2% HP regen per turn per point', color: 'text-emerald-400' },
+        { id: 'return',     name: 'Return',       desc: '+0.25% damage reflected back to attacker per point', color: 'text-amber-400' },
     ];
 
     attrDefs.forEach((a, idx) => {
@@ -55,11 +56,8 @@ function showAttributes() {
         const levelDisplay = `Lv. ${currentVal}${capDisplay}`;
         const baseNote = (minVal > 0) ? ` <span class="text-yellow-500 text-[9px]">(base ${minVal})</span>` : '';
 
-        // Revival spans full width (13th attribute)
-        const isRevival = a.id === 'revival';
-
         const btn = document.createElement('div');
-        btn.className = "flex flex-col bg-gray-900 p-1.5 rounded-lg border border-gray-700 shadow-sm" + (isRevival ? " col-span-2" : "");
+        btn.className = "flex flex-col bg-gray-900 p-1.5 rounded-lg border border-gray-700 shadow-sm";
 
         btn.innerHTML = `
             <div class="w-full mb-1">
