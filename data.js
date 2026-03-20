@@ -245,16 +245,16 @@ const CLASSES = {
         skills: [
             // Index 0-2: always unlocked
             { name: 'Shuriken Hit', type: 'attack', mult: 0.333, hits: 3, cd: 0, color: 'bg-gray-700', desc: '3 hits, each hit = 1/3 base damage' },
-            { name: 'Face Kick', type: 'attack', mult: 3.0, cd: 6, color: 'bg-green-700', desc: 'Base damage +200%' },
-            { name: 'Throw', type: 'attack', mult: 1.50, effect: { stunChance: 1.0, defDown: 0.15 }, cd: 6, color: 'bg-purple-700', desc: 'Base damage +50% + Stun (1t) + Enemy DEF -15%' },
+            { name: 'Face Kick', type: 'attack', mult: 2.50, effect: { stunChance: 1.0 }, self_effect: { healFromDmgPct: 0.10, dmgBuff: 0.15, dmgBuffTurns: 2 }, cd: 6, color: 'bg-green-700', desc: 'Base damage +150% + Heal 10% dmg dealt + +15% self dmg buff (2t, stackable) + Stun (1t)' },
+            { name: 'Backhand Slap', type: 'attack', mult: 2.40, effect: { defDown: 0.15, defDownTurns: 2 }, self_effect: { dmgBuff: 0.15, dmgBuffTurns: 2, healFromDmgPct: 0.10, healFromDmgTurns: 2 }, cd: 6, color: 'bg-purple-700', desc: 'Base damage +140% + Enemy DEF -15% (2t) + +15% self dmg buff (2t) + Heal 10% dmg dealt (2t)' },
             // Index 3-5: Shadow Path
-            { name: 'Backhand Slap', type: 'attack', mult: 2.40, effect: { defDown: 0.15, defDownTurns: 1 }, cd: 7, color: 'bg-red-800', desc: 'Base damage +140% + Enemy DEF -15% (1t)' },
-            { name: 'Kunai Swarm', type: 'attack', mult: 2.0, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2 }, self_effect: { dmgBuff: 0.15, turns: 3 }, cd: 5, color: 'bg-orange-700', desc: 'Base damage +100% to ALL + 1 Poison stack + 15% self dmg buff (3t)' },
-            { name: 'Poison Shuriken', type: 'attack', mult: 1.80, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2 }, cd: 6, color: 'bg-lime-700', desc: 'Base damage +80% to ALL + 1 Poison stack (reduces healing 50%)' },
+            { name: 'Kunai Swarm', type: 'attack', mult: 2.0, target: 'all', self_effect: { dmgBuff: 0.15, dmgBuffTurns: 2, dodgeTurns: 1, selfDmgPct: 0.15 }, cd: 5, color: 'bg-orange-700', desc: 'Base damage +100% AOE + 15% self dmg buff (2t) + Dodge all (1t) + 15% self damage' },
+            { name: 'Poison Shuriken', type: 'attack', mult: 1.40, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2, stunChance: 1.0 }, self_effect: { dmgBuff: 0.15, dmgBuffTurns: 2 }, cd: 6, color: 'bg-lime-700', desc: 'Base damage +40% AOE + 1 Poison stack + +15% self dmg buff (2t) + Stun (1t)' },
+            { name: 'Shuriken Rain', type: 'attack', mult: 1.70, target: 'all', special: 'shurikenRain', shurikenRainTurns: 4, cd: 7, color: 'bg-emerald-600', desc: 'Base damage +70% AOE + Shuriken hits random enemy on turn start for 4 turns (CD 7)' },
             // Index 6-8: Venom Path
-            { name: 'Shuriken Rain', type: 'attack', mult: 0.333, hits: 3, target: 'all', effect: { poisonStacks: 1, poisonTurns: 2 }, cd: 8, color: 'bg-emerald-600', desc: '3 hits to ALL enemies, each hit = 1/3 base damage. Each hit may add 1 Poison stack (capped at 2 total)' },
+            { name: 'Throw', type: 'attack', mult: 1.50, effect: { stunChance: 1.0, defDown: 0.15 }, cd: 6, color: 'bg-purple-700', desc: 'Base damage +50% + Stun (1t) + Enemy DEF -15%' },
             { name: 'Smoke Bomb', type: 'attack', mult: 1.50, target: 'all', self_effect: { dodgeTurns: 2 }, cd: 7, color: 'bg-gray-500', desc: 'Base damage +50% to ALL + Dodge attacks (2t)' },
-            { name: 'Huge Shuriken', type: 'attack', mult: 2.20, effect: { poisonStacks: 1, poisonTurns: 2, bleedStacks: 2, bleedTurns: 5, burnStacks: 1, burnTurns: 3, defDown: 0.20, defDownTurns: 3 }, cd: 8, color: 'bg-yellow-400', desc: 'Base damage +120% + 1 Poison + 2 Bleed + 1 Burn + Enemy DEF -20% (3t)' }
+            { name: 'Face Kick Ultimate', type: 'attack', mult: 4.50, cd: 7, color: 'bg-yellow-400', desc: 'Base damage +350% (CD 7)' }
         ]
     },
     cleric: {
