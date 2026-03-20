@@ -190,10 +190,7 @@ function generateEnemies() {
     }
 
     enemies = [];
-    _lastEnemyStateString = ""; // Force a full enemy card rebuild for the new wave 
-        for(let i=0; i<4; i++) { let e = Object.assign(createBaseEnemy(), { lvl: 1, name: 'Weak Target', avatar: '🎯', maxHp: 1, baseDmg: 0, currentHp: 1 }); assignEnemySkills(e); enemies.push(e); } 
-        activeTargetIndex = 0; return; 
-    }
+    _lastEnemyStateString = ""; // Force a full enemy card rebuild for the new wave
 
     if (currentMode === 'training') {
         let e = Object.assign(createBaseEnemy(), { lvl: 1, name: 'Training Dummy', avatar: '🎯', maxHp: 9999999, baseDmg: 0 });
