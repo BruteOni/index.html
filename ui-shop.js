@@ -86,6 +86,30 @@ function openEnchantModal(slot) {
 
     document.getElementById('enchant-modal-title').innerText = `Enchant ${eq.name}`;
     const list = document.getElementById('enchant-modal-list'); list.innerHTML = '';
+
+    // Show item stats before core options
+    let statsHtml = '<div class="bg-gray-900 border border-gray-600 rounded-lg p-3 mb-3">';
+    statsHtml += `<div class="text-sm font-bold text-white mb-2">📊 Current Stats — ${eq.name}</div>`;
+    statsHtml += '<div class="grid grid-cols-2 gap-1 text-xs">';
+    if(eq.stats) {
+        const STAT_LABELS = { dmg: '⚔️ Damage', def: '🛡️ Defense', hp: '❤️ HP', critChance: '🎯 Crit%', critDmg: '💥 Crit Dmg', dodge: '💨 Dodge', armorPierce: '🗡️ Armor Pierce', dmgMitigation: '🛡️ Dmg Mitigation' };
+        Object.entries(eq.stats).forEach(([key, val]) => {
+            if(val && val !== 0) {
+                let label = STAT_LABELS[key] || key;
+                statsHtml += `<div class="text-gray-300"><span class="text-gray-500">${label}:</span> <span class="text-yellow-300 font-bold">${typeof val === 'number' && val < 1 ? (val * 100).toFixed(1) + '%' : val}</span></div>`;
+            }
+        });
+    }
+    if(eq.bonusStats && eq.bonusStats.length > 0) {
+        eq.bonusStats.forEach(bs => {
+            if(bs.value && bs.value !== 0) {
+                let label = bs.stat || bs.key || 'Bonus';
+                statsHtml += `<div class="text-purple-300"><span class="text-gray-500">${label}:</span> <span class="font-bold">+${typeof bs.value === 'number' && bs.value < 1 ? (bs.value * 100).toFixed(1) + '%' : bs.value}</span></div>`;
+            }
+        });
+    }
+    statsHtml += '</div></div>';
+    list.innerHTML = statsHtml;
     
     const cores = [
         { id: 'ench_common', name: 'Normal Core', boost: 5, color: 'gray', mult: 1.05 },

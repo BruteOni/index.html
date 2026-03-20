@@ -361,6 +361,7 @@ let globalProgression = {
     petWinLoss: {},
     petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
     blackMarketTier: 0,
+    zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
     patchV1Applied: true,
     saveVersion: 2
 };
@@ -399,6 +400,10 @@ let isPlayerTurn = true; let combatLog = []; let isAutoBattle = false; let comba
 let activeGraveyardBoss = null;
 // Invasion state
 let invasionTotalKills = 0; let invasionKillGoal = 10; let invasionMaxOnScreen = 4; let invasionSpawned = 0;
+// Zombie Apocalypse wave state
+let zombieWaveCount = 0;
+let zombieConsecutiveWaves = 0;
+let zombieSessionKills = 0;
 // Pet battle state
 let petBattlePlayerPet = null; let petBattleEnemyPet = null; let petBattleActive = false;
 let petBattlePlayerHp = 10; let petBattleEnemyHp = 10; let petBattleLastAction = null; let petBattleEnemyLastAction = null;
@@ -415,15 +420,22 @@ function getMaxEnergy() {
     return Math.min(baseCap, 10 + Math.max(0, player.lvl - 1));
 }
 
+function getTitleStatBonus() {
+    let zs = globalProgression.zombieStats;
+    return ((zs && zs.titlesEarned) ? zs.titlesEarned.length : 0) * 0.01;
+}
+
+const ENERGY_REGEN_INTERVAL_MS = 300000; // 1 energy per 5 minutes
+
 function updateEnergy() {
     const maxEnergy = getMaxEnergy();
     const now = Date.now();
     const msPassed = now - globalProgression.lastEnergyTime;
-    const minutesPassed = Math.floor(msPassed / 60000);
+    const ticksPassed = Math.floor(msPassed / ENERGY_REGEN_INTERVAL_MS);
     if (globalProgression.energy < maxEnergy) {
-        if (minutesPassed > 0) {
-            globalProgression.energy = Math.min(maxEnergy, globalProgression.energy + minutesPassed);
-            globalProgression.lastEnergyTime = now - (msPassed % 60000);
+        if (ticksPassed > 0) {
+            globalProgression.energy = Math.min(maxEnergy, globalProgression.energy + ticksPassed);
+            globalProgression.lastEnergyTime = now - (msPassed % ENERGY_REGEN_INTERVAL_MS);
         }
     } else {
         globalProgression.lastEnergyTime = now;
@@ -655,6 +667,7 @@ function makeInitialGlobalProgression() {
         petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
         petFavorites: [],
         blackMarketTier: 0,
+        zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
         pebbleBonusDmg: 0,
         pebbleBonusArmorPierce: 0,
         pebbleBonusHp: 0,
@@ -915,7 +928,7 @@ function calculateMaxHp() {
     if (typeof getEquipBonusStat === 'function') {
         hpBoostMult *= (1 + getEquipBonusStat('bonusHpPct'));
     }
-    return Math.floor(base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01));
+    return Math.floor(base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01) * (1 + getTitleStatBonus()));
 }
 
 function getBaseDamage() {
@@ -943,12 +956,15 @@ function getBaseDamage() {
     baseDmg = Math.floor(baseDmg * (1 + ((player.skillMenuBonusDmgPct || 0) + (player.skillMenuInfiniteAtk || 0)) / 100));
     // Apply pebble exchange damage bonus
     baseDmg = Math.floor(baseDmg * (1 + (globalProgression.pebbleBonusDmg || 0) * 0.01));
+    // Apply zombie title bonus (+1% damage per title)
+    let titleBonus = getTitleStatBonus();
+    if(titleBonus > 0) baseDmg = Math.floor(baseDmg * (1 + titleBonus));
     return baseDmg;
 }
 
 function getPlayerDef() {
     let a = globalProgression.attributes;
-    return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01));
+    return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01) * (1 + getTitleStatBonus()));
 }
 
 // Returns the permanent base attributes for each class (cannot go below these)
@@ -976,7 +992,23 @@ function switchScreen(screenId) {
 
 function showMerchants() { switchScreen('screen-merchants'); }
 
-function showPortal() { switchScreen('screen-portal'); }
+function showPortal() {
+    let zombieBtn = document.getElementById('portal-zombie-btn');
+    if(zombieBtn) {
+        if(player.lvl < 100) {
+            zombieBtn.disabled = true;
+            zombieBtn.style.opacity = '0.5';
+            let label = zombieBtn.querySelector('.font-bold');
+            if(label) label.innerHTML = '🔒 Zombie Apocalypse <span class="text-xs text-gray-400">(Lvl 100)</span>';
+        } else {
+            zombieBtn.disabled = false;
+            zombieBtn.style.opacity = '';
+            let label = zombieBtn.querySelector('.font-bold');
+            if(label) label.innerHTML = 'Zombie Apocalypse';
+        }
+    }
+    switchScreen('screen-portal');
+}
 
 
 function showMenu() { try { stopMusic(); } catch(e) { console.error('Failed to stop music:', e); } switchScreen('screen-menu'); }
@@ -1037,7 +1069,9 @@ function showGenderSelect(classId) {
         warrior: 'Videos/Warrior.mp4',
         mage: 'Videos/Mage.mp4',
         paladin: 'Videos/Paladin.mp4',
-        ninja: 'Videos/Ninja.mp4'
+        ninja: 'Videos/Ninja.mp4',
+        cleric: 'Videos/Cleric.mp4',
+        archer: 'Videos/Archer.mp4'
     };
     const videoFile = classVideoMap[classId];
     if (videoFile) {
@@ -1061,7 +1095,6 @@ function showGenderSelect(classId) {
         switchScreen('screen-class-intro-video');
         return;
     }
-    // For classes without videos (cleric, archer), go straight to gender/avatar select
     populateAvatarGrid();
     switchScreen('screen-gender-select');
 }
@@ -1226,6 +1259,26 @@ function showHub() {
             }
         }
         document.getElementById('hub-level-up-noti').classList.toggle('hidden', player.statPoints <= 0);
+
+        // Show highest earned zombie title badge
+        let zs = globalProgression.zombieStats;
+        let titlesEarned = (zs && zs.titlesEarned) ? zs.titlesEarned : [];
+        let highestTitle = null;
+        if(titlesEarned.length > 0 && typeof ZOMBIE_TITLES !== 'undefined') {
+            for(let i = ZOMBIE_TITLES.length - 1; i >= 0; i--) {
+                if(titlesEarned.includes(ZOMBIE_TITLES[i].id)) { highestTitle = ZOMBIE_TITLES[i]; break; }
+            }
+        }
+        let titleBadgeEl = document.getElementById('hub-title-badge');
+        let titleMobileEl = document.getElementById('hub-title-mobile');
+        if(highestTitle) {
+            let badgeHtml = `<span class="title-badge">🏆 ${highestTitle.name}</span>`;
+            if(titleBadgeEl) { titleBadgeEl.innerHTML = badgeHtml; titleBadgeEl.classList.remove('hidden'); }
+            if(titleMobileEl) { titleMobileEl.innerHTML = badgeHtml; titleMobileEl.classList.remove('hidden'); }
+        } else {
+            if(titleBadgeEl) titleBadgeEl.classList.add('hidden');
+            if(titleMobileEl) titleMobileEl.classList.add('hidden');
+        }
     } catch(e) { console.error('showHub: basic stats update failed', e); }
 
     try {

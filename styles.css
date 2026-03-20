@@ -335,3 +335,17 @@ body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: w
 /* Skip turn button animation */
 #btn-skip-turn { animation: skipBtnPulse 1.5s ease-in-out infinite; }
 @keyframes skipBtnPulse { 0%, 100% { box-shadow: 0 0 6px rgba(234,179,8,0.4); } 50% { box-shadow: 0 0 14px rgba(234,179,8,0.8); } }
+
+/* Zombie Apocalypse Title Badge */
+.title-badge {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000;
+    font-weight: bold;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    border: 1px solid #fbbf24;
+    text-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
+    white-space: nowrap;
+    display: inline-block;
+}

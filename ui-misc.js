@@ -162,7 +162,15 @@ function showProgressMenu() {
         { label: 'Total Deaths', value: ps.totalDeaths || 0 },
         { label: 'Battles Won', value: ps.battlesWon || 0 },
         { label: 'Battles Lost', value: ps.battlesLost || 0 },
-        { label: 'Mythic Boss Found', value: ps.mythicBossFound || 0 },
+        { label: 'Mythic Boss Killed', value: (function() {
+            let count = 0;
+            if(globalProgression.killedBosses) {
+                Object.values(globalProgression.killedBosses).forEach(b => { if(b && b.name) count++; });
+            }
+            let tracked = Math.max(ps.mythicBossFound || 0, ps.mythicBossKilled || 0, count);
+            ps.mythicBossKilled = tracked;
+            return tracked;
+        })() },
         { label: 'MAX Dungeon Cleared', value: ps.maxDungeonCleared ? `Tier ${ps.maxDungeonCleared}` : 'None' },
         { label: 'Bosses Defeated', value: ps.bossesDefeated || 0 },
         { label: 'Gold Spent', value: ps.goldSpent || 0 },

@@ -109,7 +109,18 @@ function returnToTown() {
     if(btn) { btn.classList.remove('auto-on'); btn.disabled = false; btn.classList.remove('opacity-50'); }
     showHub();
 }
-function fleeBattle() { returnToTown(); }
+
+function ensureZombieStats() {
+    if(!globalProgression.zombieStats) {
+        globalProgression.zombieStats = { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] };
+    }
+    return globalProgression.zombieStats;
+}
+
+function fleeBattle() {
+    if(currentMode === 'invasion') { combatActive = false; battleEnding = false; isAutoBattle = false; enemies = []; showInvasion(); }
+    else { returnToTown(); }
+}
 function showFloatText(targetId, text, colorClass) { const target = document.getElementById(targetId); if (!target) return; const floater = document.createElement('div'); floater.className = `float-text ${colorClass}`; floater.innerText = text; target.appendChild(floater); setTimeout(() => { if(floater.parentNode) floater.remove(); }, 900); }
 function showDamageNumber(targetId, damage, isCrit) {
     const target = document.getElementById(targetId);
@@ -206,22 +217,24 @@ function generateEnemies() {
     }
 
     if (currentMode === 'invasion') {
-        // Invasion: always spawn up to invasionMaxOnScreen boss-type enemies
-        // Level scales 100–500 based on player level
+        // Zombie Apocalypse: spawn from ENEMIES_ZOMBIE pool (~5% easier than old invasion)
         let invasionLevel = Math.max(100, Math.min(player.lvl, 500));
-        let allBossTemplates = [
-            ...BOSS_TEMPLATES['hunting'], ...BOSS_TEMPLATES['pillage'],
-            ...BOSS_TEMPLATES['workshop'], ...BOSS_TEMPLATES['dungeon'],
-            ...BOSS_TEMPLATES['island_defense']
-        ];
+        let zombiePool = (typeof ENEMIES_ZOMBIE !== 'undefined' && ENEMIES_ZOMBIE.length > 0) ? ENEMIES_ZOMBIE : null;
         for(let i = 0; i < invasionMaxOnScreen; i++) {
-            let t = allBossTemplates[Math.floor(Math.random() * allBossTemplates.length)];
-            let e = Object.assign(createBaseEnemy(), { rarity: 'boss', isBoss: true });
-            e.lvl = invasionLevel;
-            e.name = 'Invader ' + t.name; e.avatar = t.avatar;
-            e.maxHp = Math.max(1, Math.floor(25 * t.hpMult * (1 + (invasionLevel - 1) * 0.4) * 5));
-            e.baseDmg = Math.max(1, Math.floor(invasionLevel * 5 * (1 + (invasionLevel - 1) * 0.01)));
-            e.templateMults = { hpMult: t.hpMult, dmgMult: t.dmgMult };
+            let e = Object.assign(createBaseEnemy(), { rarity: 'common', isBoss: false });
+            if(zombiePool) {
+                let t = zombiePool[Math.floor(Math.random() * zombiePool.length)];
+                e.lvl = invasionLevel;
+                e.name = t.name; e.avatar = t.avatar;
+                e.maxHp = Math.max(1, Math.floor(invasionLevel * 10 * t.hpMult * 0.95));
+                e.baseDmg = Math.max(1, Math.floor(invasionLevel * 2 * t.dmgMult * 0.95));
+                e.templateMults = { hpMult: t.hpMult, dmgMult: t.dmgMult };
+            } else {
+                e.lvl = invasionLevel;
+                e.name = 'Zombie'; e.avatar = '🧟';
+                e.maxHp = Math.max(1, Math.floor(invasionLevel * 10 * 0.95));
+                e.baseDmg = Math.max(1, Math.floor(invasionLevel * 2 * 0.95));
+            }
             assignEnemySkills(e);
             e.currentHp = e.maxHp;
             enemies.push(e);
@@ -676,7 +689,7 @@ function updateCombatUI() {
     if (!player || !player.data) return;
     var ui = getCombatUIElements();
     if (ui.uiLevel) ui.uiLevel.innerText = `Level ${player.lvl}`;
-    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `XP Dungeon T${activeDungeonTier} (Rm ${activeDungeonRoom})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : 'Quest Marathon';
+    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `XP Dungeon T${activeDungeonTier} (Rm ${activeDungeonRoom})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : currentMode === 'invasion' ? `🧟 Zombie Apocalypse — Wave ${zombieWaveCount + 1}` : 'Quest Marathon';
     
     if(currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop') {
         modeText += ` (${globalProgression.storyModeProgress[currentMode] + 1}/10)`;
@@ -948,7 +961,8 @@ function processAutoTurn() {
     if(!player.usedConsumableThisTurn) {
         // Auto-use regen potions at 75% HP (if enabled in settings)
         if (globalProgression.settings.autoUseRegenAt75 !== false) {
-            if (hpPct <= 0.75 && player.regenBuffs.length === 0) {
+            let hasActiveRegen = player.regenBuffs && player.regenBuffs.some(b => b.turns > 0);
+            if (hpPct <= 0.75 && !hasActiveRegen) {
                 if(inv.pot_r3 > 0) return useConsumable('pot_r3');
                 if(inv.pot_r2 > 0) return useConsumable('pot_r2');
                 if(inv.pot_r1 > 0) return useConsumable('pot_r1');
@@ -1125,6 +1139,8 @@ function usePlayerSkill(slotIndex) {
     });
     // Black Market Tier 5: -2 to all skill cooldowns
     if ((globalProgression.blackMarketTier || 0) >= 5) cdReduc += 2;
+    // Zombie Apocalypse 100-wave buff: -1 to all skill cooldowns
+    if (globalProgression.zombieStats && globalProgression.zombieStats.cooldownBuffEarned) cdReduc += 1;
     player.skillCooldowns[skillIdx] = Math.max(0, skill.cd + 1 - cdReduc);
 
     let baseDmg = getBaseDamage();
@@ -1210,8 +1226,8 @@ function usePlayerSkill(slotIndex) {
                     return; 
                 }
                 
-                // Armor Pierce: reflexes 0.3% per point + bonusArmorPierce from accessories + pebble exchange bonus
-                let armorPierce = (a.reflexes || 0) * 0.003 + getEquipBonusStat('bonusArmorPierce') + (globalProgression.pebbleBonusArmorPierce || 0) * 0.01;
+                // Armor Pierce: reflexes 0.3% per point + bonusArmorPierce from accessories + pebble exchange bonus + title bonus
+                let armorPierce = (a.reflexes || 0) * 0.003 + getEquipBonusStat('bonusArmorPierce') + (globalProgression.pebbleBonusArmorPierce || 0) * 0.01 + getTitleStatBonus();
                 let defDownDebuff = target.defReduction || 0;
                 let defMult = 1 + Math.min(0.95, armorPierce + defDownDebuff);
                 let hitDmg = Math.floor(scaledPower * defMult * (target.dmgTakenMult || 1));
@@ -1765,8 +1781,8 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     let buffDefMult = 1.0; 
     if (player.activeBuffs) player.activeBuffs.filter(b => b.type === 'def' || b.type === 'def_down').forEach(b => buffDefMult *= b.val);
     
-    // Damage reduction: tenacity 0.3% per point + gear bonusDmgReduction
-    let tenacityReduction = 1 - ((a.tenacity || 0) * 0.003 + getEquipBonusStat('bonusDmgReduction'));
+    // Damage reduction: tenacity 0.3% per point + gear bonusDmgReduction + title bonus
+    let tenacityReduction = 1 - ((a.tenacity || 0) * 0.003 + getEquipBonusStat('bonusDmgReduction') + getTitleStatBonus());
     let dmg = Math.floor(baseDmg * tenacityReduction);
     
     // Divine Shield enhancement
@@ -2006,14 +2022,18 @@ function endBattle(playerWon) {
         }
         rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-red-700 text-red-400 font-bold shadow-md">+${killCount} Kills</div>`;
 
-        // --- INVASION MODE ---
+        // --- INVASION MODE (Zombie Apocalypse) ---
         if(currentMode === 'invasion') {
             invasionTotalKills += killCount;
+            zombieSessionKills += killCount;
+            // Track total zombie kills in progression
+            let zs = ensureZombieStats();
+            zs.totalKills = (zs.totalKills || 0) + killCount;
             // Per-kill rewards: scaled gold + 1 Magic Stone per kill
             let invasionGoldGain = Math.floor(killCount * (10 + player.lvl * 2));
             globalProgression.gold += invasionGoldGain;
             globalProgression.inventory.magic_stone = (globalProgression.inventory.magic_stone || 0) + killCount;
-            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-orange-700 text-orange-400 font-bold shadow-md">⚔️ +${invasionGoldGain} Gold</div>`;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-700 text-green-400 font-bold shadow-md">🧟 +${invasionGoldGain} Gold</div>`;
             rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-600 text-blue-300 font-bold shadow-md">💎 +${killCount} Magic Stone${killCount > 1 ? 's' : ''}</div>`;
 
             // Invasion: each enemy has a chance to drop one random item from the full item pool
@@ -2061,15 +2081,40 @@ function endBattle(playerWon) {
             });
 
             // Invasion is continuous — check if player has energy to continue
+            // Track zombie wave
+            zombieWaveCount++;
+            zombieConsecutiveWaves++;
+            let zs = ensureZombieStats();
+            zs.maxWavesSurvived = Math.max(zs.maxWavesSurvived || 0, zombieConsecutiveWaves);
+            // Check every-10-wave potion reward
+            if(zombieConsecutiveWaves > 0 && zombieConsecutiveWaves % 10 === 0) {
+                zs.pendingPotionRewards = (zs.pendingPotionRewards || 0) + 1;
+            }
+            // Check 100-wave cooldown buff
+            if(zombieConsecutiveWaves >= 100 && !zs.cooldownBuffEarned) {
+                zs.cooldownBuffEarned = true;
+            }
+            // Check title awards
+            if(typeof ZOMBIE_TITLES !== 'undefined') {
+                ZOMBIE_TITLES.forEach(t => {
+                    if(zombieConsecutiveWaves >= t.wavesRequired && !(zs.titlesEarned || []).includes(t.id)) {
+                        if(!zs.titlesEarned) zs.titlesEarned = [];
+                        zs.titlesEarned.push(t.id);
+                    }
+                });
+            }
             let hasEnergy = (globalProgression.energy || 0) >= 1;
-            title.innerText = "WAVE CLEARED!"; title.className = "text-4xl font-bold mb-2 text-orange-400 drop-shadow-lg";
-            desc.innerText = `Invaders defeated: ${invasionTotalKills}. ${hasEnergy ? 'Fight on!' : 'No energy left!'}`;
+            title.innerText = "WAVE CLEARED!"; title.className = "text-4xl font-bold mb-2 text-green-400 drop-shadow-lg";
+            desc.innerText = `Zombies defeated! Wave ${zombieConsecutiveWaves}. ${hasEnergy ? 'Fight on!' : 'No energy left!'}`;
             if(hasEnergy) {
-                btnNext.innerText = `Next Wave (⚡1) — ${invasionTotalKills} kills`;
+                btnNext.innerText = `Next Wave (⚡1) — Wave ${zombieConsecutiveWaves}`;
                 btnNext.classList.remove('hidden');
             } else {
                 btnNext.classList.add('hidden');
             }
+            // Also show "Return to ZA Menu" button option
+            let btnHub = document.getElementById('btn-end-hub');
+            if(btnHub) { btnHub.innerText = '🧟 Zombie Apocalypse Menu'; btnHub.onclick = showInvasion; }
             rwdCont.classList.remove('hidden');
             xpCont.classList.remove('hidden');
         } else {
@@ -2234,7 +2279,8 @@ function endBattle(playerWon) {
             } else { desc.innerText = "Room cleared. Proceed deeper."; btnNext.innerText = "Next Room"; btnNext.classList.remove('hidden'); }
         } else if (currentMode === 'graveyard') {
             desc.innerText = "Boss Soul Harvested.";
-            btnNext.classList.add('hidden');
+            btnNext.innerText = "Return to Town"; btnNext.classList.remove('hidden');
+            btnNext.onclick = returnToTown;
         } else {
             if(globalProgression.storyModeProgress[currentMode] >= 10) {
                 desc.innerText = "Boss defeated! Progress Reset."; 
@@ -2339,11 +2385,17 @@ function endBattle(playerWon) {
         rwdCont.classList.add('hidden');
     }
     switchScreen('screen-end');
-    // Auto-return to graveyard menu after a graveyard battle
+    // After a graveyard battle, return to town
     if(currentMode === 'graveyard') {
         let gravBtn = document.getElementById('btn-end-hub');
-        if(gravBtn) { gravBtn.innerText = '⚰️ Return to Graveyard'; gravBtn.onclick = showGraveyard; }
-        setTimeout(() => showGraveyard(), 3500);
+        if(gravBtn) { gravBtn.innerText = '🏠 Return to Town'; gravBtn.onclick = returnToTown; }
+        setTimeout(() => returnToTown(), 3500);
+    }
+    // After a zombie apocalypse defeat, return to ZA menu
+    if(currentMode === 'invasion' && !playerWon) {
+        let zaBtn = document.getElementById('btn-end-hub');
+        if(zaBtn) { zaBtn.innerText = '🧟 Zombie Apocalypse Menu'; zaBtn.onclick = showInvasion; }
+        setTimeout(() => showInvasion(), 3500);
     }
 }
 
@@ -2363,12 +2415,12 @@ function handleEndNext() {
         }
         else { returnToTown(); }
     } else if (currentMode === 'invasion') {
-        // Invasion is continuous — check energy before starting next wave
+        // Zombie Apocalypse — check energy before starting next wave
         if(consumeEnergy(1)) {
             startBattle(true);
         } else {
             showNoEnergyAnimation();
-            returnToTown();
+            showInvasion();
         }
     } else {
         startBattle(true);

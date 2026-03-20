@@ -349,14 +349,113 @@ function showInvasion() {
     document.getElementById('invasion-gold-display').innerText = globalProgression.gold;
     let energyEl = document.getElementById('invasion-energy-display');
     if(energyEl) energyEl.innerText = globalProgression.energy || 0;
+
+    // Ensure zombieStats exists
+    if(!globalProgression.zombieStats) globalProgression.zombieStats = { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] };
+    let zs = globalProgression.zombieStats;
+
+    // Populate stats
+    let killsEl = document.getElementById('za-stat-kills');
+    if(killsEl) killsEl.innerText = zs.totalKills || 0;
+    let wavesEl = document.getElementById('za-stat-max-waves');
+    if(wavesEl) wavesEl.innerText = zs.maxWavesSurvived || 0;
+    let sessEl = document.getElementById('za-stat-sessions');
+    if(sessEl) sessEl.innerText = zs.totalSessions || 0;
+
+    // Populate rewards
+    let rewardsList = document.getElementById('za-rewards-list');
+    if(rewardsList) {
+        let html = '';
+        if((zs.pendingPotionRewards || 0) > 0) {
+            html += `<button onclick="claimZombieRewards()" class="bg-yellow-800 hover:bg-yellow-700 border border-yellow-500 p-2 rounded-lg text-yellow-200 font-bold text-sm transition active:scale-95">
+                🧪 Claim ${zs.pendingPotionRewards * 5} Minor Potions (from ${zs.pendingPotionRewards} reward batches)
+            </button>`;
+        }
+        if(zs.cooldownBuffEarned && !zs.cooldownBuffClaimed) {
+            html += `<button onclick="claimZombieCooldownBuff()" class="bg-purple-800 hover:bg-purple-700 border border-purple-500 p-2 rounded-lg text-purple-200 font-bold text-sm transition active:scale-95">
+                ⚡ Claim: −1 Cooldown to All Skills (100 Waves Buff)
+            </button>`;
+        }
+        if(zs.cooldownBuffEarned && zs.cooldownBuffClaimed) {
+            html += `<div class="text-purple-300 text-xs">✅ −1 Cooldown buff active</div>`;
+        }
+        if(!html) html = '<div class="text-gray-500 text-sm text-center">No pending rewards.</div>';
+        rewardsList.innerHTML = html;
+    }
+
+    // Populate titles
+    let titlesList = document.getElementById('za-titles-list');
+    if(titlesList && typeof ZOMBIE_TITLES !== 'undefined') {
+        let titlesHtml = '';
+        ZOMBIE_TITLES.forEach(t => {
+            let earned = (zs.titlesEarned || []).includes(t.id);
+            titlesHtml += `<div class="flex justify-between items-center text-xs py-1 border-b border-gray-700 last:border-0">
+                <span class="${earned ? 'text-amber-300 font-bold' : 'text-gray-500'}">${earned ? '🏆' : '🔒'} ${t.name}</span>
+                <span class="${earned ? 'text-green-400' : 'text-gray-600'}">${earned ? 'Earned' : t.wavesRequired + ' waves'}</span>
+            </div>`;
+        });
+        titlesList.innerHTML = titlesHtml;
+    }
+
+    // Level 100 lock check
+    let startBtn = document.getElementById('za-start-btn');
+    if(startBtn) {
+        if(player.lvl < 100) {
+            startBtn.disabled = true;
+            startBtn.innerText = '🔒 Unlocks at Level 100';
+            startBtn.className = 'w-full bg-gray-700 text-gray-400 font-black py-4 rounded-xl text-xl border-2 border-gray-600 opacity-60 cursor-not-allowed';
+        } else {
+            startBtn.disabled = false;
+            startBtn.innerText = '🧟 DEFEND FROM ZOMBIES';
+            startBtn.className = 'w-full bg-green-700 hover:bg-green-600 text-white font-black py-4 rounded-xl text-xl transition active:scale-95 shadow-lg border-2 border-green-400';
+        }
+    }
+
     switchScreen('screen-invasion');
 }
 
+function claimZombieRewards() {
+    let zs = globalProgression.zombieStats;
+    if(!zs || (zs.pendingPotionRewards || 0) <= 0) return;
+    let potions = zs.pendingPotionRewards * 5;
+    globalProgression.inventory.pot_i1 = (globalProgression.inventory.pot_i1 || 0) + potions;
+    zs.pendingPotionRewards = 0;
+    saveGame();
+    showInvasion();
+}
+
+function claimZombieCooldownBuff() {
+    let zs = globalProgression.zombieStats;
+    if(!zs || !zs.cooldownBuffEarned || zs.cooldownBuffClaimed) return;
+    zs.cooldownBuffClaimed = true;
+    saveGame();
+    showInvasion();
+}
+
 function startInvasion() {
+    if(player.lvl < 100) {
+        let log = document.getElementById('invasion-log') || document.getElementById('well-log');
+        playSound('lose');
+        // Show a brief overlay message
+        let existing = document.getElementById('no-energy-overlay');
+        if(existing) existing.remove();
+        let overlay = document.createElement('div');
+        overlay.className = 'no-energy-overlay';
+        overlay.id = 'no-energy-overlay';
+        overlay.innerHTML = '<div class="no-energy-emoji">🔒</div><div class="no-energy-label">Level 100 Required!</div>';
+        document.body.appendChild(overlay);
+        setTimeout(() => { let el = document.getElementById('no-energy-overlay'); if(el) el.remove(); }, 2000);
+        return;
+    }
     if(!consumeEnergy(1)) {
         showNoEnergyAnimation();
         return;
     }
+    if(!globalProgression.zombieStats) globalProgression.zombieStats = { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] };
+    globalProgression.zombieStats.totalSessions = (globalProgression.zombieStats.totalSessions || 0) + 1;
+    zombieWaveCount = 0;
+    zombieConsecutiveWaves = 0;
+    zombieSessionKills = 0;
     invasionTotalKills = 0;
     invasionSpawned = 0;
     invasionKillGoal = 0; // 0 = unlimited (continuous until player leaves or energy runs out)
@@ -892,6 +991,11 @@ function showWell() {
     energy100Btn.disabled = !canUseEnergy100 || p.gold < 100;
     energyCapBtn.disabled = p.energyCapUnlocked || p.gold < 300 || getMaxEnergy() < 50;
 
+    let btn250 = document.getElementById('well-energy250-btn');
+    if(btn250) { btn250.disabled = p.gold < 250; }
+    let status250 = document.getElementById('well-energy250-status');
+    if(status250) { status250.innerText = 'Always Available'; status250.className = 'font-bold text-emerald-300'; }
+
     document.getElementById('well-log').innerText = '';
     switchScreen('screen-well');
 }
@@ -954,6 +1058,18 @@ function useWellEnergy100() {
     let maxEnergy = getMaxEnergy();
     p.gold -= 100; p.energy = maxEnergy; p.wellLastEnergy100Date = today; saveGame(); updateEnergy();
     log.innerText = `⚡ Energy refilled to ${maxEnergy}!`; playSound('chest');
+    showWell();
+}
+
+function useWellEnergy250() {
+    const p = globalProgression;
+    const log = document.getElementById('well-log');
+    if(p.gold < 250) { if(log) log.innerText = 'Not enough Gold! (Need 250)'; playSound('lose'); return; }
+    let maxEnergy = getMaxEnergy();
+    p.gold -= 250; p.energy = maxEnergy;
+    let ps = ensureProgressStats(); ps.goldSpent = (ps.goldSpent || 0) + 250;
+    saveGame(); updateEnergy();
+    if(log) log.innerText = `⚡ Energy refilled to ${maxEnergy}!`; playSound('heal');
     showWell();
 }
 
