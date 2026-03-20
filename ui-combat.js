@@ -420,7 +420,7 @@ function startBattle(isNewEncounter = false) {
     if (isNewEncounter) { 
         // Do NOT replenish HP — player enters with their current HP
         player.regenBuffs = []; player.activeBuffs = []; 
-        player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;
+        player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0; player.shurikenRainTurns = 0;
         // Reset skill cooldowns at the start of each new battle (Way of Heavens is global and persists)
         if(!player.skillCooldowns) player.skillCooldowns = {};
         Object.keys(player.skillCooldowns).forEach(k => player.skillCooldowns[k] = 0);
@@ -1494,6 +1494,21 @@ function usePlayerSkill(slotIndex) {
         addLog('Smoke Bomb! Dodge 3t, damaged & poisoned all enemies!', 'text-gray-300 font-bold');
     }
 
+    if(skill.special === 'shurikenRain') {
+        player.shurikenRainTurns = skill.shurikenRainTurns || 4;
+        addLog(`🌟 Shuriken Rain active for ${player.shurikenRainTurns} turns!`, 'text-emerald-400 font-bold');
+    }
+
+    // Heal from damage: active buff from previous skill (e.g. Backhand Slap)
+    let healFromDmgBuff = (player.activeBuffs || []).find(b => b.type === 'heal_from_dmg');
+    if(healFromDmgBuff && totalDmg > 0) {
+        let { healMult: hm, healingBuffMult: hbm } = getHealingMultipliers();
+        let h = Math.floor(totalDmg * healFromDmgBuff.val * hm * hbm);
+        player.currentHp = Math.min(player.maxHp, player.currentHp + h);
+        showFloatText('player-avatar-container', `+${h}`, 'text-green-400');
+        addLog(`Healed ${h} HP from damage dealt!`, 'text-green-400');
+    }
+
     if(skill.self_effect) {
         let { healMult, healingBuffMult } = getHealingMultipliers();
         if(skill.self_effect.healPct) { let h = Math.floor(player.maxHp * skill.self_effect.healPct * healMult * healingBuffMult); player.currentHp = Math.min(player.maxHp, player.currentHp + h); showFloatText('player-avatar-container', `+${h}`, 'text-green-400'); }
@@ -1553,6 +1568,22 @@ function usePlayerSkill(slotIndex) {
             // Infection buff: +5% dmg per active effect stack on enemy (bleed/poison/burn)
             player.activeBuffs.push({ type: 'infection', turns: skill.self_effect.infectionTurns || 5 });
             addLog(`Infection active! +5% dmg per enemy effect stack (${skill.self_effect.infectionTurns||5}t)!`, 'text-green-400 font-bold');
+        }
+        if(skill.self_effect.healFromDmgPct && totalDmg > 0) {
+            let h = Math.floor(totalDmg * skill.self_effect.healFromDmgPct * healMult * healingBuffMult);
+            player.currentHp = Math.min(player.maxHp, player.currentHp + h);
+            showFloatText('player-avatar-container', `+${h}`, 'text-green-400');
+            addLog(`Healed ${h} HP from damage dealt!`, 'text-green-400');
+        }
+        if(skill.self_effect.healFromDmgTurns) {
+            player.activeBuffs.push({ type: 'heal_from_dmg', val: skill.self_effect.healFromDmgPct || 0.10, turns: skill.self_effect.healFromDmgTurns });
+            addLog(`Heal from damage active for ${skill.self_effect.healFromDmgTurns}t!`, 'text-green-400');
+        }
+        if(skill.self_effect.selfDmgPct) {
+            let selfDmg = Math.floor(player.maxHp * skill.self_effect.selfDmgPct);
+            player.currentHp = Math.max(1, player.currentHp - selfDmg);
+            showFloatText('player-avatar-container', `-${selfDmg}`, 'text-red-500');
+            addLog(`Self damage: ${selfDmg}!`, 'text-red-400');
         }
     }
 
@@ -1999,6 +2030,21 @@ function startPlayerTurn() {
         Object.keys(player.silencedSlots).forEach(k => { if(player.silencedSlots[k] > 0) player.silencedSlots[k]--; });
         player.silencedSlots = Object.fromEntries(Object.entries(player.silencedSlots).filter(([,v]) => v > 0));
     }
+
+    // Shuriken Rain: auto-hit random enemy on turn start
+    if(player.shurikenRainTurns > 0) {
+        let alive = enemies.filter(e => e.currentHp > 0);
+        if(alive.length > 0) {
+            let target = alive[Math.floor(Math.random() * alive.length)];
+            let shurikenDmg = getBaseDamage();
+            target.currentHp = Math.max(0, target.currentHp - shurikenDmg);
+            let tIdx = enemies.indexOf(target);
+            showFloatText('enemy-card-' + tIdx, `-${shurikenDmg}`, 'text-yellow-300');
+            addLog(`🌟 Shuriken Rain hit ${target.name} for ${shurikenDmg}!`, 'text-yellow-400');
+        }
+        player.shurikenRainTurns--;
+    }
+
     updateCombatUI(); 
 
     if(player.stunned > 0) {
