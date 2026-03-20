@@ -1077,7 +1077,7 @@ function unlockEnergyCapUpgrade() {
     if(p.gold < WELL_ENERGY_CAP_COST) { log.innerText = `Not enough Gold! (Need ${WELL_ENERGY_CAP_COST})`; playSound('lose'); return; }
     p.gold -= WELL_ENERGY_CAP_COST;
     p.energyCapUnlocked = true;
-    log.innerText = '❗ Energy cap upgraded to 100! Level up to reach energies 51-100.';
+    log.innerText = '❗ Energy cap upgraded to 150! Level up to reach energies 51-150.';
     playSound('win');
     saveGame();
     updateEnergy();

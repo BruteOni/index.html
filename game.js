@@ -451,7 +451,7 @@ function getEl(id) {
 }
 
 function getMaxEnergy() {
-    let baseCap = globalProgression.energyCapUnlocked ? 100 : 50;
+    let baseCap = globalProgression.energyCapUnlocked ? 150 : 50;
     return Math.min(baseCap, 10 + Math.max(0, player.lvl - 1));
 }
 
@@ -498,7 +498,7 @@ function updateEnergy() {
     // Show/hide energy cap upgrade indicator in well button
     const wellNoti = getEl('hub-well-energy-noti');
     if (wellNoti) {
-        wellNoti.style.display = (!globalProgression.energyCapUnlocked && getMaxEnergy() >= 50 && globalProgression.gold >= 300) ? 'inline' : 'none';
+        wellNoti.style.display = (!globalProgression.energyCapUnlocked && getMaxEnergy() >= 50 && globalProgression.gold >= 400) ? 'inline' : 'none';
     }
 
     ['herbs', 'mine', 'fish', 'enchants'].forEach(type => {
@@ -1816,23 +1816,43 @@ function gatherAction(type) {
     
     if(type === 'herbs') {
         overlay.innerHTML = `
-            <div class="gather-emoji" style="animation-delay:0s">🌱</div>
-            <div class="gather-emoji" style="animation-delay:0.3s; animation: herb-grow 1s ease forwards, gather-bounce 0.5s 1s infinite">🌿</div>
-            <div class="gather-emoji" style="animation-delay:1.5s; animation: herb-grow 1s 1.5s ease forwards, gather-bounce 0.5s 2.5s infinite; opacity:0">🌺</div>
+            <div class="gather-glow-ring" style="background:radial-gradient(circle,rgba(34,197,94,0.25) 0%,transparent 70%);"></div>
+            <div class="gather-emoji" style="animation: herb-sprout 0.8s ease forwards;">🌱</div>
+            <div class="gather-emoji" style="animation: herb-sprout 0.8s 0.9s ease forwards; opacity:0;">🌿</div>
+            <div class="gather-emoji" style="animation: herb-bloom 1s 1.9s ease forwards; opacity:0;">🌺</div>
+            <div class="gather-sparkle" style="animation: gather-sparkle 0.5s 1.0s ease-in-out infinite alternate;">✦</div>
+            <div class="gather-sparkle" style="animation: gather-sparkle 0.5s 1.3s ease-in-out infinite alternate; margin-left:20px;">✦</div>
+            <div class="gather-sparkle" style="animation: gather-sparkle 0.5s 1.6s ease-in-out infinite alternate; margin-left:-20px;">✦</div>
             <div class="gather-label">Foraging herbs...</div>
         `;
     } else if(type === 'fish') {
         overlay.innerHTML = `
-            <div class="gather-emoji" style="animation-delay:0s">🎣</div>
-            <div class="gather-emoji" style="animation: fish-cast 0.8s 0.8s ease forwards; opacity:0">🐟</div>
-            <div class="gather-emoji" style="animation: gather-bounce 0.3s 1.6s ease infinite; opacity:1; font-size:2rem">💧💧</div>
+            <div class="gather-glow-ring" style="background:radial-gradient(circle,rgba(59,130,246,0.25) 0%,transparent 70%);"></div>
+            <div class="gather-emoji" style="animation: gather-bounce 0.4s ease-in-out infinite;">🎣</div>
+            <div class="gather-emoji" style="animation: fish-cast 0.8s 0.8s ease forwards; opacity:0;">🐟</div>
+            <div class="gather-emoji" style="animation: fish-splash 0.6s 1.5s ease forwards; opacity:0; font-size:2rem;">💦</div>
+            <div class="gather-sparkle" style="animation: fish-splash 0.5s 1.8s ease-in-out infinite alternate; font-size:1rem;">💧</div>
+            <div class="gather-sparkle" style="animation: fish-splash 0.5s 2.1s ease-in-out infinite alternate; font-size:1rem; margin-left:24px;">💧</div>
             <div class="gather-label">Fishing...</div>
         `;
     } else if(type === 'enchants') {
         overlay.innerHTML = `
-            <div class="gather-emoji" style="animation: gather-bounce 0.6s ease-in-out infinite">✨</div>
-            <div class="gather-emoji" style="animation: gather-bounce 0.6s 0.3s ease-in-out infinite; opacity:0.7">💎</div>
+            <div class="gather-glow-ring" style="background:radial-gradient(circle,rgba(168,85,247,0.35) 0%,transparent 70%);"></div>
+            <div class="gather-emoji" style="animation: enchant-vortex 1.2s linear infinite;">✨</div>
+            <div class="gather-emoji" style="animation: enchant-vortex 1.0s 0.2s linear infinite reverse; opacity:0.85;">💎</div>
+            <div class="gather-emoji" style="animation: enchant-vortex 1.4s 0.4s linear infinite; opacity:0.7;">🔮</div>
+            <div class="gather-sparkle" style="animation: gather-sparkle 0.6s 0.0s ease-in-out infinite alternate;">✦</div>
+            <div class="gather-sparkle" style="animation: gather-sparkle 0.6s 0.3s ease-in-out infinite alternate; margin-left:30px;">✦</div>
             <div class="gather-label">Gathering enchanting cores...</div>
+        `;
+    } else if(type === 'mine') {
+        overlay.innerHTML = `
+            <div class="gather-glow-ring" style="background:radial-gradient(circle,rgba(234,179,8,0.25) 0%,transparent 70%);"></div>
+            <div class="gather-emoji" style="animation: mine-strike 0.4s ease-in-out infinite;">⛏️</div>
+            <div class="gather-emoji" style="animation: mine-crumble 0.5s 0.3s ease forwards; opacity:0;">🪨</div>
+            <div class="gather-sparkle" style="animation: gather-sparkle 0.4s 0.5s ease-in-out infinite alternate; font-size:1rem;">💥</div>
+            <div class="gather-sparkle" style="animation: gather-sparkle 0.4s 0.7s ease-in-out infinite alternate; font-size:1rem; margin-left:20px;">💥</div>
+            <div class="gather-label">Mining...</div>
         `;
     }
     

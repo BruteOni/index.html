@@ -15,22 +15,22 @@ function showAttributes() {
     list.innerHTML = '';
     
     const attrDefs = [
-        { id: 'rawPower',   name: 'Raw Power',  desc: '+2 base damage per point', color: 'text-red-400' },
-        { id: 'willpower',  name: 'Willpower',  desc: '+0.3% increased base damage per point', color: 'text-blue-400' },
-        { id: 'agility',    name: 'Agility',    desc: '+0.25% chance to attack back when hit per point', color: 'text-yellow-400' },
-        { id: 'fury',       name: 'Fury',       desc: '+0.25% crit damage per point', color: 'text-red-500' },
-        { id: 'tenacity',   name: 'Tenacity',   desc: '+0.3% damage reduction per point', color: 'text-orange-400' },
-        { id: 'resistance', name: 'Resistance', desc: '+0.25% dodge chance per point', color: 'text-purple-400' },
-        { id: 'hp',         name: 'HP',         desc: '+0.5% max HP per point', color: 'text-green-300' },
-        { id: 'defense',    name: 'Defense',    desc: '+1 defense per point (reduces damage by 1)', color: 'text-gray-300' },
-        { id: 'reflexes',   name: 'Reflexes',   desc: '+0.3% armor pierce (ignore enemy defense) per point', color: 'text-green-400' },
-        { id: 'force',      name: 'Force',      desc: '+0.5% crit rate per point', color: 'text-cyan-400' },
-        { id: 'revival',    name: 'Revival',    desc: '+0.2% HP regen per turn per point', color: 'text-emerald-400' },
-        { id: 'happiness',  name: 'Happiness',  desc: '+0.25% healing received per point', color: 'text-pink-400' },
-        { id: 'vampire',    name: 'Vampire',    desc: '+0.25% life received per hit per point', color: 'text-violet-400' },
+        { id: 'rawPower',   name: 'Raw Power',   desc: '+2 base damage per point', color: 'text-red-400' },
+        { id: 'willpower',  name: 'Willpower',   desc: '+0.3% increased base damage per point', color: 'text-blue-400' },
+        { id: 'defense',    name: 'Defense',      desc: '+1 defense per point (reduces damage by 1)', color: 'text-gray-300' },
+        { id: 'hp',         name: 'HP',           desc: '+0.5% max HP per point', color: 'text-green-300' },
+        { id: 'reflexes',   name: 'Reflexes',     desc: '+0.3% armor pierce (ignore enemy defense) per point', color: 'text-green-400' },
+        { id: 'tenacity',   name: 'Tenacity',     desc: '+0.3% damage reduction per point', color: 'text-orange-400' },
+        { id: 'agility',    name: 'Agility',      desc: '+0.25% chance to attack back when hit per point', color: 'text-yellow-400' },
+        { id: 'resistance', name: 'Resistance',   desc: '+0.25% dodge chance per point', color: 'text-purple-400' },
+        { id: 'happiness',  name: 'Happiness',    desc: '+0.25% healing received per point', color: 'text-pink-400' },
+        { id: 'vampire',    name: 'Vampire',      desc: '+0.25% life received per hit per point', color: 'text-violet-400' },
+        { id: 'force',      name: 'Force',        desc: '+0.5% crit rate per point', color: 'text-cyan-400' },
+        { id: 'fury',       name: 'Fury',         desc: '+0.25% crit damage per point', color: 'text-red-500' },
+        { id: 'revival',    name: 'Revival',      desc: '+0.2% HP regen per turn per point', color: 'text-emerald-400' },
     ];
 
-    attrDefs.forEach(a => {
+    attrDefs.forEach((a, idx) => {
         const currentVal = globalProgression.attributes[a.id] !== undefined ? globalProgression.attributes[a.id] : 0;
         const { classId, classBase } = getPlayerClassBase();
         const minVal = classBase[a.id] !== undefined ? classBase[a.id] : 0;
@@ -40,15 +40,10 @@ function showAttributes() {
         // + button: disabled if can't afford or at cap
         const plusDisabled = (player.statPoints < cost) || (currentVal >= attrCap) ? 'disabled' : '';
 
-        // +5 button disabled logic (some levels may cross the ATTRIBUTE_EXPENSIVE_THRESHOLD)
+        // +5 button disabled logic
         const cheap5 = Math.max(0, Math.min(5, ATTRIBUTE_EXPENSIVE_THRESHOLD - currentVal));
         const plus5Cost = cheap5 + (5 - cheap5) * 2;
         const plus5Disabled = (currentVal >= attrCap || player.statPoints < plus5Cost) ? 'disabled' : '';
-
-        // +50 button disabled logic (some levels may cross the ATTRIBUTE_EXPENSIVE_THRESHOLD)
-        const cheap50 = Math.max(0, Math.min(50, ATTRIBUTE_EXPENSIVE_THRESHOLD - currentVal));
-        const plus50Cost = cheap50 + (50 - cheap50) * 2;
-        const plus50Disabled = (currentVal >= attrCap || player.statPoints < plus50Cost) ? 'disabled' : '';
 
         // - button: disabled if at class minimum (permanent base)
         const minusDisabled = currentVal <= minVal ? 'disabled' : '';
@@ -56,31 +51,29 @@ function showAttributes() {
         // -5 button: disabled if fewer than 5 levels above minimum
         const minus5Disabled = (currentVal - 5) < minVal ? 'disabled' : '';
 
-        // -50 button: disabled if fewer than 50 levels above minimum
-        const minus50Disabled = (currentVal - 50) < minVal ? 'disabled' : '';
-
         const capDisplay = ` / ${attrCap}`;
         const levelDisplay = `Lv. ${currentVal}${capDisplay}`;
         const baseNote = (minVal > 0) ? ` <span class="text-yellow-500 text-[9px]">(base ${minVal})</span>` : '';
 
+        // Revival spans full width (13th attribute)
+        const isRevival = a.id === 'revival';
+
         const btn = document.createElement('div');
-        btn.className = "flex flex-col bg-gray-900 p-2 rounded-lg border border-gray-700 shadow-sm";
+        btn.className = "flex flex-col bg-gray-900 p-1.5 rounded-lg border border-gray-700 shadow-sm" + (isRevival ? " col-span-2" : "");
 
         btn.innerHTML = `
-            <div class="w-full mb-2">
-                <div class="font-bold ${a.color} text-sm">${sanitizeHTML(a.name)} <span class="text-white ml-2 text-xs">${levelDisplay}</span>${baseNote} <span class="text-xs text-yellow-400 ml-1">Cost: ${cost} SP</span></div>
-                <div class="text-[10px] text-gray-400 leading-tight mt-0.5">${sanitizeHTML(a.desc)}</div>
+            <div class="w-full mb-1">
+                <div class="font-bold ${a.color} text-[11px] leading-tight">${sanitizeHTML(a.name)} <span class="text-white text-[10px]">${levelDisplay}</span>${baseNote} <span class="text-[9px] text-yellow-400">Cost: ${cost} SP</span></div>
+                <div class="text-[9px] text-gray-400 leading-tight">${sanitizeHTML(a.desc)}</div>
             </div>
-            <div class="flex gap-2 w-full items-stretch">
-                <div class="flex flex-col gap-1 flex-1">
-                    <button onclick="deallocateAttribute('${a.id}',50)" class="w-full bg-red-800 hover:bg-red-700 py-1 rounded text-white font-bold transition active:scale-95 border border-red-600 text-xs disabled:opacity-50" ${minus50Disabled}>- 50</button>
-                    <button onclick="deallocateAttribute('${a.id}',5)" class="w-full bg-red-800 hover:bg-red-700 py-1 rounded text-white font-bold transition active:scale-95 border border-red-600 text-xs disabled:opacity-50" ${minus5Disabled}>- 5</button>
-                    <button onclick="deallocateAttribute('${a.id}',1)" class="w-full bg-red-800 hover:bg-red-700 py-1 rounded text-white font-bold transition active:scale-95 border border-red-600 text-sm disabled:opacity-50" ${minusDisabled}>-</button>
+            <div class="flex gap-1 w-full items-stretch">
+                <div class="flex flex-col gap-0.5 flex-1">
+                    <button onclick="deallocateAttribute('${a.id}',5)" class="w-full bg-red-800 hover:bg-red-700 py-0.5 rounded text-white font-bold transition active:scale-95 border border-red-600 text-[10px] disabled:opacity-50" ${minus5Disabled}>- 5</button>
+                    <button onclick="deallocateAttribute('${a.id}',1)" class="w-full bg-red-800 hover:bg-red-700 py-0.5 rounded text-white font-bold transition active:scale-95 border border-red-600 text-[10px] disabled:opacity-50" ${minusDisabled}>-</button>
                 </div>
-                <div class="flex flex-col gap-1 flex-1">
-                    <button onclick="allocateAttribute('${a.id}',50)" class="w-full bg-green-700 hover:bg-green-600 py-1 rounded text-white font-bold transition active:scale-95 border border-green-500 text-xs disabled:opacity-50" ${plus50Disabled}>+ 50</button>
-                    <button onclick="allocateAttribute('${a.id}',5)" class="w-full bg-green-700 hover:bg-green-600 py-1 rounded text-white font-bold transition active:scale-95 border border-green-500 text-xs disabled:opacity-50" ${plus5Disabled}>+ 5</button>
-                    <button onclick="allocateAttribute('${a.id}',1)" class="w-full bg-green-700 hover:bg-green-600 py-1 rounded text-white font-bold transition active:scale-95 border border-green-500 text-sm disabled:opacity-50" ${plusDisabled}>+</button>
+                <div class="flex flex-col gap-0.5 flex-1">
+                    <button onclick="allocateAttribute('${a.id}',5)" class="w-full bg-green-700 hover:bg-green-600 py-0.5 rounded text-white font-bold transition active:scale-95 border border-green-500 text-[10px] disabled:opacity-50" ${plus5Disabled}>+ 5</button>
+                    <button onclick="allocateAttribute('${a.id}',1)" class="w-full bg-green-700 hover:bg-green-600 py-0.5 rounded text-white font-bold transition active:scale-95 border border-green-500 text-[10px] disabled:opacity-50" ${plusDisabled}>+</button>
                 </div>
             </div>
         `;
