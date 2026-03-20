@@ -714,7 +714,7 @@ function loadGameAndContinue() {
         }
         const savedKey = LEGACY_SAVE_KEYS.find(k => localStorage.getItem(k));
         const saved = savedKey ? localStorage.getItem(savedKey) : null;
-        console.log('loadGameAndContinue: saved data found =', !!saved, 'key =', savedKey);
+
         if (saved) {
             const savedJson = saved.includes('|') ? saved.split('|')[0] : saved;
             const data = JSON.parse(savedJson);
@@ -1151,8 +1151,6 @@ function selectGenderAndStart(gender, chosenAvatar) {
         const isNewGame = pendingNewGame;
         pendingNewGame = false;
 
-        console.log(`selectGenderAndStart: gender=${gender}, classId=${pendingClassId}, isNewGame=${isNewGame}`);
-
         // Determine the final avatar: use chosen emoji if provided, else fall back to class defaults
         let finalAvatar = chosenAvatar || (CLASS_GENDER_AVATARS[pendingClassId] ? CLASS_GENDER_AVATARS[pendingClassId][gender] : (gender === 'female' ? '👩' : '🧑'));
 
@@ -1272,9 +1270,11 @@ function showHub() {
         let titleBadgeEl = document.getElementById('hub-title-badge');
         let titleMobileEl = document.getElementById('hub-title-mobile');
         if(highestTitle) {
-            let badgeHtml = `<span class="title-badge">🏆 ${highestTitle.name}</span>`;
-            if(titleBadgeEl) { titleBadgeEl.innerHTML = badgeHtml; titleBadgeEl.classList.remove('hidden'); }
-            if(titleMobileEl) { titleMobileEl.innerHTML = badgeHtml; titleMobileEl.classList.remove('hidden'); }
+            const badgeSpan = document.createElement('span');
+            badgeSpan.className = 'title-badge';
+            badgeSpan.textContent = `🏆 ${highestTitle.name}`;
+            if(titleBadgeEl) { titleBadgeEl.innerHTML = ''; titleBadgeEl.appendChild(badgeSpan.cloneNode(true)); titleBadgeEl.classList.remove('hidden'); }
+            if(titleMobileEl) { titleMobileEl.innerHTML = ''; titleMobileEl.appendChild(badgeSpan.cloneNode(true)); titleMobileEl.classList.remove('hidden'); }
         } else {
             if(titleBadgeEl) titleBadgeEl.classList.add('hidden');
             if(titleMobileEl) titleMobileEl.classList.add('hidden');
@@ -1864,5 +1864,4 @@ window.loadGameAndContinue = loadGameAndContinue;
 window.selectGenderAndStart = selectGenderAndStart;
 window.showGenderSelect = showGenderSelect;
 window.onClassVideoEnd = onClassVideoEnd;
-console.log("Game.js loaded successfully");
 

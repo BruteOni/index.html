@@ -278,13 +278,19 @@ function showImport() {
                     throw new Error("Checksum mismatch");
                 }
             }
-            let parsed = JSON.parse(jsonData); 
+            let parsed = JSON.parse(jsonData);
             if(parsed.global && parsed.pState) {
+                // Sanity-check key numeric fields to catch corrupted or tampered saves
+                const gp = parsed.global;
+                const ps = parsed.pState;
+                if (typeof gp.gold !== 'number' || gp.gold < 0 || !isFinite(gp.gold)) throw new Error("Invalid gold value in save data");
+                if (typeof ps.lvl !== 'number' || ps.lvl < 1 || ps.lvl > 200 || !isFinite(ps.lvl)) throw new Error("Invalid level in save data");
+                if (typeof ps.currentHp !== 'number' || ps.currentHp < 0 || !isFinite(ps.currentHp)) throw new Error("Invalid HP in save data");
                 localStorage.setItem('EternalAscensionSaveDataV1', jsonData);
                 closeSaveLoadModal();
                 playSound('win');
-                loadGameAndContinue(); 
-                showHub(); 
+                loadGameAndContinue();
+                showHub();
             } else {
                 throw new Error("Invalid format");
             }
