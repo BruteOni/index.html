@@ -35,18 +35,18 @@ function showAttributes() {
         const { classId, classBase } = getPlayerClassBase();
         const minVal = classBase[a.id] !== undefined ? classBase[a.id] : 0;
         const attrCap = getClassAttrCap(classId, a.id);
-        const cost = currentVal >= 50 ? 2 : 1;
+        const cost = currentVal >= ATTRIBUTE_EXPENSIVE_THRESHOLD ? 2 : 1;
 
         // + button: disabled if can't afford or at cap
         const plusDisabled = (player.statPoints < cost) || (currentVal >= attrCap) ? 'disabled' : '';
 
-        // +5 button disabled logic (some levels may cross the 50 threshold)
-        const cheap5 = Math.max(0, Math.min(5, 50 - currentVal));
+        // +5 button disabled logic (some levels may cross the ATTRIBUTE_EXPENSIVE_THRESHOLD)
+        const cheap5 = Math.max(0, Math.min(5, ATTRIBUTE_EXPENSIVE_THRESHOLD - currentVal));
         const plus5Cost = cheap5 + (5 - cheap5) * 2;
         const plus5Disabled = (currentVal >= attrCap || player.statPoints < plus5Cost) ? 'disabled' : '';
 
-        // +50 button disabled logic (some levels may cross the 50 threshold)
-        const cheap50 = Math.max(0, Math.min(50, 50 - currentVal));
+        // +50 button disabled logic (some levels may cross the ATTRIBUTE_EXPENSIVE_THRESHOLD)
+        const cheap50 = Math.max(0, Math.min(50, ATTRIBUTE_EXPENSIVE_THRESHOLD - currentVal));
         const plus50Cost = cheap50 + (50 - cheap50) * 2;
         const plus50Disabled = (currentVal >= attrCap || player.statPoints < plus50Cost) ? 'disabled' : '';
 
@@ -99,12 +99,12 @@ function allocateAttribute(id, count) {
     const defaultMin = classBase[id] !== undefined ? classBase[id] : 0;
     const currentVal = globalProgression.attributes[id] !== undefined ? globalProgression.attributes[id] : defaultMin;
 
-    // Determine how many levels we can afford, accounting for threshold at 50
+    // Determine how many levels we can afford, accounting for threshold at ATTRIBUTE_EXPENSIVE_THRESHOLD
     let affordable;
-    if (currentVal >= 50) {
+    if (currentVal >= ATTRIBUTE_EXPENSIVE_THRESHOLD) {
         affordable = Math.floor(player.statPoints / 2);
     } else {
-        const cheapCapacity = 50 - currentVal; // levels available at cost 1 SP
+        const cheapCapacity = ATTRIBUTE_EXPENSIVE_THRESHOLD - currentVal; // levels available at cost 1 SP
         if (player.statPoints <= cheapCapacity) {
             affordable = player.statPoints;
         } else {
@@ -116,7 +116,7 @@ function allocateAttribute(id, count) {
     if (canAllocate <= 0) return;
 
     // Calculate actual SP cost, accounting for threshold crossing
-    const cheap = Math.max(0, Math.min(canAllocate, 50 - currentVal));
+    const cheap = Math.max(0, Math.min(canAllocate, ATTRIBUTE_EXPENSIVE_THRESHOLD - currentVal));
     const expensive = Math.max(0, canAllocate - cheap);
     const totalCost = cheap + expensive * 2;
 
@@ -139,8 +139,8 @@ function deallocateAttribute(id, count) {
     const canRemove = Math.min(count, currentVal - minVal);
     if (canRemove <= 0) return;
 
-    // Calculate refund: levels above 50 refund 2 SP each, levels at/below 50 refund 1 SP each
-    const expensiveRemoved = Math.min(canRemove, Math.max(0, currentVal - 50));
+    // Calculate refund: levels above ATTRIBUTE_EXPENSIVE_THRESHOLD refund 2 SP each, levels at/below refund 1 SP each
+    const expensiveRemoved = Math.min(canRemove, Math.max(0, currentVal - ATTRIBUTE_EXPENSIVE_THRESHOLD));
     const cheapRemoved = canRemove - expensiveRemoved;
     const totalRefund = cheapRemoved + expensiveRemoved * 2;
 
@@ -159,8 +159,8 @@ function respecAttributes() {
     ATTRIBUTE_KEYS.forEach(stat => {
         let currentVal = globalProgression.attributes[stat] !== undefined ? globalProgression.attributes[stat] : 0;
         let baseVal = classBase[stat] !== undefined ? classBase[stat] : 0;
-        let cheapLevels = Math.max(0, Math.min(50, currentVal) - baseVal);
-        let expensiveLevels = Math.max(0, currentVal - Math.max(50, baseVal));
+        let cheapLevels = Math.max(0, Math.min(ATTRIBUTE_EXPENSIVE_THRESHOLD, currentVal) - baseVal);
+        let expensiveLevels = Math.max(0, currentVal - Math.max(ATTRIBUTE_EXPENSIVE_THRESHOLD, baseVal));
         totalRefund += cheapLevels + expensiveLevels * 2;
         globalProgression.attributes[stat] = baseVal;
     });
@@ -188,17 +188,17 @@ function getTotalSpentPoints() {
     ATTRIBUTE_KEYS.forEach(stat => {
         let cur = globalProgression.attributes[stat] || 0;
         let base = classBase[stat] || 0;
-        // Levels from base up to 50 cost 1 SP each
-        let cheapLevels = Math.max(0, Math.min(50, cur) - base);
-        // Levels from 50 up to cur cost 2 SP each
-        let expensiveLevels = Math.max(0, cur - Math.max(50, base));
+        // Levels from base up to ATTRIBUTE_EXPENSIVE_THRESHOLD cost 1 SP each
+        let cheapLevels = Math.max(0, Math.min(ATTRIBUTE_EXPENSIVE_THRESHOLD, cur) - base);
+        // Levels from ATTRIBUTE_EXPENSIVE_THRESHOLD up to cur cost 2 SP each
+        let expensiveLevels = Math.max(0, cur - Math.max(ATTRIBUTE_EXPENSIVE_THRESHOLD, base));
         total += cheapLevels + expensiveLevels * 2;
     });
     return total;
 }
 
 function getMaxAttributePoints() {
-    return player.lvl * 2;
+    return player.lvl * STAT_POINTS_PER_LEVEL;
 }
 
 function clampAttributes() {
@@ -225,7 +225,7 @@ function clampAttributes() {
             });
             if (!highest) break;
             let curLevel = globalProgression.attributes[highest] || 0;
-            let trimCost = curLevel > 50 ? 2 : 1;
+            let trimCost = curLevel > ATTRIBUTE_EXPENSIVE_THRESHOLD ? 2 : 1;
             globalProgression.attributes[highest]--;
             excess -= trimCost;
         }

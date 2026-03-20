@@ -1,0 +1,47 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "args": "none", "varsIgnorePattern": "^_" }],
+    "no-undef": "off",
+    "eqeqeq": ["warn", "smart"],
+    "no-redeclare": "warn",
+    "no-constant-condition": "warn",
+    "no-debugger": "error",
+    "no-duplicate-case": "error",
+    "no-empty": ["warn", { "allowEmptyCatch": true }],
+    "no-extra-semi": "warn",
+    "no-unreachable": "warn",
+    "curly": ["warn", "multi-line"],
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "prefer-const": ["warn", { "destructuring": "all" }]
+  },
+  "globals": {
+    "player": "writable",
+    "globalProgression": "writable",
+    "enemies": "writable",
+    "savedEnemies": "writable",
+    "combatActive": "writable",
+    "isPlayerTurn": "writable",
+    "isAutoBattle": "writable",
+    "currentMode": "writable",
+    "activeTargetIndex": "writable",
+    "CLASSES": "readonly",
+    "CONSUMABLES": "readonly",
+    "USABLE_ITEMS": "readonly",
+    "RARITY_CONFIG": "readonly",
+    "sanitizeHTML": "readonly",
+    "saveGame": "readonly",
+    "playSound": "readonly",
+    "switchScreen": "readonly",
+    "showHub": "readonly"
+  }
+}

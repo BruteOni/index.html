@@ -79,7 +79,7 @@ function showMagicalEnhancer() {
                 <div class="text-xs text-gray-500 mt-2 italic">Already enhanced</div>`;
         } else {
             // Show enhance options
-            let canAfford = (p.gold >= 10000) && ((p.inventory.magic_stone || 0) >= 50);
+            let canAfford = (p.gold >= MAGICAL_ENHANCER_GOLD_COST) && ((p.inventory.magic_stone || 0) >= MAGICAL_ENHANCER_STONE_COST);
             let setOptions = Object.entries(classSets).map(([sk, sd]) => {
                 let optBtn = `<button onclick="enhanceWithSet('${isEquipped ? 'equip_' + slot : 'inv_id_' + item.id}', '${sk}')"
                     class="text-left w-full rounded-lg p-2 mt-1 border ${sd.borderColor} bg-gray-900 hover:bg-gray-700 transition ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}"
@@ -104,8 +104,8 @@ function showMagicalEnhancer() {
 
 function enhanceWithSet(itemRef, setKey) {
     let p = globalProgression;
-    if((p.inventory.magic_stone || 0) < 50) { document.getElementById('me-status').innerText = '❌ Need 50 Magic Stones!'; return; }
-    if(p.gold < 10000) { document.getElementById('me-status').innerText = '❌ Need 10,000 Gold!'; return; }
+    if((p.inventory.magic_stone || 0) < MAGICAL_ENHANCER_STONE_COST) { document.getElementById('me-status').innerText = `❌ Need ${MAGICAL_ENHANCER_STONE_COST} Magic Stones!`; return; }
+    if(p.gold < MAGICAL_ENHANCER_GOLD_COST) { document.getElementById('me-status').innerText = `❌ Need ${MAGICAL_ENHANCER_GOLD_COST.toLocaleString()} Gold!`; return; }
 
     let classId = player.classId || 'warrior';
     let classSets = SET_BONUS_DEFS[classId];
@@ -128,8 +128,8 @@ function enhanceWithSet(itemRef, setKey) {
     if(!item) { document.getElementById('me-status').innerText = '❌ Item not found!'; return; }
     if(item.setBonus) { document.getElementById('me-status').innerText = '❌ Already enhanced!'; return; }
 
-    p.inventory.magic_stone -= 50;
-    p.gold -= 10000;
+    p.inventory.magic_stone -= MAGICAL_ENHANCER_STONE_COST;
+    p.gold -= MAGICAL_ENHANCER_GOLD_COST;
     item.setBonus = { setKey, setName: setDef.name };
 
     playSound('win');
@@ -200,16 +200,6 @@ function closeProgressMenu() {
 }
 
 // --- EXPORT / IMPORT SAVE ---
-function simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const chr = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + chr;
-        hash |= 0; // Convert to 32-bit integer
-    }
-    return btoa(hash.toString());
-}
-
 function copyToClipboard(text, btn) {
     const onSuccess = () => {
         btn.innerText = "Copied!";
@@ -284,7 +274,7 @@ function showImport() {
                 const gp = parsed.global;
                 const ps = parsed.pState;
                 if (typeof gp.gold !== 'number' || gp.gold < 0 || !isFinite(gp.gold)) throw new Error("Invalid gold value in save data");
-                if (typeof ps.lvl !== 'number' || ps.lvl < 1 || ps.lvl > 200 || !isFinite(ps.lvl)) throw new Error("Invalid level in save data");
+                if (typeof ps.lvl !== 'number' || ps.lvl < 1 || ps.lvl > MAX_LEVEL || !isFinite(ps.lvl)) throw new Error("Invalid level in save data");
                 if (typeof ps.currentHp !== 'number' || ps.currentHp < 0 || !isFinite(ps.currentHp)) throw new Error("Invalid HP in save data");
                 localStorage.setItem('EternalAscensionSaveDataV1', jsonData);
                 closeSaveLoadModal();

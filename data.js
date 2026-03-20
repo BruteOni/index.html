@@ -1,3 +1,25 @@
+// --- GAME BALANCE CONSTANTS ---
+const AUTOSAVE_INTERVAL_MS = 30000;        // Auto-save interval (30 seconds)
+const HP_REGEN_INTERVAL_MS = 60000;        // HP regen tick interval (1 minute)
+const HP_REGEN_AMOUNT = 10;                // HP regained per regen tick
+const ENERGY_REGEN_INTERVAL_MS = 300000;   // Energy regen interval (5 minutes)
+const MAX_LEVEL = 500;                     // Maximum player level
+const MYTHIC_BOSS_SPAWN_CHANCE = 0.005;    // 0.5% chance to spawn the secret mythic boss
+const ENEMY_COUNT_4_CHANCE = 0.05;         // Cumulative 5%: chance of 4 enemies
+const ENEMY_COUNT_3_CHANCE = 0.10;         // Cumulative 10%: 5% chance of 3 enemies
+const ENEMY_COUNT_2_CHANCE = 0.50;         // Cumulative 50%: 40% chance of 2 enemies
+const WELL_HEAL_COST = 50;                 // Gold cost for well full heal
+const WELL_BLESSING_COST = 20;             // Gold cost for well XP/drop blessings
+const WELL_ENERGY50_COST = 50;             // Gold cost for 50-energy refill
+const WELL_ENERGY100_COST = 100;           // Gold cost for 100-energy refill
+const WELL_ENERGY_CAP_COST = 300;          // Gold cost for energy cap upgrade
+const WELL_ENERGY250_COST = 250;           // Gold cost for unlimited-use 250-energy refill
+const WELL_ENERGY_CAP_MIN_ENERGY = 50;     // Minimum max-energy required to unlock the energy cap
+const MAGICAL_ENHANCER_STONE_COST = 50;    // Magic stones needed for set enhancement
+const MAGICAL_ENHANCER_GOLD_COST = 10000;  // Gold needed for set enhancement
+const ATTRIBUTE_EXPENSIVE_THRESHOLD = 50;  // Attribute level above which each point costs 2 SP
+const STAT_POINTS_PER_LEVEL = 2;           // Stat points granted per level-up
+
 // --- DATA DICTIONARIES ---
 const CONSUMABLES = {
     pot_i1: { id: 'pot_i1', name: 'Minor Potion', type: 'instant', val: 0.20, cost: 0, icon: '🧪', desc: 'Instantly heals 20% HP' },
