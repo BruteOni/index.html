@@ -364,24 +364,24 @@ body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: w
 .tap-to-play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); cursor: pointer; z-index: 10; border-radius: 12px; }
 .tap-to-play-overlay span { color: #fff; font-size: 1.4rem; font-weight: bold; pointer-events: none; }
 
-/* Desktop: enlarge and center the hub character info panel */
+/* Hub avatar golden glowing border */
+.hub-avatar-golden {
+    border: 2px solid rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 12px 3px rgba(251, 191, 36, 0.4), inset 0 0 8px rgba(251, 191, 36, 0.08);
+    animation: hubAvatarGoldenGlow 3s ease-in-out infinite;
+}
+@keyframes hubAvatarGoldenGlow {
+    0%, 100% { border-color: rgba(251, 191, 36, 0.7); box-shadow: 0 0 10px 2px rgba(251, 191, 36, 0.4), inset 0 0 8px rgba(251, 191, 36, 0.08); }
+    50% { border-color: rgba(251, 191, 36, 1); box-shadow: 0 0 22px 6px rgba(251, 191, 36, 0.7), inset 0 0 14px rgba(251, 191, 36, 0.18); }
+}
+
+/* Desktop: enlarge hub class name and level on wider screens */
 @media (min-width: 768px) {
-    #hub-info-btn {
-        text-align: center !important;
-    }
     #hub-class {
-        font-size: 1.5rem;
-        display: block;
-        text-align: center;
+        font-size: 1.4rem;
     }
     #hub-lvl {
-        font-size: 1.2rem;
-    }
-    #hub-info-btn .text-xs {
-        font-size: 0.9rem;
-    }
-    #hub-info-btn .text-base {
-        font-size: 1.4rem;
+        font-size: 1.1rem;
     }
 }
 
@@ -410,7 +410,7 @@ body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: w
 }
 
 /* Flex layout for the hub title badge so spans sit side by side */
-#hub-title-badge:not(.hidden) {
+#hub-title-badge {
     display: flex;
     align-items: center;
     gap: 0.25rem;
