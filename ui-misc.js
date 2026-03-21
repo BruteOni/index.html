@@ -4,6 +4,8 @@ function showMagicalEnhancer() {
     const p = globalProgression;
     document.getElementById('me-gold-display').innerText = p.gold;
     document.getElementById('me-stones-display').innerText = p.inventory.magic_stone || 0;
+    const dustEl = document.getElementById('me-dust-display');
+    if (dustEl) dustEl.innerText = p.inventory.ethereal_dust || 0;
     
     const list = document.getElementById('me-item-list');
     list.innerHTML = '';
@@ -76,7 +78,11 @@ function showMagicalEnhancer() {
             card.innerHTML = header + `
                 <div class="text-xs ${setDef.color} font-bold mb-1">✨ Set: ${setDef.name} (${equippedCount} equipped)</div>
                 <div class="bg-gray-900 rounded-lg p-2 space-y-1">${bonusHtml}</div>
-                <div class="text-xs text-gray-500 mt-2 italic">Already enhanced</div>`;
+                <div class="text-xs text-gray-500 mt-2 italic">Already enhanced</div>
+                <button onclick="reStatItem('${isEquipped ? 'equip_' + slot : 'inv_id_' + item.id}')"
+                    class="mt-2 w-full bg-teal-800 hover:bg-teal-700 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95">
+                    🔄 Re-Stat <span class="text-teal-300">(10 ✨ Ethereal Dust)</span>
+                </button>`;
         } else {
             // Show enhance options
             const canAfford = (p.gold >= MAGICAL_ENHANCER_GOLD_COST) && ((p.inventory.magic_stone || 0) >= MAGICAL_ENHANCER_STONE_COST);
@@ -135,6 +141,41 @@ function enhanceWithSet(itemRef, setKey) {
     playSound('win');
     queueSave();
     document.getElementById('me-status').innerText = `✨ ${item.name} enhanced with ${setDef.name} set!`;
+    showMagicalEnhancer();
+}
+
+// --- RESTAT ---
+function reStatItem(itemRef) {
+    const p = globalProgression;
+    const RESTAT_COST = 10;
+    if ((p.inventory.ethereal_dust || 0) < RESTAT_COST) {
+        document.getElementById('me-status').innerText = `❌ Need ${RESTAT_COST} Ethereal Dust!`;
+        return;
+    }
+
+    let item = null;
+    if (typeof itemRef === 'string' && itemRef.startsWith('equip_')) {
+        const slot = itemRef.replace('equip_', '');
+        item = p.equipped[slot];
+    } else if (typeof itemRef === 'string' && itemRef.startsWith('inv_id_')) {
+        const itemId = itemRef.replace('inv_id_', '');
+        item = (p.equipInventory || []).find(i => i && i.id === itemId);
+    }
+
+    if (!item) { document.getElementById('me-status').innerText = '❌ Item not found!'; return; }
+
+    if (item.stats && Array.isArray(item.stats)) {
+        item.stats = item.stats.map(s => {
+            const baseVal = s.val;
+            const variation = baseVal * (0.5 + Math.random());
+            return { ...s, val: Math.round(variation * 1000) / 1000 };
+        });
+    }
+
+    p.inventory.ethereal_dust -= RESTAT_COST;
+    playSound('win');
+    queueSave();
+    document.getElementById('me-status').innerText = '✨ Item stats re-rolled!';
     showMagicalEnhancer();
 }
 
