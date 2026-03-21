@@ -723,6 +723,16 @@ function togglePetFavorite(petId) {
     showPetBattle();
 }
 
+function refreshPetBattleEnergy() {
+    if (globalProgression.gold < 5000) return;
+    if ((globalProgression.petBattleEnergy || 0) >= 10) return;
+    globalProgression.gold -= 5000;
+    globalProgression.petBattleEnergy = 10;
+    playSound('win');
+    queueSave();
+    showPetBattle();
+}
+
 function showPetBattle() {
     regenPetBattleEnergy();
     document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
@@ -740,6 +750,14 @@ function showPetBattle() {
     }
     petBattleActive = false;
     petBattlePlayerPet = null;
+
+    // Manage refresh energy button state
+    const refreshBtn = document.getElementById('pet-battle-refresh-energy-btn');
+    if (refreshBtn) {
+        const energyFull = (globalProgression.petBattleEnergy || 0) >= 10;
+        const canAfford = globalProgression.gold >= 5000;
+        refreshBtn.disabled = energyFull || !canAfford;
+    }
 
     // Show select area, hide battle area
     document.getElementById('pet-select-area').classList.remove('hidden');
