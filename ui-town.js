@@ -829,6 +829,7 @@ function petBattleRoundEnd(playerWon) {
         globalProgression.gold += 15;
         globalProgression.petBattleEnergy = Math.max(0, (globalProgression.petBattleEnergy || 0) - 1);
         globalProgression.petBattleLastEnergyDate = new Date().toDateString();
+        globalProgression.petBattleLastEnergyTime = Date.now();
         // Drop a Titan Shard for winning
         globalProgression.inventory.titan_shard = (globalProgression.inventory.titan_shard || 0) + 1;
         const xpGain = Math.floor(getXpForNextLevel(player.lvl) * 0.01);

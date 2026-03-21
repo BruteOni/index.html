@@ -2480,7 +2480,8 @@ function endBattle(playerWon) {
             rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-gray-500 text-gray-300 font-bold shadow-md">🌫️ +10 Ethereal Dust</div>`;
             if (activeDungeonRoom === 5) { 
                 desc.innerText = `You conquered Tier ${activeDungeonTier}!`; btnNext.classList.add('hidden'); 
-                // Every 100 floors (tier * 5 rooms = 100 floors means tier 20)
+                // Every 100 cumulative floors (5 floors/tier × 20 tiers = 100, 40 tiers = 200, etc.)
+                // activeDungeonTier * 5 = cumulative floors cleared (since each tier always has 5 floors)
                 const totalFloorsCleared = activeDungeonTier * 5;
                 if (totalFloorsCleared % 100 === 0) {
                     globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 20;
