@@ -758,13 +758,17 @@ function updateCombatUI() {
     if (!player || !player.data) return;
     var ui = getCombatUIElements();
     if (ui.uiLevel) ui.uiLevel.innerText = `Level ${player.lvl}`;
-    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `XP Dungeon T${activeDungeonTier} (Rm ${activeDungeonRoom})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : currentMode === 'invasion' ? `🧟 Zombie Apocalypse — Wave ${zombieWaveCount + 1}` : 'Quest Marathon';
+    const activeDungeonFloor = (activeDungeonTier - 1) * 5 + activeDungeonRoom;
+    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `🗼 Tower of Babel — Floor ${activeDungeonFloor}` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : currentMode === 'invasion' ? `🧟 Zombie Apocalypse — Wave ${zombieWaveCount + 1}` : 'Quest Marathon';
     
     if(currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop') {
         modeText += ` (${globalProgression.storyModeProgress[currentMode] + 1}/10)`;
     }
 
     if (ui.uiModeBadge) ui.uiModeBadge.innerText = modeText;
+    // Show current energy in mode badge area
+    const energyDisplay = document.getElementById('battle-energy-display');
+    if (energyDisplay) energyDisplay.innerText = `⚡ ${globalProgression.energy || 0}/${getMaxEnergy()}`;
 
     if (ui.playerAvatar) setAvatarDisplay('combat-player-avatar', player.data.avatar);
     // Black Market Tier 1: avatar glow border
@@ -790,19 +794,22 @@ function updateCombatUI() {
     if (ui.stunInd) ui.stunInd.style.display = player.stunned > 0 ? 'block' : 'none';
 
     let activeBuffsHtml = '';
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'dmg')) activeBuffsHtml += `<span class="bg-orange-900 text-xs px-1 rounded border border-orange-500 shadow-md">⚔️UP</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'def')) activeBuffsHtml += `<span class="bg-blue-900 text-xs px-1 rounded border border-blue-500 shadow-md">🛡️UP</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'def_down')) activeBuffsHtml += `<span class="bg-purple-900 text-xs px-1 rounded border border-purple-500 shadow-md">📉DEF</span>`;
-    if(player.bleedStacks > 0) activeBuffsHtml += `<span class="bg-red-900 text-xs px-1 rounded border border-red-500 shadow-md">🩸${player.bleedStacks}</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'poison')) activeBuffsHtml += `<span class="bg-green-900 text-xs px-1 rounded border border-green-500 shadow-md">🧪Poison</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'burn')) activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">🔥Burn</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'fire_shield')) activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔥Shield</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'ice_shield')) activeBuffsHtml += `<span class="bg-cyan-800 text-xs px-1 rounded border border-cyan-400 shadow-md">❄️Shield</span>`;
-    if(player.dodgeTurns > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨Dodge</span>`;
-    if((player.ninjaDodgeTurns || 0) > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨NinjaDodge(${player.ninjaDodgeTurns}t)</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'skill_reflect')) activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔄Reflect</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'double_damage_taken')) activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">⚠️2xDmg</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'vamp_buff')) { const vbPct = Math.round(player.activeBuffs.filter(b => b.type === 'vamp_buff').reduce((s,b) => s+(b.val||0),0)*100); activeBuffsHtml += `<span class="bg-violet-900 text-xs px-1 rounded border border-violet-500 shadow-md">🧛${vbPct}%Vamp</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'dmg')) { const t = player.activeBuffs.filter(b => b.type === 'dmg').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-orange-900 text-xs px-1 rounded border border-orange-500 shadow-md">⚔️UP${t>0?'('+t+'t)':''}</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'def')) { const t = player.activeBuffs.filter(b => b.type === 'def').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-blue-900 text-xs px-1 rounded border border-blue-500 shadow-md">🛡️UP${t>0?'('+t+'t)':''}</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'def_down')) { const t = player.activeBuffs.filter(b => b.type === 'def_down').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-purple-900 text-xs px-1 rounded border border-purple-500 shadow-md">📉DEF${t>0?'('+t+'t)':''}</span>`; }
+    if(player.bleedStacks > 0) activeBuffsHtml += `<span class="bg-red-900 text-xs px-1 rounded border border-red-500 shadow-md">🩸${player.bleedStacks}${(player.bleedTurns||0)>0?'('+player.bleedTurns+'t)':''}</span>`;
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'poison')) { const t = player.activeBuffs.filter(b => b.type === 'poison').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-green-900 text-xs px-1 rounded border border-green-500 shadow-md">🧪Poison${t>0?'('+t+'t)':''}</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'burn')) { const t = player.activeBuffs.filter(b => b.type === 'burn').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">🔥Burn${t>0?'('+t+'t)':''}</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'fire_shield')) { const t = player.activeBuffs.filter(b => b.type === 'fire_shield').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔥Shield${t>0?'('+t+'t)':''}</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'ice_shield')) { const t = player.activeBuffs.filter(b => b.type === 'ice_shield').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-cyan-800 text-xs px-1 rounded border border-cyan-400 shadow-md">❄️Shield${t>0?'('+t+'t)':''}</span>`; }
+    if(player.dodgeTurns > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨Dodge(${player.dodgeTurns}t)</span>`;
+    if((player.ninjaDodgeTurns || 0) > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨Dodge(${player.ninjaDodgeTurns}t)</span>`;
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'skill_reflect')) { const t = player.activeBuffs.filter(b => b.type === 'skill_reflect').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔄Reflect${t>0?'('+t+'t)':''}</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'double_damage_taken')) { const t = player.activeBuffs.filter(b => b.type === 'double_damage_taken').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">⚠️2xDmg${t>0?'('+t+'t)':''}</span>`; }
+    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'vamp_buff')) { const vbPct = Math.round(player.activeBuffs.filter(b => b.type === 'vamp_buff').reduce((s,b) => s+(b.val||0),0)*100); const vt = player.activeBuffs.filter(b => b.type === 'vamp_buff').reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-violet-900 text-xs px-1 rounded border border-violet-500 shadow-md">🧛${vbPct}%Vamp${vt>0?'('+vt+'t)':''}</span>`; }
+    if(player.stunned > 0) activeBuffsHtml += `<span class="bg-yellow-900 text-xs px-1 rounded border border-yellow-500 shadow-md">😵Stun(${player.stunned}t)</span>`;
+    if((player.regenBuffs || []).length > 0) { const rt = player.regenBuffs.reduce((m,b) => Math.max(m, b.turns||0), 0); activeBuffsHtml += `<span class="bg-green-800 text-xs px-1 rounded border border-green-400 shadow-md">💚Regen${rt>0?'('+rt+'t)':''}</span>`; }
+    if((player.shurikenRainTurns || 0) > 0) activeBuffsHtml += `<span class="bg-gray-700 text-xs px-1 rounded border border-gray-500 shadow-md">🌟Rain(${player.shurikenRainTurns}t)</span>`;
     
     if (ui.buffsEl) ui.buffsEl.innerHTML = activeBuffsHtml;
 
@@ -1623,7 +1630,7 @@ function usePlayerSkill(slotIndex) {
         }
         if(skill.self_effect.ninjaDodgeTurns) {
             player.ninjaDodgeTurns = (player.ninjaDodgeTurns || 0) + skill.self_effect.ninjaDodgeTurns;
-            addLog(`💨 Dodge active! All attacks dodged for ${skill.self_effect.ninjaDodgeTurns} ninja turn(s)!`, 'text-gray-300 font-bold');
+            addLog(`💨 Dodge active! All attacks dodged for ${skill.self_effect.ninjaDodgeTurns} turn(s)!`, 'text-gray-300 font-bold');
         }
         if(skill.self_effect.healFromDmgPct && totalDmg > 0) {
             const h = Math.floor(totalDmg * skill.self_effect.healFromDmgPct * healMult * healingBuffMult);
@@ -2106,7 +2113,7 @@ function startPlayerTurn() {
     if((player.ninjaDodgeTurns || 0) > 0) {
         player.ninjaDodgeTurns--;
         if(player.ninjaDodgeTurns > 0) {
-            addLog(`💨 Ninja Dodge: ${player.ninjaDodgeTurns} turn(s) remaining.`, 'text-gray-400');
+            addLog(`💨 Dodge: ${player.ninjaDodgeTurns} turn(s) remaining.`, 'text-gray-400');
         }
     }
 
@@ -2286,10 +2293,10 @@ function endBattle(playerWon) {
             zombieWaveCount++;
             zombieConsecutiveWaves++;
             zs.maxWavesSurvived = Math.max(zs.maxWavesSurvived || 0, zombieConsecutiveWaves);
-            // Check every-10-wave potion reward
-            if(zombieConsecutiveWaves > 0 && zombieConsecutiveWaves % 10 === 0) {
-                zs.pendingPotionRewards = (zs.pendingPotionRewards || 0) + 1;
-            }
+            // Give soul pebbles equal to the wave number per wave
+            const wavePebbles = zombieConsecutiveWaves;
+            globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + wavePebbles;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-purple-700 text-purple-300 font-bold text-xs shadow-md">+${wavePebbles} 🔮 Soul Pebble${wavePebbles !== 1 ? 's' : ''}</div>`;
             // Check 100-wave cooldown buff
             if(zombieConsecutiveWaves >= 100 && !zs.cooldownBuffEarned) {
                 zs.cooldownBuffEarned = true;
@@ -2472,15 +2479,25 @@ function endBattle(playerWon) {
         if (currentMode === 'invasion') {
             // Already handled above
         } else if (currentMode === 'dungeon') {
+            const floorNum = (activeDungeonTier - 1) * 5 + activeDungeonRoom;
+            // Reward: 10 Ethereal Dust per floor cleared
+            globalProgression.inventory.ethereal_dust = (globalProgression.inventory.ethereal_dust || 0) + 10;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-teal-700 text-teal-300 font-bold shadow-md">+10 💠 Ethereal Dust</div>`;
+            rwdCont.classList.remove('hidden');
+            // Reward: 20 Soul Pebbles every 100 floors
+            if(floorNum % 100 === 0) {
+                globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 20;
+                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-purple-700 text-purple-300 font-bold shadow-md">🎉 +20 🔮 Soul Pebbles (Floor ${floorNum} milestone!)</div>`;
+            }
             if (activeDungeonRoom === 5) { 
-                desc.innerText = `You conquered Tier ${activeDungeonTier}!`; btnNext.classList.add('hidden'); 
+                desc.innerText = `You conquered Tower of Babel Tier ${activeDungeonTier}!`; btnNext.classList.add('hidden'); 
                 
                 if(activeDungeonTier === globalProgression.dungeonTier) globalProgression.dungeonTier++; 
-            } else { desc.innerText = "Room cleared. Proceed deeper."; btnNext.innerText = "Next Room"; btnNext.classList.remove('hidden'); }
+            } else { desc.innerText = `Floor ${floorNum} cleared. Ascend higher.`; btnNext.innerText = "Next Floor"; btnNext.classList.remove('hidden'); }
         } else if (currentMode === 'graveyard') {
             desc.innerText = "Boss Soul Harvested.";
-            btnNext.innerText = "Return to Town"; btnNext.classList.remove('hidden');
-            btnNext.onclick = returnToTown;
+            btnNext.innerText = "Return to Graveyard"; btnNext.classList.remove('hidden');
+            btnNext.onclick = showGraveyard;
         } else {
             if(globalProgression.storyModeProgress[currentMode] >= 10) {
                 desc.innerText = "Boss defeated! Progress Reset."; 
@@ -2514,8 +2531,12 @@ function endBattle(playerWon) {
         });
         
         if((globalProgression.wellXpBattles || 0) > 0) totalXp *= 2;
-        // Dungeons give 2x XP
+        // Dungeons (Tower of Babel) give 2x XP
         if(currentMode === 'dungeon') totalXp *= 2;
+        // Graveyard gives 0 XP
+        if(currentMode === 'graveyard') totalXp = 0;
+        // Adventure hunt XP capped at level 100 rates
+        if(currentMode === 'hunting') { const cappedLvl = Math.min(player.lvl, 100); const cappedXp = getXpForNextLevel(cappedLvl); totalXp = Math.min(totalXp, Math.floor(cappedXp * 2)); }
         // Apply XP Increase enhancements + XP Gain from accessories
         let xpMult = 1 + getEquipBonusStat('bonusXpGain');
         (globalProgression.skillTreeEnhancements || []).forEach(enh => {
@@ -2586,11 +2607,10 @@ function endBattle(playerWon) {
         rwdCont.classList.add('hidden');
     }
     switchScreen('screen-end');
-    // After a graveyard battle, return to town
+    // After a graveyard battle, show Return to Graveyard button (no auto-continue)
     if(currentMode === 'graveyard') {
         const gravBtn = document.getElementById('btn-end-hub');
-        if(gravBtn) { gravBtn.innerText = '🏠 Return to Town'; gravBtn.onclick = returnToTown; }
-        setTimeout(() => returnToTown(), 3500);
+        if(gravBtn) { gravBtn.innerText = '⚔️ Return to Graveyard'; gravBtn.onclick = showGraveyard; }
     }
     // After a zombie apocalypse defeat, return to ZA menu
     if(currentMode === 'invasion' && !playerWon) {

@@ -2,7 +2,7 @@
 const AUTOSAVE_INTERVAL_MS = 30000;        // Auto-save interval (30 seconds)
 const HP_REGEN_INTERVAL_MS = 60000;        // HP regen tick interval (1 minute)
 const HP_REGEN_AMOUNT = 10;                // HP regained per regen tick
-const ENERGY_REGEN_INTERVAL_MS = 300000;   // Energy regen interval (5 minutes)
+const ENERGY_REGEN_INTERVAL_MS = 600000;   // Energy regen interval (10 minutes)
 const MAX_LEVEL = 500;                     // Maximum player level
 const MYTHIC_BOSS_SPAWN_CHANCE = 0.005;    // 0.5% chance to spawn the secret mythic boss
 const ENEMY_COUNT_4_CHANCE = 0.05;         // Cumulative 5%: chance of 4 enemies
@@ -40,8 +40,8 @@ const RECIPES_ALCHEMIST = [{ id: 'pot_i1', herb: 'herb_red', herbAmt: 1, gold: 5
 const RECIPES_CHEF = [{ id: 'food_d1', fish: 'fish_1', fishAmt: 2, gold: 5 }, { id: 'food_d2', fish: 'fish_3', fishAmt: 2, gold: 15 }, { id: 'food_d3', fish: 'fish_5', fishAmt: 2, gold: 40 }, { id: 'food_df1', fish: 'fish_2', fishAmt: 2, gold: 5 }, { id: 'food_df2', fish: 'fish_4', fishAmt: 2, gold: 15 }, { id: 'food_df3', fish: 'fish_6', fishAmt: 2, gold: 40 }];
 
 const MAT_PRICES = { ench_common: 5, ench_rare: 15, ench_epic: 40, ench_legendary: 100, herb_red: 5, herb_blue: 5, fish_1: 3, fish_2: 3, fish_3: 6, fish_4: 6, fish_5: 10, fish_6: 15, soul_pebbles: 40, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 };
-const MAT_ICONS = { ench_common: '⚪', ench_rare: '🔵', ench_epic: '🟣', ench_legendary: '🟡', herb_red: '🌺', herb_blue: '💠', fish_1: '🐟', fish_2: '🐠', fish_3: '🐡', fish_4: '🦈', fish_5: '🦑', fish_6: '🦀', soul_pebbles: '🔮', titan_shard: '🔱', magic_stone: '💎' };
-const MAT_NAMES = { ench_common: 'Normal Core', ench_rare: 'Rare Core', ench_epic: 'Epic Core', ench_legendary: 'Legendary Core', herb_red: 'Crimson Herb', herb_blue: 'Azure Herb', fish_1: 'Salmon', fish_2: 'Trout', fish_3: 'Bass', fish_4: 'Tuna', fish_5: 'Pike', fish_6: 'Carp', soul_pebbles: 'Soul Pebble', titan_shard: 'Titan Shard', magic_stone: 'Magic Stone' };
+const MAT_ICONS = { ench_common: '⚪', ench_rare: '🔵', ench_epic: '🟣', ench_legendary: '🟡', herb_red: '🌺', herb_blue: '💠', fish_1: '🐟', fish_2: '🐠', fish_3: '🐡', fish_4: '🦈', fish_5: '🦑', fish_6: '🦀', soul_pebbles: '🔮', titan_shard: '🔱', magic_stone: '💎', ethereal_dust: '💠' };
+const MAT_NAMES = { ench_common: 'Normal Core', ench_rare: 'Rare Core', ench_epic: 'Epic Core', ench_legendary: 'Legendary Core', herb_red: 'Crimson Herb', herb_blue: 'Azure Herb', fish_1: 'Salmon', fish_2: 'Trout', fish_3: 'Bass', fish_4: 'Tuna', fish_5: 'Pike', fish_6: 'Carp', soul_pebbles: 'Soul Pebble', titan_shard: 'Titan Shard', magic_stone: 'Magic Stone', ethereal_dust: 'Ethereal Dust' };
 // Populate MAT_ICONS & NAMES with consumables
 Object.values(CONSUMABLES).forEach(c => {
     if(!MAT_ICONS[c.id]) MAT_ICONS[c.id] = c.icon;

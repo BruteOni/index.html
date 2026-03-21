@@ -338,8 +338,11 @@ body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: w
 }
 .bm-avatar-glow { border: 2px solid rgba(250,204,21,0.7); border-radius: 12px; animation: bmAvatarGlow 2s ease-in-out infinite; }
 
-/* Black Market screen */
+/* Black Market screen — responsive mobile layout */
 #screen-black-market .bm-tier-card { transition: all 0.2s; }
+#screen-black-market #bm-tier-list { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; }
+#screen-black-market #bm-tier-list > * { width: 100%; box-sizing: border-box; }
+#bm-pebble-exchange, #bm-pebble-stats { width: 100%; }
 
 /* Skip turn button animation */
 #btn-skip-turn { animation: skipBtnPulse 1.5s ease-in-out infinite; }

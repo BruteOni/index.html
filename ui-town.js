@@ -271,6 +271,23 @@ function showWeaponSmith() {
     document.getElementById('ws-shards-display').innerText = p.inventory.titan_shard || 0;
     document.getElementById('ws-log').innerText = '';
 
+    // Titan Shard → Gold exchange section
+    const exchangeEl = document.getElementById('ws-exchange-section');
+    if (exchangeEl) {
+        const shards = p.inventory.titan_shard || 0;
+        const canExchange = shards >= 1;
+        exchangeEl.innerHTML = `
+            <div class="bg-gray-800 border border-yellow-700 rounded-xl p-3 mb-4 flex justify-between items-center shadow-md">
+                <div>
+                    <div class="font-bold text-yellow-300 text-sm">🔱 Titan Shard → Gold</div>
+                    <div class="text-xs text-gray-400">1 Titan Shard = 10 Gold</div>
+                    <div class="text-xs text-gray-400 mt-1">Owned: <span class="text-yellow-300">${shards}</span></div>
+                </div>
+                <button onclick="exchangeTitanShardForGold()" class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md ${canExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canExchange ? '' : 'disabled'}>EXCHANGE</button>
+            </div>
+        `;
+    }
+
     const list = document.getElementById('ws-weapon-list');
     list.innerHTML = '';
 
@@ -296,7 +313,7 @@ function showWeaponSmith() {
         const enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0; // cumulative: 30 at lv1, 70 at lv2, 120 at lv3...
         const enhLabel = enhLvl > 0 ? `+${enhBonus} dmg` : 'Not Enhanced';
         const maxBonus = isMaxed ? ' (+5% dmg bonus!)' : '';
-        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 50;
+        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 100;
 
         const div = document.createElement('div');
         div.className = `bg-gray-800 border-2 rarity-${item.rarity} p-3 rounded-lg shadow-md`;
@@ -313,7 +330,7 @@ function showWeaponSmith() {
                 <button onclick="enhanceWeapon('${item.id}')" 
                     class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     ${canEnhance ? '' : 'disabled'}>
-                    🔨 Enhance<br><span class="text-yellow-300">50💰 + 1🔱</span>
+                    🔨 Enhance<br><span class="text-yellow-300">100💰 + 1🔱</span>
                 </button>
             </div>
             <div class="text-[10px] text-gray-400">Next level: +${30 + enhLvl * 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
@@ -341,10 +358,10 @@ function enhanceWeapon(itemId) {
     const enhLvl = item.weaponEnhance || 0;
     if(enhLvl >= 100) { log.innerText = 'Already at max enhancement level!'; return; }
     if((p.inventory.titan_shard || 0) < 1) { log.innerText = 'Not enough Titan Shards!'; playSound('lose'); return; }
-    if(p.gold < 50) { log.innerText = 'Not enough Gold! (50 needed)'; playSound('lose'); return; }
+    if(p.gold < 100) { log.innerText = 'Not enough Gold! (100 needed)'; playSound('lose'); return; }
 
     // Consume resources
-    p.gold -= 50;
+    p.gold -= 100;
     p.inventory.titan_shard = (p.inventory.titan_shard || 0) - 1;
 
     // 40% failure rate
@@ -374,6 +391,16 @@ function enhanceWeapon(itemId) {
     showWeaponSmith();
 }
 
+
+function exchangeTitanShardForGold() {
+    const p = globalProgression;
+    if ((p.inventory.titan_shard || 0) < 1) { playSound('lose'); return; }
+    p.inventory.titan_shard -= 1;
+    p.gold += 10;
+    playSound('win');
+    queueSave();
+    showWeaponSmith();
+}
 
 function showInvasion() {
     document.getElementById('invasion-gold-display').innerText = globalProgression.gold;
@@ -507,18 +534,15 @@ function startInvasion() {
 // --- PET BATTLE ---
 function regenPetBattleEnergy() {
     const MAX_PET_ENERGY = 10;
-    const REGEN_MS = 300000; // 5 minutes
+    const DAILY_MS = 86400000; // 24 hours
     if(globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
     if(globalProgression.petBattleLastEnergyTime === undefined) globalProgression.petBattleLastEnergyTime = Date.now();
     if(globalProgression.petBattleEnergy < MAX_PET_ENERGY) {
         const now = Date.now();
         const msPassed = now - globalProgression.petBattleLastEnergyTime;
-        const ticksPassed = Math.floor(msPassed / REGEN_MS);
-        if(ticksPassed > 0) {
-            globalProgression.petBattleEnergy = Math.min(MAX_PET_ENERGY, globalProgression.petBattleEnergy + ticksPassed);
-            // Set lastEnergyTime to the timestamp of the most recent complete regen tick,
-            // preserving partial progress toward the next tick.
-            globalProgression.petBattleLastEnergyTime = now - (msPassed % REGEN_MS);
+        if(msPassed >= DAILY_MS) {
+            globalProgression.petBattleEnergy = MAX_PET_ENERGY;
+            globalProgression.petBattleLastEnergyTime = now;
             queueSave();
         }
     } else {
@@ -548,7 +572,20 @@ function togglePetFavorite(petId) {
 function showPetBattle() {
     regenPetBattleEnergy();
     document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
-    document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
+    const energy = globalProgression.petBattleEnergy;
+    const MAX_PET_ENERGY = 10;
+    const DAILY_MS = 86400000;
+    let energyText = `${energy}`;
+    if (energy < MAX_PET_ENERGY) {
+        const msPassed = Date.now() - (globalProgression.petBattleLastEnergyTime || Date.now());
+        const msLeft = Math.max(0, DAILY_MS - msPassed);
+        const hLeft = Math.floor(msLeft / 3600000);
+        const mLeft = Math.floor((msLeft % 3600000) / 60000);
+        energyText = `${energy}/10 ⏱ ${hLeft}h ${mLeft}m until refresh`;
+    } else {
+        energyText = `${energy}/10`;
+    }
+    document.getElementById('pet-battle-energy-display').innerText = energyText;
     petBattleActive = false;
     petBattlePlayerPet = null;
 
@@ -602,7 +639,7 @@ function startPetBattle(playerPetId) {
     regenPetBattleEnergy();
     if((globalProgression.petBattleEnergy || 0) <= 0) {
         const energyMsg = document.getElementById('pet-energy-msg');
-        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy recharges in 5 min.'; energyMsg.classList.remove('hidden'); }
+        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy recharges once per day.'; energyMsg.classList.remove('hidden'); }
         return;
     }
     const energyMsg = document.getElementById('pet-energy-msg');
@@ -650,7 +687,8 @@ function updatePetBattleUI() {
     document.getElementById('pb-enemy-hp-bar').className = `h-2 rounded-full transition-all ${petBattleEnemyHp > 2.5 ? 'bg-green-500' : petBattleEnemyHp > 1 ? 'bg-yellow-500' : 'bg-red-500'}`;
 
     // Update cooldown info and button visuals
-    const cdText = (petBattleLastAction && petBattleLastAction !== 'attack') ? `⏱ ${petBattleLastAction.charAt(0).toUpperCase() + petBattleLastAction.slice(1)} is on cooldown for 1 turn` : '';
+    const ACTION_DISPLAY_NAMES = { attack: 'Weapon Attack', block: 'Block', counter: 'Counter Punch' };
+    const cdText = (petBattleLastAction && petBattleLastAction !== 'attack') ? `⏱ ${ACTION_DISPLAY_NAMES[petBattleLastAction] || petBattleLastAction} is on cooldown for 1 turn` : '';
     document.getElementById('pb-cooldown-info').innerText = cdText;
 
     ['attack', 'block', 'counter'].forEach(action => {
@@ -663,7 +701,7 @@ function updatePetBattleUI() {
                 if(lbl) lbl.innerText = '(1 turn CD)';
             } else {
                 btn.classList.remove('opacity-50');
-                if(lbl) lbl.innerText = action.charAt(0).toUpperCase() + action.slice(1);
+                if(lbl) lbl.innerText = ACTION_DISPLAY_NAMES[action] || action;
             }
         }
     });
@@ -804,7 +842,7 @@ function petBattleRoundEnd(playerWon) {
         showPetBattleVictory();
         queueSave();
         document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
-        document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
+        { const e2 = globalProgression.petBattleEnergy; const MAX_PET_ENERGY = 10; const DAILY_MS = 86400000; let et = e2 < MAX_PET_ENERGY ? (() => { const ml = Math.max(0, DAILY_MS - (Date.now() - (globalProgression.petBattleLastEnergyTime||Date.now()))); return `${e2}/10 ⏱ ${Math.floor(ml/3600000)}h ${Math.floor((ml%3600000)/60000)}m until refresh`; })() : `${e2}/10`; document.getElementById('pet-battle-energy-display').innerText = et; }
         // Heal and start next round
         setTimeout(() => {
             petBattlePlayerHp = 5;
@@ -814,7 +852,7 @@ function petBattleRoundEnd(playerWon) {
             // Check energy for next round
             regenPetBattleEnergy();
             if((globalProgression.petBattleEnergy || 0) <= 0) {
-                document.getElementById('pb-result-text').innerText = '😴 Out of energy! Recharges in 5 min.';
+                document.getElementById('pb-result-text').innerText = '😴 Out of energy! Recharges once per day.';
                 ['attack', 'block', 'counter'].forEach(action => {
                     const btn = document.getElementById(`pb-btn-${action}`);
                     if(btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
@@ -1239,7 +1277,7 @@ function showQuests() {
             if (type === 'hunting') { qt.innerText = 'Wilderness Hunter'; qd.innerText = `Slay ${goal} beasts in the Wilderness.`; }
             if (type === 'pillage') { qt.innerText = 'Village Pillager'; qd.innerText = `Defeat ${goal} foes in Pillage Village.`; }
             if (type === 'workshop') { qt.innerText = 'Workshop Raider'; qd.innerText = `Destroy ${goal} constructs in the Workshop.`; }
-            if (type === 'dungeon') { qt.innerText = 'Dungeon Delver'; qd.innerText = `Destroy ${goal} aliens in the Dungeon Portal.`; }
+            if (type === 'dungeon') { qt.innerText = 'Tower Climber'; qd.innerText = `Defeat ${goal} enemies in the Tower of Babel.`; }
         }
         // Update progress bar via the new IDs
         const prog = globalProgression[`questProg${i}`];
@@ -1309,7 +1347,7 @@ function showDungeons() {
         const isLocked = i > globalProgression.dungeonTier;
         const btn = document.createElement('button');
         btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-red-900 hover:border-red-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
-        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} XP Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
+        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} — Floors ${1+(i-1)*5}-${5+(i-1)*5}</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous tier boss to unlock' : `Tower of Babel · 5 Floors · 2x XP`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🗼'}</div>`;
         if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonRoom = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
     }
     switchScreen('screen-dungeons');
@@ -1320,12 +1358,19 @@ function showGraveyard() {
     document.getElementById('graveyard-gold-display').innerText = globalProgression.gold;
     const list = document.getElementById('graveyard-list'); list.innerHTML = '';
     
-    const bosses = Object.values(globalProgression.killedBosses || {});
+    const allBosses = Object.values(globalProgression.killedBosses || {});
+    const bosses = allBosses.slice(0, 20); // Max 20 bosses in graveyard
     const today = new Date().toDateString();
     
     if(bosses.length === 0) {
         list.innerHTML = `<div class="text-center text-gray-500 py-6 bg-gray-900 rounded-xl">No bosses have been defeated yet.</div>`;
     } else {
+        if(allBosses.length >= 20) {
+            const capNote = document.createElement('div');
+            capNote.className = 'text-center text-yellow-400 text-xs py-2 mb-2 bg-gray-900 rounded-lg border border-yellow-700';
+            capNote.innerText = `⚠️ Graveyard capacity: 20/20 bosses`;
+            list.appendChild(capNote);
+        }
         bosses.forEach(b => {
             const btn = document.createElement('div');
             btn.className = `bg-gray-800 border-2 border-gray-700 p-4 rounded-xl flex justify-between items-center shadow-md mb-2`;

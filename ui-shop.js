@@ -3,22 +3,31 @@ function showEnchanter() {
     const list = document.getElementById('enchant-modal-list'); list.innerHTML = '';
     document.getElementById('ench-list').innerHTML = '';
     
+    const etherealDust = p.inventory.ethereal_dust || 0;
     let hasGear = false;
     EQUIP_SLOTS.forEach(slot => {
         const eq = globalProgression.equipped[slot];
         if(eq) {
             hasGear = true;
             const btn = document.createElement('div');
-            btn.className = `bg-gray-800 border-2 rarity-${eq.rarity} p-3 rounded-lg flex justify-between items-center shadow-md`;
+            btn.className = `bg-gray-800 border-2 rarity-${eq.rarity} p-3 rounded-lg flex justify-between items-center gap-2 shadow-md`;
+            const isLocked = (globalProgression.lockedItems || {})[slot];
+            const lockBtn = eq.rarity === 'mythic' ? `<button onclick="toggleItemLock('${slot}')" class="text-xs px-2 py-1 rounded border ${isLocked ? 'bg-yellow-700 border-yellow-500 text-yellow-200' : 'bg-gray-700 border-gray-500 text-gray-400'} font-bold transition active:scale-95">${isLocked ? '🔒' : '🔓'}</button>` : '';
             const enchStatus = eq.enchanted ? `<span class="text-xs text-yellow-300 bg-gray-900 px-2 py-1 rounded">(${sanitizeHTML(eq.enchanted)})</span>` : 
-                `<button onclick="openEnchantModal('${slot}')" class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md">Enchant</button>`;
+                `<button onclick="openEnchantModal('${slot}')" class="bg-purple-700 hover:bg-purple-600 text-white px-3 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md">Enchant</button>`;
+            const canReStat = !isLocked && etherealDust >= 10;
+            const reStatBtn = `<button onclick="reStatItem('${slot}')" class="bg-teal-700 hover:bg-teal-600 text-white px-3 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md ${canReStat ? '' : 'opacity-50 cursor-not-allowed'}" ${canReStat ? '' : 'disabled'}>Re-Stat (10💠)</button>`;
             
-            btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-3xl">${sanitizeHTML(eq.icon)}</span><div><div class="font-bold text-white">${sanitizeHTML(eq.name)}</div>${eq.type === 'weapon' && eq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(eq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}</div></div> ${enchStatus}`;
+            btn.innerHTML = `<div class="flex items-center gap-2 flex-1"><span class="text-3xl">${sanitizeHTML(eq.icon)}</span><div><div class="font-bold text-white">${sanitizeHTML(eq.name)}</div>${eq.type === 'weapon' && eq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(eq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}</div></div><div class="flex gap-1 items-center flex-wrap justify-end">${lockBtn} ${enchStatus} ${reStatBtn}</div>`;
             document.getElementById('ench-list').appendChild(btn);
         }
     });
 
     if(!hasGear) document.getElementById('ench-list').innerHTML = `<div class="text-gray-500 text-center py-4 bg-gray-900 rounded-lg shadow-inner">You must equip gear first to enchant it.</div>`;
+
+    // Ethereal Dust display
+    const dustDisplay = document.getElementById('ench-dust-display');
+    if (dustDisplay) dustDisplay.innerText = etherealDust;
 
     // Soul Core Fusion section
     const mergeContainer = document.getElementById('ench-core-merge');
@@ -52,13 +61,13 @@ function showEnchanter() {
         // Legendary Core → Soul Pebble Exchange
         const legCores = globalProgression.inventory.ench_legendary || 0;
         const pebbles = globalProgression.inventory.soul_pebbles || 0;
-        const canPebbleExchange = legCores >= 200;
+        const canPebbleExchange = legCores >= 100;
         const pebbleDiv = document.createElement('div');
         pebbleDiv.className = 'mt-2 bg-gray-800 border border-purple-700 rounded-lg p-3 flex justify-between items-center';
         pebbleDiv.innerHTML = `
             <div>
                 <div class="text-sm font-bold text-purple-300">🔮 Legendary Core → Soul Pebble Exchange</div>
-                <div class="text-xs text-gray-400">200 Legendary Cores → 1 Soul Pebble</div>
+                <div class="text-xs text-gray-400">100 Legendary Cores → 10 Soul Pebbles</div>
                 <div class="text-xs text-gray-400 mt-1">Cores: <span class="text-yellow-300">${legCores}</span> &nbsp; Pebbles: <span class="text-purple-300">${pebbles}</span></div>
             </div>
             <button onclick="exchangeLegendaryCoresForPebble(showEnchanter)" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-3 py-2 rounded text-xs transition active:scale-95 shadow-md ${canPebbleExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canPebbleExchange ? '' : 'disabled'}>EXCHANGE</button>
@@ -286,10 +295,11 @@ function showShop() {
 
 function generateShopGear() {
     globalProgression.shopGear = [];
+    let hasMythic = false;
     for(let i=0; i<3; i++) {
         const roll = Math.random();
         let rarity = 'common';
-        if(roll < 0.01) rarity = 'mythic';
+        if(roll < 0.01) { rarity = 'mythic'; hasMythic = true; }
         else if(roll < 0.02) rarity = 'legendary';
         else if(roll < 0.12) rarity = 'epic';
         else if(roll < 0.32) rarity = 'rare';
@@ -299,6 +309,14 @@ function generateShopGear() {
         globalProgression.shopGear.push({ item: item, cost: cost, bought: false });
     }
     queueSave();
+    // Freeze refresh button for 5 seconds if mythic rolled
+    if (hasMythic) {
+        const refreshBtns = document.querySelectorAll('[onclick="refreshShopGear()"]');
+        refreshBtns.forEach(btn => { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); });
+        setTimeout(() => {
+            refreshBtns.forEach(btn => { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); });
+        }, 5000);
+    }
 }
 
 function refreshShopGear() {
@@ -335,11 +353,20 @@ function sellItem(type, amount) {
 
 function sellGear(groupKey, amount) {
     const p = globalProgression;
+    const lockedSlots = p.lockedItems || {};
+    // Build set of locked item IDs (equipped mythic items that are locked)
+    const lockedIds = new Set();
+    Object.entries(lockedSlots).forEach(([slot, locked]) => {
+        if (locked && p.equipped && p.equipped[slot]) lockedIds.add(p.equipped[slot].id);
+    });
+    // Also, inventory mythic items lock by ID stored in lockedItems
+    Object.entries(lockedSlots).forEach(([k, v]) => { if (v && k.startsWith('inv_')) lockedIds.add(k.slice(4)); });
+    
     const matchingIds = [];
     let pricePer = 0;
     
     p.equipInventory.forEach(eq => {
-        if(`${eq.name}_${eq.rarity}` === groupKey) {
+        if(`${eq.name}_${eq.rarity}` === groupKey && !lockedIds.has(eq.id)) {
             matchingIds.push(eq.id);
             pricePer = getGearSellPrice(eq.rarity);
         }
@@ -520,12 +547,37 @@ function exchangeSoulPebbles() {
 }
 
 function exchangeLegendaryCoresForPebble(refreshFn) {
-    if ((globalProgression.inventory.ench_legendary || 0) < 200) { playSound('lose'); return; }
-    globalProgression.inventory.ench_legendary -= 200;
-    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 1;
+    if ((globalProgression.inventory.ench_legendary || 0) < 100) { playSound('lose'); return; }
+    globalProgression.inventory.ench_legendary -= 100;
+    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 10;
     playSound('win');
     queueSave();
     if (refreshFn) refreshFn();
+}
+
+function toggleItemLock(slot) {
+    if (!globalProgression.lockedItems) globalProgression.lockedItems = {};
+    globalProgression.lockedItems[slot] = !globalProgression.lockedItems[slot];
+    if (!globalProgression.lockedItems[slot]) delete globalProgression.lockedItems[slot];
+    queueSave();
+    showEnchanter();
+}
+
+function reStatItem(slot) {
+    const p = globalProgression;
+    if (!p.equipped || !p.equipped[slot]) return;
+    const item = p.equipped[slot];
+    if ((p.lockedItems || {})[slot]) { playSound('lose'); return; }
+    if ((p.inventory.ethereal_dust || 0) < 10) { playSound('lose'); return; }
+    p.inventory.ethereal_dust -= 10;
+    // Re-roll bonus stats only (keep setBonus, enchanted, weaponBaseDmgPct, itemLevel)
+    const itemLevel = item.itemLevel || Math.min(100, Math.max(1, player.lvl));
+    item.bonusStats = generateBonusStats(item.rarity, itemLevel, item.type);
+    player.maxHp = calculateMaxHp();
+    if (player.currentHp > player.maxHp) player.currentHp = player.maxHp;
+    playSound('win');
+    queueSave();
+    showEnchanter();
 }
 
 function buyBlackMarketTier(tier) {

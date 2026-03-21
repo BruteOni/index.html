@@ -29,7 +29,7 @@ function showInventory() {
     const matList = document.getElementById('inv-materials-list'); matList.innerHTML = '';
     let hasMats = false;
     let matsHtml = '';
-    ['ench_common', 'ench_rare', 'ench_epic', 'ench_legendary', 'herb_red', 'herb_blue', 'fish_1', 'fish_2', 'fish_3', 'fish_4', 'fish_5', 'fish_6', 'soul_pebbles', 'titan_shard', 'magic_stone'].forEach(key => {
+    ['ench_common', 'ench_rare', 'ench_epic', 'ench_legendary', 'herb_red', 'herb_blue', 'fish_1', 'fish_2', 'fish_3', 'fish_4', 'fish_5', 'fish_6', 'soul_pebbles', 'titan_shard', 'magic_stone', 'ethereal_dust'].forEach(key => {
         if(inv[key] > 0) { hasMats = true; matsHtml += `<div class="bag-item p-3 rounded-xl flex justify-between items-center shadow-inner"><span class="text-lg">${sanitizeHTML(MAT_ICONS[key])} ${sanitizeHTML(MAT_NAMES[key])}</span> <span class="text-yellow-400 font-bold">${inv[key]}</span></div>`; }
     });
     document.getElementById('inv-mats-header').style.display = hasMats ? 'block' : 'none';
