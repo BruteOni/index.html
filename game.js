@@ -577,7 +577,7 @@ function consumeEnergy(amount) {
 }
 
 // --- INVENTORY STACK CAP ---
-const INVENTORY_STACK_CAP = 99;
+const INVENTORY_STACK_CAP = 999;
 function addToInventory(type, amount) {
     const current = globalProgression.inventory[type] || 0;
     const newAmount = Math.min(current + amount, INVENTORY_STACK_CAP);

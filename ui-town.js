@@ -9,7 +9,7 @@ function showAlchemist() {
         const isFull = (p.inventory[rec.id] || 0) >= INVENTORY_STACK_CAP;
         const row = document.createElement('div');
         row.className = `bg-gray-800 p-2 rounded-lg flex justify-between items-center border border-gray-700 hover:border-green-500 transition gap-2`;
-        row.innerHTML = `<div class="text-left flex items-center gap-2"><span class="text-2xl">${sanitizeHTML(pot.icon)}</span> <div><b class="text-white">${sanitizeHTML(pot.name)}</b><br><span class="text-[10px] text-gray-400">${sanitizeHTML(pot.desc)}</span>${isFull ? '<span class="text-red-400 text-[10px] font-bold"> (Full 99)</span>' : ''}</div></div><div class="text-yellow-400 font-bold bg-gray-900 px-2 py-1 rounded shadow-inner text-xs flex flex-col items-center gap-1"><span>${herbIcon} ${rec.herbAmt}</span><span>💰 ${rec.gold}</span></div>`;
+        row.innerHTML = `<div class="text-left flex items-center gap-2"><span class="text-2xl">${sanitizeHTML(pot.icon)}</span> <div><b class="text-white">${sanitizeHTML(pot.name)}</b><br><span class="text-[10px] text-gray-400">${sanitizeHTML(pot.desc)}</span>${isFull ? '<span class="text-red-400 text-[10px] font-bold"> (Full 999)</span>' : ''}</div></div><div class="text-yellow-400 font-bold bg-gray-900 px-2 py-1 rounded shadow-inner text-xs flex flex-col items-center gap-1"><span>${herbIcon} ${rec.herbAmt}</span><span>💰 ${rec.gold}</span></div>`;
         const btnWrap = document.createElement('div');
         btnWrap.className = 'flex flex-col gap-1';
         const btn1 = document.createElement('button');
@@ -39,7 +39,7 @@ function showChef() {
         const isFull = (p.inventory[rec.id] || 0) >= INVENTORY_STACK_CAP;
         const row = document.createElement('div');
         row.className = `bg-gray-800 p-2 rounded-lg flex justify-between items-center border border-gray-700 hover:border-orange-500 transition gap-2`;
-        row.innerHTML = `<div class="text-left flex items-center gap-2"><span class="text-2xl">${sanitizeHTML(food.icon)}</span> <div><b class="text-white">${sanitizeHTML(food.name)}</b><br><span class="text-[10px] text-gray-400">${sanitizeHTML(food.desc)}</span>${isFull ? '<span class="text-red-400 text-[10px] font-bold"> (Full 99)</span>' : ''}</div></div><div class="text-yellow-400 font-bold bg-gray-900 px-2 py-1 rounded shadow-inner text-xs flex flex-col items-center gap-1"><span>${sanitizeHTML(MAT_ICONS[rec.fish])} ${rec.fishAmt}</span><span>💰 ${rec.gold}</span></div>`;
+        row.innerHTML = `<div class="text-left flex items-center gap-2"><span class="text-2xl">${sanitizeHTML(food.icon)}</span> <div><b class="text-white">${sanitizeHTML(food.name)}</b><br><span class="text-[10px] text-gray-400">${sanitizeHTML(food.desc)}</span>${isFull ? '<span class="text-red-400 text-[10px] font-bold"> (Full 999)</span>' : ''}</div></div><div class="text-yellow-400 font-bold bg-gray-900 px-2 py-1 rounded shadow-inner text-xs flex flex-col items-center gap-1"><span>${sanitizeHTML(MAT_ICONS[rec.fish])} ${rec.fishAmt}</span><span>💰 ${rec.gold}</span></div>`;
         const btnWrap = document.createElement('div');
         btnWrap.className = 'flex flex-col gap-1';
         const btn1 = document.createElement('button');
@@ -123,6 +123,15 @@ function showWorkshop() {
         disenchantHeader.innerHTML = `<h3 class="font-bold text-red-400 text-center mt-6 mb-2 uppercase tracking-wider text-sm">⚗️ Disenchant Mythic Items</h3>
             <p class="text-xs text-gray-400 text-center mb-3">Unequipped mythic items only. Gives 10 Soul Pebbles each.</p>`;
         list.appendChild(disenchantHeader);
+
+        if (unequippedMythic.length >= 2) {
+            const totalPebbles = unequippedMythic.length * 10;
+            const disenchantAllBtn = document.createElement('button');
+            disenchantAllBtn.className = 'w-full bg-red-900 hover:bg-red-800 border border-red-500 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md mb-3';
+            disenchantAllBtn.innerHTML = `⚗️ Disenchant All <span class="text-purple-300">(+${totalPebbles} 🔮)</span>`;
+            disenchantAllBtn.onclick = disenchantAllMythics;
+            list.appendChild(disenchantAllBtn);
+        }
 
         unequippedMythic.forEach(item => {
             const card = document.createElement('div');
@@ -225,7 +234,18 @@ function disenchantMythicItem(itemId) {
     const idx = (p.equipInventory || []).findIndex(i => i && i.id === itemId && i.rarity === 'mythic');
     if (idx === -1) { addLog('Item not found or not a mythic item!', 'text-red-400'); return; }
     p.equipInventory.splice(idx, 1);
-    p.inventory.soul_pebbles = (p.inventory.soul_pebbles || 0) + 10;
+    addToInventory('soul_pebbles', 10);
+    playSound('win');
+    queueSave();
+    showWorkshop();
+}
+
+function disenchantAllMythics() {
+    const p = globalProgression;
+    const mythicItems = (p.equipInventory || []).filter(item => item && item.rarity === 'mythic');
+    if (mythicItems.length === 0) return;
+    p.equipInventory = (p.equipInventory || []).filter(item => item && item.rarity !== 'mythic');
+    addToInventory('soul_pebbles', mythicItems.length * 10);
     playSound('win');
     queueSave();
     showWorkshop();
@@ -644,7 +664,7 @@ function claimZombieRewards() {
     const zs = globalProgression.zombieStats;
     if(!zs || (zs.pendingPotionRewards || 0) <= 0) return;
     const pebbles = zs.pendingPotionRewards * 5;
-    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + pebbles;
+    addToInventory('soul_pebbles', pebbles);
     zs.pendingPotionRewards = 0;
     queueSave();
     showInvasion();
