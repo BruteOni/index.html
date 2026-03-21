@@ -8,6 +8,11 @@ if (typeof structuredClone === 'undefined') {
     };
 }
 
+// --- TOWER OF BABEL REWARD CONSTANTS ---
+const TOWER_ETHEREAL_DUST_PER_FLOOR = 10;       // Ethereal Dust awarded per floor cleared
+const TOWER_SOUL_PEBBLES_MILESTONE_REWARD = 20; // Soul Pebbles awarded at floor milestones
+const TOWER_MILESTONE_FLOOR_INTERVAL = 100;     // Floor interval for Soul Pebble milestone
+
 // Tracks the last rendered enemy state to prevent full DOM rebuilds on every turn.
 let _lastEnemyStateString = "";
 

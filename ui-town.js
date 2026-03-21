@@ -532,15 +532,16 @@ function startInvasion() {
 }
 
 // --- PET BATTLE ---
+const MAX_PET_ENERGY = 10;
+const PET_ENERGY_DAILY_MS = 86400000; // 24 hours — full energy refill once per day
+
 function regenPetBattleEnergy() {
-    const MAX_PET_ENERGY = 10;
-    const DAILY_MS = 86400000; // 24 hours
     if(globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
     if(globalProgression.petBattleLastEnergyTime === undefined) globalProgression.petBattleLastEnergyTime = Date.now();
     if(globalProgression.petBattleEnergy < MAX_PET_ENERGY) {
         const now = Date.now();
         const msPassed = now - globalProgression.petBattleLastEnergyTime;
-        if(msPassed >= DAILY_MS) {
+        if(msPassed >= PET_ENERGY_DAILY_MS) {
             globalProgression.petBattleEnergy = MAX_PET_ENERGY;
             globalProgression.petBattleLastEnergyTime = now;
             queueSave();
@@ -552,12 +553,10 @@ function regenPetBattleEnergy() {
 
 function updatePetBattleEnergyDisplay() {
     const energy = globalProgression.petBattleEnergy;
-    const MAX_PET_ENERGY = 10;
-    const DAILY_MS = 86400000;
     const el = document.getElementById('pet-battle-energy-display');
     if (!el) return;
     if (energy < MAX_PET_ENERGY) {
-        const msLeft = Math.max(0, DAILY_MS - (Date.now() - (globalProgression.petBattleLastEnergyTime || Date.now())));
+        const msLeft = Math.max(0, PET_ENERGY_DAILY_MS - (Date.now() - (globalProgression.petBattleLastEnergyTime || Date.now())));
         const hLeft = Math.floor(msLeft / 3600000);
         const mLeft = Math.floor((msLeft % 3600000) / 60000);
         el.innerText = `${energy}/10 ⏱ ${hLeft}h ${mLeft}m until refresh`;
@@ -1357,21 +1356,23 @@ function showDungeons() {
 }
 
 // --- GRAVEYARD ---
+const MAX_GRAVEYARD_BOSSES = 20;
+
 function showGraveyard() {
     document.getElementById('graveyard-gold-display').innerText = globalProgression.gold;
     const list = document.getElementById('graveyard-list'); list.innerHTML = '';
     
     const allBosses = Object.values(globalProgression.killedBosses || {});
-    const bosses = allBosses.slice(0, 20); // Max 20 bosses in graveyard
+    const bosses = allBosses.slice(0, MAX_GRAVEYARD_BOSSES); // Max bosses in graveyard
     const today = new Date().toDateString();
     
     if(bosses.length === 0) {
         list.innerHTML = `<div class="text-center text-gray-500 py-6 bg-gray-900 rounded-xl">No bosses have been defeated yet.</div>`;
     } else {
-        if(allBosses.length >= 20) {
+        if(allBosses.length >= MAX_GRAVEYARD_BOSSES) {
             const capNote = document.createElement('div');
             capNote.className = 'text-center text-yellow-400 text-xs py-2 mb-2 bg-gray-900 rounded-lg border border-yellow-700';
-            capNote.innerText = `⚠️ Graveyard capacity: 20/20 bosses`;
+            capNote.innerText = `⚠️ Graveyard capacity: ${MAX_GRAVEYARD_BOSSES}/${MAX_GRAVEYARD_BOSSES} bosses`;
             list.appendChild(capNote);
         }
         bosses.forEach(b => {

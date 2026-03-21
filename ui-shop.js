@@ -1,3 +1,7 @@
+const LEGENDARY_CORE_EXCHANGE_COST = 100;   // Legendary cores needed per exchange
+const LEGENDARY_CORE_EXCHANGE_PEBBLES = 10; // Soul Pebbles received per exchange
+const RESTAT_ETHEREAL_DUST_COST = 10;        // Ethereal Dust needed for Re-Stat
+
 function showEnchanter() {
     const p = globalProgression;
     const list = document.getElementById('enchant-modal-list'); list.innerHTML = '';
@@ -15,8 +19,8 @@ function showEnchanter() {
             const lockBtn = eq.rarity === 'mythic' ? `<button onclick="toggleItemLock('${slot}')" class="text-xs px-2 py-1 rounded border ${isLocked ? 'bg-yellow-700 border-yellow-500 text-yellow-200' : 'bg-gray-700 border-gray-500 text-gray-400'} font-bold transition active:scale-95">${isLocked ? '🔒' : '🔓'}</button>` : '';
             const enchStatus = eq.enchanted ? `<span class="text-xs text-yellow-300 bg-gray-900 px-2 py-1 rounded">(${sanitizeHTML(eq.enchanted)})</span>` : 
                 `<button onclick="openEnchantModal('${slot}')" class="bg-purple-700 hover:bg-purple-600 text-white px-3 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md">Enchant</button>`;
-            const canReStat = !isLocked && etherealDust >= 10;
-            const reStatBtn = `<button onclick="reStatItem('${slot}')" class="bg-teal-700 hover:bg-teal-600 text-white px-3 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md ${canReStat ? '' : 'opacity-50 cursor-not-allowed'}" ${canReStat ? '' : 'disabled'}>Re-Stat (10💠)</button>`;
+            const canReStat = !isLocked && etherealDust >= RESTAT_ETHEREAL_DUST_COST;
+            const reStatBtn = `<button onclick="reStatItem('${slot}')" class="bg-teal-700 hover:bg-teal-600 text-white px-3 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md ${canReStat ? '' : 'opacity-50 cursor-not-allowed'}" ${canReStat ? '' : 'disabled'}>Re-Stat (${RESTAT_ETHEREAL_DUST_COST}💠)</button>`;
             
             btn.innerHTML = `<div class="flex items-center gap-2 flex-1"><span class="text-3xl">${sanitizeHTML(eq.icon)}</span><div><div class="font-bold text-white">${sanitizeHTML(eq.name)}</div>${eq.type === 'weapon' && eq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(eq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}</div></div><div class="flex gap-1 items-center flex-wrap justify-end">${lockBtn} ${enchStatus} ${reStatBtn}</div>`;
             document.getElementById('ench-list').appendChild(btn);
@@ -61,13 +65,13 @@ function showEnchanter() {
         // Legendary Core → Soul Pebble Exchange
         const legCores = globalProgression.inventory.ench_legendary || 0;
         const pebbles = globalProgression.inventory.soul_pebbles || 0;
-        const canPebbleExchange = legCores >= 100;
+        const canPebbleExchange = legCores >= LEGENDARY_CORE_EXCHANGE_COST;
         const pebbleDiv = document.createElement('div');
         pebbleDiv.className = 'mt-2 bg-gray-800 border border-purple-700 rounded-lg p-3 flex justify-between items-center';
         pebbleDiv.innerHTML = `
             <div>
                 <div class="text-sm font-bold text-purple-300">🔮 Legendary Core → Soul Pebble Exchange</div>
-                <div class="text-xs text-gray-400">100 Legendary Cores → 10 Soul Pebbles</div>
+                <div class="text-xs text-gray-400">${LEGENDARY_CORE_EXCHANGE_COST} Legendary Cores → ${LEGENDARY_CORE_EXCHANGE_PEBBLES} Soul Pebbles</div>
                 <div class="text-xs text-gray-400 mt-1">Cores: <span class="text-yellow-300">${legCores}</span> &nbsp; Pebbles: <span class="text-purple-300">${pebbles}</span></div>
             </div>
             <button onclick="exchangeLegendaryCoresForPebble(showEnchanter)" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-3 py-2 rounded text-xs transition active:scale-95 shadow-md ${canPebbleExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canPebbleExchange ? '' : 'disabled'}>EXCHANGE</button>
@@ -547,9 +551,9 @@ function exchangeSoulPebbles() {
 }
 
 function exchangeLegendaryCoresForPebble(refreshFn) {
-    if ((globalProgression.inventory.ench_legendary || 0) < 100) { playSound('lose'); return; }
-    globalProgression.inventory.ench_legendary -= 100;
-    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 10;
+    if ((globalProgression.inventory.ench_legendary || 0) < LEGENDARY_CORE_EXCHANGE_COST) { playSound('lose'); return; }
+    globalProgression.inventory.ench_legendary -= LEGENDARY_CORE_EXCHANGE_COST;
+    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + LEGENDARY_CORE_EXCHANGE_PEBBLES;
     playSound('win');
     queueSave();
     if (refreshFn) refreshFn();
@@ -568,8 +572,8 @@ function reStatItem(slot) {
     if (!p.equipped || !p.equipped[slot]) return;
     const item = p.equipped[slot];
     if ((p.lockedItems || {})[slot]) { playSound('lose'); return; }
-    if ((p.inventory.ethereal_dust || 0) < 10) { playSound('lose'); return; }
-    p.inventory.ethereal_dust -= 10;
+    if ((p.inventory.ethereal_dust || 0) < RESTAT_ETHEREAL_DUST_COST) { playSound('lose'); return; }
+    p.inventory.ethereal_dust -= RESTAT_ETHEREAL_DUST_COST;
     // Re-roll bonus stats only (keep setBonus, enchanted, weaponBaseDmgPct, itemLevel)
     const itemLevel = item.itemLevel || Math.min(100, Math.max(1, player.lvl));
     item.bonusStats = generateBonusStats(item.rarity, itemLevel, item.type);
