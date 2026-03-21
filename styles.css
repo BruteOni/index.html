@@ -409,6 +409,13 @@ body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: w
     50% { box-shadow: 0 0 16px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 69, 0, 0.8); background-position: 100% center; }
 }
 
+/* Flex layout for the hub title badge so spans sit side by side */
+#hub-title-badge:not(.hidden) {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 /* On desktop, pin the Crown of Infinity badge to the top-right of the status panel */
 @media (min-width: 768px) {
     #hub-status-panel {
