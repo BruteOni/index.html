@@ -1167,7 +1167,7 @@ function showPortal() {
 
 function showApocalypse() {
     const el = document.getElementById('apocalypse-status');
-    if (el) el.innerText = player.lvl < 500 ? `⚠️ Requires Level 500. You are Level ${player.lvl}.` : 'Ready to face yourself!';
+    if (el) el.innerText = player.lvl < 500 ? `⚠️ Requires Level 500. You are Level ${player.lvl}.` : 'Ready to face the Obsidian Colossus!';
     const startBtn = document.getElementById('apocalypse-start-btn');
     if (startBtn) startBtn.disabled = player.lvl < 500;
     switchScreen('screen-apocalypse');
@@ -1177,13 +1177,13 @@ function startApocalypse() {
     if (player.lvl < 500) { return; }
 
     const clone = {
-        name: '💀 Your Shadow',
-        avatar: player.data ? player.data.avatar || '💀' : '💀',
-        hp: player.maxHp,
-        maxHp: player.maxHp,
+        name: '🗿 Obsidian Colossus',
+        avatar: '🗿',
+        hp: player.maxHp * 10,
+        maxHp: player.maxHp * 10,
         dmg: getBaseDamage(),
         def: getPlayerDef(),
-        currentHp: player.maxHp,
+        currentHp: player.maxHp * 10,
         bleedStacks: 0, bleedTurns: 0, stunned: 0, healBlock: 0,
         defReduction: 0, defReductionTurns: 0,
         shield: 0, dodgeTurns: 0,

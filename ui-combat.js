@@ -2586,6 +2586,7 @@ function endBattle(playerWon) {
         });
         totalXp = Math.floor(totalXp * xpMult);
         if(currentMode === 'invasion') totalXp = Math.floor(totalXp * 0.40);
+        totalXp = Math.floor(totalXp * 0.5); // Global 50% XP reduction
         // Graveyard gives no XP
         if(currentMode === 'graveyard') totalXp = 0;
         document.getElementById('end-xp-amount').innerText = totalXp; globalProgression.totalExpEarned += totalXp;
