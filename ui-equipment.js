@@ -1,7 +1,10 @@
 // --- EQUIPMENT CONSTANTS ---
 const GEAR_BUY_PRICES = { common: 100, rare: 200, epic: 600, legendary: 1000, mythic: 5000 };
 
-// --- SET TIER HELPER ---
+function renderDropLevelHtml(item) {
+    if(!item || !item.itemLevel) return '';
+    return `<span class="text-[10px] text-gray-500 ml-1">Drop Lv.${item.itemLevel}</span>`;
+}
 function getActiveSetTier(equippedCount) {
     let activeTier = 0;
     [4, 8, 12, 14].forEach(t => { if (equippedCount >= t) activeTier = t; });
@@ -58,7 +61,7 @@ function openEquipModal(slot) {
         eqCard.className = `bg-gray-800 border-2 rarity-${currentEq.rarity} p-3 rounded-lg flex justify-between items-center mb-2`;
         const enchTxt = currentEq.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${sanitizeHTML(currentEq.enchanted)})</span>` : '';
         const bonusTxt = renderBonusStatsHtml(currentEq.bonusStats) + renderSetBonusHtml(currentEq);
-        eqCard.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl">${currentEq.icon}</span><div><div class="font-bold text-white">${sanitizeHTML(currentEq.name)} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${sanitizeHTML(currentEq.rarity)}</span></div>${currentEq.type === 'weapon' && currentEq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(currentEq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button onclick="unequipCurrent()" class="bg-red-900 hover:bg-red-800 text-red-200 px-3 py-2 rounded text-xs font-bold transition active:scale-95 border border-red-700">Unequip</button>`;
+        eqCard.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl">${currentEq.icon}</span><div><div class="font-bold text-white">${sanitizeHTML(currentEq.name)} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${sanitizeHTML(currentEq.rarity)}</span>${renderDropLevelHtml(currentEq)}</div>${currentEq.type === 'weapon' && currentEq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(currentEq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button onclick="unequipCurrent()" class="bg-red-900 hover:bg-red-800 text-red-200 px-3 py-2 rounded text-xs font-bold transition active:scale-95 border border-red-700">Unequip</button>`;
         eqSection.appendChild(eqCard);
     } else {
         eqSection.innerHTML += `<div class="text-gray-400 text-center py-2 text-sm italic bg-gray-900 rounded-lg">Nothing Equipped</div>`;
@@ -83,7 +86,7 @@ function openEquipModal(slot) {
             const enchTxt = item.enchanted ? `<span class="text-yellow-300 ml-1 text-xs">(${sanitizeHTML(item.enchanted)})</span>` : '';
             const bonusTxt = renderBonusStatsHtml(item.bonusStats) + renderSetBonusHtml(item);
             
-            btn.innerHTML = `${upgradeBadge}<div class="flex items-center gap-2"><span class="text-2xl">${item.icon || '📦'}</span><div><div class="font-bold text-white">${sanitizeHTML(item.name)} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${sanitizeHTML(item.rarity)}</span></div>${item.type === 'weapon' && item.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(item.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button class="bg-blue-800 hover:bg-blue-700 text-blue-200 px-4 py-2 rounded text-xs font-bold border border-blue-600 transition active:scale-95">Equip</button>`;
+            btn.innerHTML = `${upgradeBadge}<div class="flex items-center gap-2"><span class="text-2xl">${item.icon || '📦'}</span><div><div class="font-bold text-white">${sanitizeHTML(item.name)} ${enchTxt} <span class="text-[10px] text-gray-500 uppercase">${sanitizeHTML(item.rarity)}</span>${renderDropLevelHtml(item)}</div>${item.type === 'weapon' && item.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(item.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}${bonusTxt}</div></div><button class="bg-blue-800 hover:bg-blue-700 text-blue-200 px-4 py-2 rounded text-xs font-bold border border-blue-600 transition active:scale-95">Equip</button>`;
             btn.onclick = (e) => { if(e.target.tagName !== 'BUTTON') return; equipItem(item.id); }; 
             invSection.appendChild(btn);
         });

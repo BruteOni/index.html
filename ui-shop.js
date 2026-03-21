@@ -286,9 +286,11 @@ function showShop() {
 
     const sellList = document.getElementById('shop-sell-list'); sellList.innerHTML = '';
     
-    // Gear Selling only (grouped by Name+Rarity) — no consumables
+    // Gear Selling only (grouped by Name+Rarity) — no consumables, locked mythic excluded
     const gearGroups = {};
     p.equipInventory.forEach(eq => {
+        // Skip locked mythic items
+        if(eq.rarity === 'mythic' && eq.locked) return;
         const key = `${eq.name}_${eq.rarity}`;
         if(!gearGroups[key]) gearGroups[key] = { count: 0, rarity: eq.rarity, name: eq.name, icon: eq.icon, ids: [] };
         gearGroups[key].count++;
@@ -396,6 +398,8 @@ function sellGear(groupKey, amount) {
     
     p.equipInventory.forEach(eq => {
         if(`${eq.name}_${eq.rarity}` === groupKey) {
+            // Skip locked mythic items
+            if(eq.rarity === 'mythic' && eq.locked) return;
             matchingIds.push(eq.id);
             pricePer = getGearSellPrice(eq.rarity);
         }
@@ -416,9 +420,10 @@ function getGearSellPrice(rarity) {
 
 function sellAllGear() {
     const p = globalProgression;
-    const totalGold = p.equipInventory.reduce((sum, eq) => sum + getGearSellPrice(eq.rarity), 0);
+    const sellable = p.equipInventory.filter(eq => !(eq.rarity === 'mythic' && eq.locked));
+    const totalGold = sellable.reduce((sum, eq) => sum + getGearSellPrice(eq.rarity), 0);
     if(totalGold > 0) {
-        p.equipInventory = [];
+        p.equipInventory = p.equipInventory.filter(eq => eq.rarity === 'mythic' && eq.locked);
         p.gold += totalGold;
         playSound('click'); queueSave(); showShop();
     }

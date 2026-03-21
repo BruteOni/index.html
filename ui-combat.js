@@ -2575,7 +2575,7 @@ function endBattle(playerWon) {
         }, 100);
 
         queueSave(); 
-        if(isAutoBattle && !btnNext.classList.contains('hidden')) {
+        if(isAutoBattle && !btnNext.classList.contains('hidden') && currentMode !== 'graveyard') {
             btnNext.innerText = "Auto-Continuing in 4s...";
             setTimeout(() => { if(isAutoBattle) handleEndNext(); }, 4000);
         }

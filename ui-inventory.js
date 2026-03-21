@@ -24,7 +24,14 @@ function closeCombatBag() {
     document.getElementById('modal-combat-bag').style.display = 'none';
 }
 
-function showInventory() {
+function toggleMythicLock(itemId) {
+    const item = (globalProgression.equipInventory || []).find(eq => eq.id === itemId);
+    if(!item || item.rarity !== 'mythic') return;
+    item.locked = !item.locked;
+    playSound('click');
+    queueSave();
+    showInventory();
+}
     const inv = globalProgression.inventory;
     const matList = document.getElementById('inv-materials-list'); matList.innerHTML = '';
     let hasMats = false;
@@ -46,6 +53,35 @@ function showInventory() {
     document.getElementById('inv-cons-header').style.display = hasCons ? 'block' : 'none';
     if (!hasCons) consHtml = '<p class="text-stone-500 text-sm">No consumables.</p>';
     consList.innerHTML = consHtml;
+
+    // Show Mythic gear in inventory (bag)
+    const mythicList = document.getElementById('inv-mythic-list');
+    if(mythicList) {
+        const mythicItems = (globalProgression.equipInventory || []).filter(eq => eq.rarity === 'mythic');
+        if(mythicItems.length > 0) {
+            let mythicHtml = '';
+            mythicItems.forEach(item => {
+                const isLocked = item.locked || false;
+                const bonusTxt = renderBonusStatsHtml ? renderBonusStatsHtml(item.bonusStats) : '';
+                mythicHtml += `<div class="bag-item p-3 rounded-xl border-2 border-yellow-500 shadow-inner flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">${sanitizeHTML(item.icon || '📦')}</span>
+                        <div>
+                            <div class="font-bold text-yellow-300 text-sm">${sanitizeHTML(item.name)} ${isLocked ? '🔒' : ''}</div>
+                            <div class="text-[10px] text-gray-400 uppercase">Mythic</div>
+                            ${bonusTxt}
+                        </div>
+                    </div>
+                    <button onclick="toggleMythicLock('${item.id}')" class="text-xs px-2 py-1 rounded border ${isLocked ? 'bg-yellow-900 border-yellow-500 text-yellow-300' : 'bg-gray-700 border-gray-500 text-gray-400'} transition active:scale-95 ml-1">${isLocked ? '🔒' : '🔓'}</button>
+                </div>`;
+            });
+            mythicList.innerHTML = mythicHtml;
+            document.getElementById('inv-mythic-header').style.display = 'block';
+        } else {
+            mythicList.innerHTML = '';
+            document.getElementById('inv-mythic-header').style.display = 'none';
+        }
+    }
     
     switchScreen('screen-inventory');
 }
