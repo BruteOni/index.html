@@ -424,6 +424,16 @@ const BLACK_MARKET_TIERS = [
         desc: 'Passive: All skill cooldowns reduced by 2 (minimum 0). Your skills come back faster.',
         color: 'border-cyan-400',
         reward: 'cdMastery'
+    },
+    {
+        tier: 6, cost: 0, // This tier uses GOLD, not SP
+        title: 'Auto Complete Graveyard Bosses',
+        icon: '🪦',
+        desc: 'Unlocks a button in the Graveyard that instantly defeats all bosses and collects all rewards. Requires Level 400. Costs 10,000 Gold.',
+        color: 'border-green-400',
+        reward: 'autoGraveyard',
+        goldCost: 10000,
+        levelReq: 400
     }
 ];
 
@@ -438,10 +448,15 @@ function showBlackMarket() {
     list.innerHTML = '';
 
     BLACK_MARKET_TIERS.forEach((t) => {
-        const isPurchased = currentTier >= t.tier;
+        const isAutoGraveyard = t.reward === 'autoGraveyard';
+        const isPurchased = isAutoGraveyard
+            ? globalProgression.autoGraveyardUnlocked === true
+            : currentTier >= t.tier;
         const isNext = currentTier === t.tier - 1;
         const isLocked = !isPurchased && !isNext;
-        const canAfford = player.skillPoints >= t.cost;
+        const canAfford = isAutoGraveyard
+            ? (player.lvl >= (t.levelReq || 0) && (globalProgression.gold || 0) >= (t.goldCost || 0))
+            : player.skillPoints >= t.cost;
 
         const div = document.createElement('div');
         div.className = `bg-gray-900 border-2 ${isPurchased ? 'border-green-500' : isNext ? t.color : 'border-gray-700'} rounded-xl p-4 flex flex-col gap-2 shadow-lg ${isLocked ? 'opacity-50' : ''}`;
@@ -449,8 +464,24 @@ function showBlackMarket() {
         const statusBadge = isPurchased
             ? `<span class="text-green-400 font-bold text-sm">✅ Purchased</span>`
             : isNext
-                ? `<span class="text-yellow-300 font-bold text-sm">🎯 Available — ${t.cost} SP</span>`
+                ? isAutoGraveyard
+                    ? `<span class="text-yellow-300 font-bold text-sm">🎯 Available — 10,000 Gold</span>`
+                    : `<span class="text-yellow-300 font-bold text-sm">🎯 Available — ${t.cost} SP</span>`
                 : `<span class="text-gray-500 font-bold text-sm">🔒 Locked (complete previous tier)</span>`;
+
+        const levelReqBadge = isAutoGraveyard && isNext && !isPurchased && player.lvl < (t.levelReq || 0)
+            ? `<div class="text-xs text-orange-400 font-bold mt-1">🔒 Requires Level ${t.levelReq}</div>`
+            : '';
+
+        const buyBtn = isNext && !isPurchased
+            ? isAutoGraveyard
+                ? `<button onclick="buyBlackMarketTier(${t.tier})" class="w-full bg-green-700 hover:bg-green-600 border border-green-400 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}" ${canAfford ? '' : 'disabled'}>
+                Purchase — 10,000 Gold
+            </button>`
+                : `<button onclick="buyBlackMarketTier(${t.tier})" class="w-full bg-purple-700 hover:bg-purple-600 border border-purple-400 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}" ${canAfford ? '' : 'disabled'}>
+                Purchase — ${t.cost} Skill Points
+            </button>`
+            : '';
 
         div.innerHTML = `
             <div class="flex items-center gap-3">
@@ -458,12 +489,11 @@ function showBlackMarket() {
                 <div class="flex-1">
                     <div class="font-black text-white text-base">Tier ${t.tier}: ${t.title}</div>
                     <div class="text-xs text-gray-300 mt-0.5">${t.desc}</div>
+                    ${levelReqBadge}
                 </div>
                 ${statusBadge}
             </div>
-            ${isNext && !isPurchased ? `<button onclick="buyBlackMarketTier(${t.tier})" class="w-full bg-purple-700 hover:bg-purple-600 border border-purple-400 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}" ${canAfford ? '' : 'disabled'}>
-                Purchase — ${t.cost} Skill Points
-            </button>` : ''}
+            ${buyBtn}
         `;
         list.appendChild(div);
     });
@@ -542,9 +572,17 @@ function buyBlackMarketTier(tier) {
     const t = BLACK_MARKET_TIERS[tier - 1];
     if (!t) return;
     if ((globalProgression.blackMarketTier || 0) !== tier - 1) return; // must be next tier
-    if (player.skillPoints < t.cost) { playSound('lose'); return; }
 
-    player.skillPoints -= t.cost;
+    if (t.reward === 'autoGraveyard') {
+        if (player.lvl < (t.levelReq || 0)) { playSound('lose'); return; }
+        if ((globalProgression.gold || 0) < (t.goldCost || 0)) { playSound('lose'); return; }
+        globalProgression.gold -= t.goldCost;
+        globalProgression.autoGraveyardUnlocked = true;
+    } else {
+        if (player.skillPoints < t.cost) { playSound('lose'); return; }
+        player.skillPoints -= t.cost;
+    }
+
     globalProgression.blackMarketTier = tier;
 
     // Apply immediate effects

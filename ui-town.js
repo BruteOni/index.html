@@ -1515,9 +1515,21 @@ function showGraveyard() {
     // Show only the most recent 20
     const bosses = allBosses.slice(-20);
     const today = new Date().toDateString();
-    
+
+    // Auto Complete button (if unlocked)
+    if (globalProgression.autoGraveyardUnlocked) {
+        const autoBtn = document.createElement('button');
+        autoBtn.className = 'bg-emerald-700 hover:bg-emerald-600 border border-emerald-400 text-white font-bold py-3 rounded-xl text-lg shadow-lg w-full mb-2';
+        autoBtn.textContent = '⚡ Auto Complete All Bosses';
+        autoBtn.onclick = autoCompleteGraveyard;
+        list.appendChild(autoBtn);
+    }
+
     if(bosses.length === 0) {
-        list.innerHTML = `<div class="text-center text-gray-500 py-6 bg-gray-900 rounded-xl">No bosses have been defeated yet.</div>`;
+        const empty = document.createElement('div');
+        empty.className = 'text-center text-gray-500 py-6 bg-gray-900 rounded-xl';
+        empty.textContent = 'No bosses have been defeated yet.';
+        list.appendChild(empty);
     } else {
         bosses.forEach(b => {
             const btn = document.createElement('div');
@@ -1526,16 +1538,19 @@ function showGraveyard() {
             const revivedToday = (globalProgression.graveyardRevivalDates || {})[b.name] === today;
             const canRevive = canFight && !revivedToday;
             const statusText = revivedToday ? '<span class="text-xs text-gray-500 ml-1">(Revived today)</span>' : '';
+            const avatarHtml = b.avatar && /\.(png|jpg|webp|gif)$/i.test(b.avatar)
+                ? `<img src="${sanitizeHTML(b.avatar)}" alt="Boss" class="w-10 h-10 object-contain filter grayscale">`
+                : `<span class="text-4xl filter grayscale drop-shadow-lg">${sanitizeHTML(b.avatar)}</span>`;
             
             btn.innerHTML = `
                 <div class="flex items-center gap-3">
-                    <span class="text-4xl filter grayscale drop-shadow-lg">${b.avatar}</span>
+                    ${avatarHtml}
                     <div>
-                        <div class="font-bold text-gray-300">${b.name}</div>
+                        <div class="font-bold text-gray-300">${sanitizeHTML(b.name)}</div>
                         <div class="text-xs text-gray-500">Defeated Boss${statusText}</div>
                     </div>
                 </div>
-                <button onclick="fightGraveyardBoss('${b.name}')" class="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-4 py-2 rounded font-bold transition active:scale-95 border border-indigo-700 shadow flex items-center gap-1 ${canRevive ? '' : 'opacity-50 cursor-not-allowed'}" ${canRevive ? '' : 'disabled'}>
+                <button onclick="fightGraveyardBoss('${sanitizeHTML(b.name)}')" class="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-4 py-2 rounded font-bold transition active:scale-95 border border-indigo-700 shadow flex items-center gap-1 ${canRevive ? '' : 'opacity-50 cursor-not-allowed'}" ${canRevive ? '' : 'disabled'}>
                     <span>Resurrect</span><span class="text-yellow-400 text-xs">💰500</span>
                 </button>
             `;
@@ -1543,6 +1558,61 @@ function showGraveyard() {
         });
     }
     switchScreen('screen-graveyard');
+}
+
+function autoCompleteGraveyard() {
+    const today = new Date().toDateString();
+    if (!globalProgression.graveyardRevivalDates) globalProgression.graveyardRevivalDates = {};
+    const allBosses = Object.values(globalProgression.killedBosses || {});
+    let pebbleCount = 0;
+    const gearDrops = [];
+
+    allBosses.forEach(b => {
+        if (globalProgression.graveyardRevivalDates[b.name] === today) return; // already done today
+        globalProgression.graveyardRevivalDates[b.name] = today;
+        globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 1;
+        pebbleCount++;
+        // Roll gear: 5% legendary, 15% epic, 30% rare, 50% common
+        const rRoll = Math.random();
+        let forceRarity;
+        if (rRoll < 0.05) forceRarity = 'legendary';
+        else if (rRoll < 0.20) forceRarity = 'epic';
+        else if (rRoll < 0.50) forceRarity = 'rare';
+        else forceRarity = 'common';
+        const newEquip = rollEquipment(forceRarity);
+        if (newEquip) {
+            globalProgression.equipInventory.push(newEquip);
+            globalProgression.newItems[newEquip.type.startsWith('ring') ? 'ring' : newEquip.type] = true;
+            gearDrops.push(newEquip);
+        }
+    });
+
+    playSound('win');
+    queueSave();
+    showGraveyard();
+
+    // Show summary above the boss list
+    const list = document.getElementById('graveyard-list');
+    if (list) {
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'bg-emerald-900 border-2 border-emerald-400 rounded-xl p-4 text-center text-white font-bold shadow-lg mb-2';
+        if (pebbleCount === 0) {
+            summaryDiv.innerHTML = '<div class="text-base">All bosses already completed today!</div>';
+        } else {
+            summaryDiv.innerHTML = `
+                <div class="text-lg">⚡ Auto Complete!</div>
+                <div class="text-sm mt-1 text-purple-300">+${pebbleCount} Soul Pebble${pebbleCount !== 1 ? 's' : ''}</div>
+                <div class="text-sm text-yellow-300">⚔️ ${gearDrops.length} Gear Drop${gearDrops.length !== 1 ? 's' : ''}</div>
+            `;
+        }
+        // Insert after the auto-complete button (first child) or at top
+        const autoBtn = list.firstChild;
+        if (autoBtn && autoBtn.tagName === 'BUTTON') {
+            list.insertBefore(summaryDiv, autoBtn.nextSibling);
+        } else {
+            list.insertBefore(summaryDiv, list.firstChild);
+        }
+    }
 }
 
 function fightGraveyardBoss(bossName) {

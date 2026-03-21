@@ -735,6 +735,7 @@ function makeInitialGlobalProgression() {
         petBattleEnergy: 3, petBattleEnergyDate: '', petBattleLastEnergyTime: Date.now(),
         petFavorites: [],
         blackMarketTier: 0,
+        autoGraveyardUnlocked: false,
         zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
         pebbleBonusDmg: 0, pebbleBonusArmorPierce: 0, pebbleBonusHp: 0, pebbleBonusDef: 0,
         patchV1Applied: true,
@@ -1564,10 +1565,15 @@ function showHub() {
 
         // Show Crown of Infinity title if earned, otherwise show highest zombie title
         const titleBadgeEl = document.getElementById('hub-title-badge');
+        const titleBuffEl = document.getElementById('hub-title-buff');
         if (globalProgression.crownOfInfinity) {
             if (titleBadgeEl) {
-                titleBadgeEl.innerHTML = '<span class="crown-of-infinity-title">👑 Crown of Infinity</span> <span class="text-[10px] text-yellow-300 ml-1 font-bold">+5% All Stats</span>';
+                titleBadgeEl.innerHTML = '<span class="crown-of-infinity-title">👑 Crown of Infinity</span>';
                 titleBadgeEl.classList.remove('hidden');
+            }
+            if (titleBuffEl) {
+                titleBuffEl.textContent = '+5% All Stats';
+                titleBuffEl.classList.remove('hidden');
             }
         } else {
         const zs = globalProgression.zombieStats;
@@ -1583,8 +1589,14 @@ function showHub() {
             badgeSpan.className = 'title-badge';
             badgeSpan.textContent = `🏆 ${highestTitle.name}`;
             if(titleBadgeEl) { titleBadgeEl.innerHTML = ''; titleBadgeEl.appendChild(badgeSpan.cloneNode(true)); titleBadgeEl.classList.remove('hidden'); }
+            if(titleBuffEl) {
+                const bonusCount = titlesEarned.length;
+                titleBuffEl.textContent = `+${bonusCount}% DMG, +${bonusCount}% AP, +${bonusCount}% DR`;
+                titleBuffEl.classList.remove('hidden');
+            }
         } else {
             if(titleBadgeEl) titleBadgeEl.classList.add('hidden');
+            if(titleBuffEl) titleBuffEl.classList.add('hidden');
         }
         }
     } catch(e) { console.error('showHub: basic stats update failed', e); }
