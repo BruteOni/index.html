@@ -1054,7 +1054,9 @@ function calculateMaxHp() {
             if (item.armorEnhance >= 100) armorUpgradeHpPct += 0.10;
         }
     });
-    return Math.floor((base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01) * (1 + getTitleStatBonus()) + armorUpgradeHp) * (1 + armorUpgradeHpPct));
+    let maxHp = Math.floor((base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01) * (1 + getTitleStatBonus()) + armorUpgradeHp) * (1 + armorUpgradeHpPct));
+    if (globalProgression.crownOfInfinity) maxHp = Math.floor(maxHp * 1.05);
+    return maxHp;
 }
 
 /**
@@ -1090,6 +1092,7 @@ function getBaseDamage() {
     // Apply zombie title bonus (+1% damage per title)
     const titleBonus = getTitleStatBonus();
     if(titleBonus > 0) baseDmg = Math.floor(baseDmg * (1 + titleBonus));
+    if (globalProgression.crownOfInfinity) baseDmg = Math.floor(baseDmg * 1.05);
     return baseDmg;
 }
 
@@ -1111,7 +1114,9 @@ function getPlayerDef() {
     });
     const baseDef = Math.floor((50 + (a.defense || 0) + player.treeBonusDef + accUpgradeDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01) * (1 + getTitleStatBonus()));
     // Accessory max mitigation bonus (+10% reduced damage at level 100)
-    return baseDef;
+    let def = baseDef;
+    if (globalProgression.crownOfInfinity) def = Math.floor(def * 1.05);
+    return def;
 }
 
 // Returns the permanent base attributes for each class (cannot go below these).
@@ -1187,8 +1192,8 @@ function startApocalypse() {
         lvl: player.lvl,
         hp: player.maxHp * 10,
         maxHp: player.maxHp * 10,
-        dmg: getBaseDamage(),
-        baseDmg: getBaseDamage(),
+        dmg: getBaseDamage() * 3,
+        baseDmg: getBaseDamage() * 3,
         def: getPlayerDef(),
         currentHp: player.maxHp * 10,
         bleedStacks: 0, bleedTurns: 0, stunned: 0, healBlock: 0,

@@ -408,3 +408,15 @@ body { margin: 0; padding: 0; overflow: hidden; background-color: #111; color: w
     0%, 100% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.6), 0 0 16px rgba(255, 69, 0, 0.4); background-position: 0% center; }
     50% { box-shadow: 0 0 16px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 69, 0, 0.8); background-position: 100% center; }
 }
+
+/* On desktop, pin the Crown of Infinity badge to the top-right of the status panel */
+@media (min-width: 768px) {
+    #hub-status-panel {
+        position: relative;
+    }
+    #hub-title-badge:not(.hidden) {
+        position: absolute;
+        right: 0.75rem;
+        top: 0.75rem;
+    }
+}
