@@ -4,8 +4,6 @@ function showMagicalEnhancer() {
     const p = globalProgression;
     document.getElementById('me-gold-display').innerText = p.gold;
     document.getElementById('me-stones-display').innerText = p.inventory.magic_stone || 0;
-    const dustEl = document.getElementById('me-dust-display');
-    if (dustEl) dustEl.innerText = p.inventory.ethereal_dust || 0;
     
     const list = document.getElementById('me-item-list');
     list.innerHTML = '';
@@ -15,7 +13,7 @@ function showMagicalEnhancer() {
     const classSets = SET_BONUS_DEFS[classId];
     if(!classSets) { list.innerHTML = '<p class="text-gray-500 text-center">No set bonuses available for your class.</p>'; switchScreen('screen-magical-enhancer'); return; }
 
-    // Gather all mythical items: equipped + inventory
+    // Gather only EQUIPPED mythical items
     const mythicItems = [];
     const equippedSlots = p.equipped || {};
     Object.entries(equippedSlots).forEach(([slot, item]) => {
@@ -23,14 +21,9 @@ function showMagicalEnhancer() {
             mythicItems.push({ item, slot, isEquipped: true });
         }
     });
-    (p.equipInventory || []).forEach((item, idx) => {
-        if(item && item.rarity === 'mythic') {
-            mythicItems.push({ item, idx, isEquipped: false });
-        }
-    });
 
     if(mythicItems.length === 0) {
-        list.innerHTML = '<p class="text-gray-500 text-center py-4">No Mythical equipment found. Mythical gear drops from Mythic Bosses.</p>';
+        list.innerHTML = '<p class="text-gray-500 text-center py-4">No Mythical equipment equipped. Equip Mythical gear first to enhance it.</p>';
         switchScreen('screen-magical-enhancer');
         return;
     }
@@ -78,11 +71,7 @@ function showMagicalEnhancer() {
             card.innerHTML = header + `
                 <div class="text-xs ${setDef.color} font-bold mb-1">✨ Set: ${setDef.name} (${equippedCount} equipped)</div>
                 <div class="bg-gray-900 rounded-lg p-2 space-y-1">${bonusHtml}</div>
-                <div class="text-xs text-gray-500 mt-2 italic">Already enhanced</div>
-                <button onclick="reStatItem('${isEquipped ? 'equip_' + slot : 'inv_id_' + item.id}')"
-                    class="mt-2 w-full bg-teal-800 hover:bg-teal-700 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95">
-                    🔄 Re-Stat <span class="text-teal-300">(10 ✨ Ethereal Dust)</span>
-                </button>`;
+                <div class="text-xs text-gray-500 mt-2 italic">Already enhanced</div>`;
         } else {
             // Show enhance options
             const canAfford = (p.gold >= MAGICAL_ENHANCER_GOLD_COST) && ((p.inventory.magic_stone || 0) >= MAGICAL_ENHANCER_STONE_COST);
@@ -144,12 +133,80 @@ function enhanceWithSet(itemRef, setKey) {
     showMagicalEnhancer();
 }
 
-// --- RESTAT ---
-function reStatItem(itemRef) {
+// --- REFORGER ---
+function showReforger() {
+    if (!player || !globalProgression || !globalProgression.inventory) return;
     const p = globalProgression;
-    const RESTAT_COST = 10;
-    if ((p.inventory.ethereal_dust || 0) < RESTAT_COST) {
-        document.getElementById('me-status').innerText = `❌ Need ${RESTAT_COST} Ethereal Dust!`;
+    document.getElementById('rf-dust-display').innerText = p.inventory.ethereal_dust || 0;
+
+    const list = document.getElementById('rf-item-list');
+    list.innerHTML = '';
+    document.getElementById('rf-status').innerText = '';
+
+    // Gather ALL mythic items: equipped + inventory
+    const mythicItems = [];
+    const equippedSlots = p.equipped || {};
+    Object.entries(equippedSlots).forEach(([slot, item]) => {
+        if(item && item.rarity === 'mythic') {
+            mythicItems.push({ item, slot, isEquipped: true });
+        }
+    });
+    (p.equipInventory || []).forEach((item, idx) => {
+        if(item && item.rarity === 'mythic') {
+            mythicItems.push({ item, idx, isEquipped: false });
+        }
+    });
+
+    if(mythicItems.length === 0) {
+        list.innerHTML = '<p class="text-gray-500 text-center py-4">No Mythical equipment found. Mythical gear drops from Mythic Bosses.</p>';
+        switchScreen('screen-reforger');
+        return;
+    }
+
+    mythicItems.forEach(({ item, slot, idx, isEquipped }) => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-800 border border-teal-600 rounded-xl p-3 shadow-md';
+
+        const bonusHtml = (item.bonusStats && item.bonusStats.length > 0)
+            ? item.bonusStats.map(bs => {
+                if(bs.stat === 'bonusCdReduc') return `<div class="text-xs text-cyan-300">CD -${bs.value}t</div>`;
+                const pct = (bs.value * 100).toFixed(2);
+                return `<div class="text-xs text-cyan-300">+${pct}% ${bs.label}</div>`;
+            }).join('')
+            : '<div class="text-xs text-gray-500 italic">No bonus stats</div>';
+
+        const itemLevel = item.itemLevel || item.lvl || 1;
+        const canAfford = (p.inventory.ethereal_dust || 0) >= 10;
+        const itemRef = isEquipped ? 'equip_' + slot : 'inv_id_' + item.id;
+
+        card.innerHTML = `
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-2xl">${item.icon || '⚔️'}</span>
+                <div class="flex-1">
+                    <div class="font-black text-white text-sm drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]">${sanitizeHTML(item.name)}</div>
+                    <div class="text-xs text-gray-400">${sanitizeHTML(item.type)} ${isEquipped ? '(Equipped)' : '(Inventory)'} | Lv.${itemLevel}</div>
+                </div>
+            </div>
+            <div class="bg-gray-900 rounded-lg p-2 mb-2 space-y-0.5">
+                <div class="text-xs text-gray-500 font-bold mb-1">Current Stats:</div>
+                ${bonusHtml}
+            </div>
+            <button onclick="reforgeItem('${itemRef}')"
+                class="w-full bg-teal-800 hover:bg-teal-700 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}"
+                ${canAfford ? '' : 'disabled'}>
+                🔄 Reforge Stats <span class="text-teal-300">(10 ✨ Ethereal Dust)</span>
+            </button>`;
+        list.appendChild(card);
+    });
+
+    switchScreen('screen-reforger');
+}
+
+function reforgeItem(itemRef) {
+    const REFORGE_COST = 10;
+    const p = globalProgression;
+    if ((p.inventory.ethereal_dust || 0) < REFORGE_COST) {
+        document.getElementById('rf-status').innerText = `❌ Need ${REFORGE_COST} Ethereal Dust!`;
         return;
     }
 
@@ -162,21 +219,20 @@ function reStatItem(itemRef) {
         item = (p.equipInventory || []).find(i => i && i.id === itemId);
     }
 
-    if (!item) { document.getElementById('me-status').innerText = '❌ Item not found!'; return; }
+    if (!item) { document.getElementById('rf-status').innerText = '❌ Item not found!'; return; }
 
-    if (item.stats && Array.isArray(item.stats)) {
-        item.stats = item.stats.map(s => {
-            const baseVal = s.val;
-            const variation = baseVal * (0.5 + Math.random());
-            return { ...s, val: Math.round(variation * 1000) / 1000 };
-        });
-    }
+    if (!confirm('Are you sure? This will randomly re-roll ALL stats on this item.')) return;
 
-    p.inventory.ethereal_dust -= RESTAT_COST;
+    const itemLevel = item.itemLevel || item.lvl || 1;
+    const slotType = item.type;
+    // Regenerate all bonus stats from the slot-appropriate pool at the item's level
+    item.bonusStats = generateBonusStats('mythic', itemLevel, slotType);
+
+    p.inventory.ethereal_dust -= REFORGE_COST;
     playSound('win');
     queueSave();
-    document.getElementById('me-status').innerText = '✨ Item stats re-rolled!';
-    showMagicalEnhancer();
+    document.getElementById('rf-status').innerText = `🔄 ${item.name} stats have been reforged!`;
+    showReforger();
 }
 
 // --- PROGRESS MENU ---
