@@ -2,7 +2,7 @@
 const AUTOSAVE_INTERVAL_MS = 30000;        // Auto-save interval (30 seconds)
 const HP_REGEN_INTERVAL_MS = 60000;        // HP regen tick interval (1 minute)
 const HP_REGEN_AMOUNT = 10;                // HP regained per regen tick
-const ENERGY_REGEN_INTERVAL_MS = 600000;   // Energy regen interval (10 minutes)
+const ENERGY_REGEN_INTERVAL_MS = 1200000;   // Energy regen interval (20 minutes)
 const MAX_LEVEL = 500;                     // Maximum player level
 const MYTHIC_BOSS_SPAWN_CHANCE = 0.005;    // 0.5% chance to spawn the secret mythic boss
 const ENEMY_COUNT_4_CHANCE = 0.05;         // Cumulative 5%: chance of 4 enemies

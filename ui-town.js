@@ -459,6 +459,7 @@ function showWeaponSmith() {
         </button>
     </div>`;
     list.appendChild(convHeader);
+    switchScreen('screen-weaponsmith');
 }
 
 function enhanceWeapon(itemId) {

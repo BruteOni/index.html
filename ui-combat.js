@@ -468,6 +468,9 @@ function startBattle(isNewEncounter = false) {
         if(usableSlots) {
             usableSlots.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '0.3'; });
         }
+        // Boss goes first in apocalypse mode
+        isPlayerTurn = false;
+        setTimeout(() => executeEnemyTurns(0), 800);
     }
 }
 
@@ -1755,6 +1758,29 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     let availableSkills = e.skills ? e.skills.filter(s => !e.cooldowns[s]) : ['hit'];
     if(availableSkills.length === 0) availableSkills = ['hit'];
     
+    // Apocalypse clone: use player's cloned skills instead of normal enemy skills
+    if (e.isApocalypseClone && e.cloneSkills && e.cloneSkills.length > 0) {
+        const skill = e.cloneSkills[Math.floor(Math.random() * e.cloneSkills.length)];
+        playSound('hit'); triggerAnim(`enemy-card-${enemyIdx}`, 'anim-strike'); setTimeout(() => triggerAnim('combat-player-avatar', 'anim-shake'), 150);
+        const hits = skill.hits || 1;
+        let totalDmg = 0;
+        for (let h = 0; h < hits; h++) {
+            let dmg = Math.floor(e.baseDmg * (skill.mult || 1) * (0.8 + Math.random() * 0.4));
+            if (e.dmgBoostMult && e.dmgBoostMult > 1) dmg = Math.floor(dmg * e.dmgBoostMult);
+            dealDamageToPlayer(dmg, e);
+            totalDmg += dmg;
+        }
+        addLog(`${e.name} used <b>${skill.name}</b>${hits > 1 ? ` (${hits}x)` : ''} for ${totalDmg} dmg!`, 'text-red-400 font-bold');
+        if (e.dmgBoostTurns > 0) { e.dmgBoostTurns--; if (e.dmgBoostTurns === 0) e.dmgBoostMult = 1; }
+        updateCombatUI();
+        if (extraTurns > 0) {
+            setTimeout(() => executeEnemyTurns(enemyIdx, extraTurns - 1), 700);
+        } else {
+            setTimeout(() => executeEnemyTurns(enemyIdx + 1), 700);
+        }
+        return;
+    }
+
     let action = availableSkills[Math.floor(Math.random() * availableSkills.length)];
 
     if(e.healBlock > 0) { if(action==='recover') action = 'hit'; e.healBlock--; }
@@ -2515,7 +2541,7 @@ function endBattle(playerWon) {
                 title.style.background = 'linear-gradient(90deg,#ffd700,#ff4500,#ffd700)';
                 title.style.webkitBackgroundClip = 'text';
                 title.style.webkitTextFillColor = 'transparent';
-                rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 border-yellow-400 text-yellow-300 font-black shadow-md animate-pulse">👑 Title Unlocked: Crown of Infinity!</div>`;
+                rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 border-yellow-400 text-yellow-300 font-black shadow-md animate-pulse">👑 Title Unlocked: Crown of Infinity! (+5% All Stats)</div>`;
             } else {
                 desc.innerText = 'You have already claimed the Crown of Infinity.';
             }
