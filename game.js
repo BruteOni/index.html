@@ -1566,7 +1566,7 @@ function showHub() {
         const titleBadgeEl = document.getElementById('hub-title-badge');
         if (globalProgression.crownOfInfinity) {
             if (titleBadgeEl) {
-                titleBadgeEl.innerHTML = '<span class="crown-of-infinity-title">👑 Crown of Infinity</span><div class="text-[10px] text-yellow-300 text-center mt-0.5">+5% All Stats</div>';
+                titleBadgeEl.innerHTML = '<span class="crown-of-infinity-title">👑 Crown of Infinity</span> <span class="text-[10px] text-yellow-300 ml-1 font-bold">+5% All Stats</span>';
                 titleBadgeEl.classList.remove('hidden');
             }
         } else {
