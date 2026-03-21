@@ -117,7 +117,7 @@ function returnToTown() {
     isAutoBattle = false;
     // Save living enemies for persistence (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
-        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
         savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
     }
     enemies = []; // Clear enemies so fresh ones spawn next battle
@@ -183,7 +183,7 @@ function getHealingMultipliers() {
 function generateEnemies() {
     // Check for persisted enemies in this mode (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode)) {
-        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
         if (savedEnemies[persistKey]) {
             const saved = savedEnemies[persistKey];
             const alive = saved.filter(e => e.currentHp > 0);
@@ -287,7 +287,7 @@ function generateEnemies() {
     let isBossFight = false;
     let count = 1;
 
-    if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
+    if (currentMode === 'dungeon' && activeDungeonFloor === 5) {
         isBossFight = true; count = 1;
     } else if ((currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop' || currentMode === 'island_defense') && globalProgression.storyModeProgress[currentMode] >= 9) {
         isBossFight = true; count = 1;
@@ -335,7 +335,7 @@ function generateEnemies() {
     for(let i=0; i<count; i++) {
         const e = createBaseEnemy();
         
-        if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
+        if (currentMode === 'dungeon' && activeDungeonFloor === 5) {
             e.lvl = activeDungeonTier * 5; 
             const dBoss = BOSS_TEMPLATES['dungeon'][Math.floor(Math.random() * BOSS_TEMPLATES['dungeon'].length)];
             e.name = dBoss.name; e.avatar = dBoss.avatar;
@@ -353,7 +353,7 @@ function generateEnemies() {
             e.rarity = 'boss'; e.isBoss = true;
             e.templateMults = { hpMult: bTemplate.hpMult, dmgMult: bTemplate.dmgMult };
         } else {
-            const lvlBase = currentMode === 'dungeon' ? (activeDungeonTier - 1) * 5 + activeDungeonRoom : Math.min(player.lvl, 100); 
+            const lvlBase = currentMode === 'dungeon' ? (activeDungeonTier - 1) * 5 + activeDungeonFloor : Math.min(player.lvl, 100); 
             e.lvl = Math.max(1, lvlBase + Math.floor(Math.random() * 3) - 1);
             const t = pool[Math.floor(Math.random() * pool.length)];
             e.name = t.name; e.avatar = t.avatar;
@@ -758,7 +758,7 @@ function updateCombatUI() {
     if (!player || !player.data) return;
     var ui = getCombatUIElements();
     if (ui.uiLevel) ui.uiLevel.innerText = `Level ${player.lvl}`;
-    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `XP Dungeon T${activeDungeonTier} (Rm ${activeDungeonRoom})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : currentMode === 'invasion' ? `🧟 Zombie Apocalypse — Wave ${zombieWaveCount + 1}` : 'Quest Marathon';
+    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `🗼 Tower of Babel (Floor ${activeDungeonFloor})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : currentMode === 'invasion' ? `🧟 Zombie Apocalypse — Wave ${zombieWaveCount + 1}` : 'Quest Marathon';
     
     if(currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop') {
         modeText += ` (${globalProgression.storyModeProgress[currentMode] + 1}/10)`;
@@ -2167,7 +2167,7 @@ function endBattle(playerWon) {
         const killCount = enemies.length;
 
         // Clear persisted enemies for this mode since all were defeated
-        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
         if (savedEnemies[persistKey]) delete savedEnemies[persistKey];
 
         // Progress tracking: win
@@ -2177,7 +2177,7 @@ function endBattle(playerWon) {
         if (ps.currentWinStreak > ps.longestWinStreak) ps.longestWinStreak = ps.currentWinStreak;
         ps.totalKills += killCount;
         enemies.forEach(e => { if (e.isBoss) ps.bossesDefeated++; if (e.isMythicBoss) { ps.mythicBossKilled = (ps.mythicBossKilled || 0) + 1; } });
-        if (currentMode === 'dungeon' && activeDungeonRoom === 5 && activeDungeonTier > (ps.maxDungeonCleared || 0)) ps.maxDungeonCleared = activeDungeonTier;
+        if (currentMode === 'dungeon' && activeDungeonFloor === 5 && activeDungeonTier > (ps.maxDungeonCleared || 0)) ps.maxDungeonCleared = activeDungeonTier;
         if (player.lvl > (ps.levelReached || 0)) ps.levelReached = player.lvl;
         if (globalProgression.gold > (ps.highestGold || 0)) ps.highestGold = globalProgression.gold;
         
@@ -2328,7 +2328,9 @@ function endBattle(playerWon) {
             const isBoss = e.isBoss;
             if(isBoss && currentMode !== 'graveyard') {
                 if(!globalProgression.killedBosses) globalProgression.killedBosses = {};
-                globalProgression.killedBosses[e.name] = { name: e.name, avatar: e.avatar, hpMult: e.templateMults?.hpMult || 3, dmgMult: e.templateMults?.dmgMult || 2 };
+                if(Object.keys(globalProgression.killedBosses).length < 20) {
+                    globalProgression.killedBosses[e.name] = { name: e.name, avatar: e.avatar, hpMult: e.templateMults?.hpMult || 3, dmgMult: e.templateMults?.dmgMult || 2 };
+                }
             }
 
             // Mythic boss: guaranteed mythic gear drop
@@ -2472,11 +2474,19 @@ function endBattle(playerWon) {
         if (currentMode === 'invasion') {
             // Already handled above
         } else if (currentMode === 'dungeon') {
-            if (activeDungeonRoom === 5) { 
+            // Floor rewards: +10 ethereal dust per floor, +20 soul pebbles every 100 floors
+            const currentFloor = (activeDungeonTier - 1) * 5 + activeDungeonFloor;
+            globalProgression.inventory.ethereal_dust = (globalProgression.inventory.ethereal_dust || 0) + 10;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-600 text-yellow-300 font-bold shadow-md">✨ +10 Ethereal Dust</div>`;
+            if (currentFloor % 100 === 0) {
+                globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 20;
+                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-purple-700 text-purple-400 font-bold shadow-md">🔮 +20 Soul Pebbles (Floor ${currentFloor} Milestone!)</div>`;
+            }
+            if (activeDungeonFloor === 5) { 
                 desc.innerText = `You conquered Tier ${activeDungeonTier}!`; btnNext.classList.add('hidden'); 
                 
                 if(activeDungeonTier === globalProgression.dungeonTier) globalProgression.dungeonTier++; 
-            } else { desc.innerText = "Room cleared. Proceed deeper."; btnNext.innerText = "Next Room"; btnNext.classList.remove('hidden'); }
+            } else { desc.innerText = "Floor cleared. Continue climbing!"; btnNext.innerText = "Next Floor"; btnNext.classList.remove('hidden'); }
         } else if (currentMode === 'graveyard') {
             desc.innerText = "Boss Soul Harvested.";
             btnNext.innerText = "Return to Town"; btnNext.classList.remove('hidden');
@@ -2493,7 +2503,10 @@ function endBattle(playerWon) {
 
         xpCont.classList.remove('hidden');
         let totalXp = 0; 
-        const nextLvlXp = getXpForNextLevel(player.lvl);
+        // Cap XP level at 100 for non-dungeon adventure modes
+        const xpCapModes = ['hunting', 'pillage', 'workshop', 'island_defense'];
+        const xpLvl = (player.lvl >= 100 && xpCapModes.includes(currentMode)) ? 100 : player.lvl;
+        const nextLvlXp = getXpForNextLevel(xpLvl);
         
         enemies.forEach(e => { 
             if(currentMode === 'invasion') {
@@ -2523,6 +2536,8 @@ function endBattle(playerWon) {
         });
         totalXp = Math.floor(totalXp * xpMult);
         if(currentMode === 'invasion') totalXp = Math.floor(totalXp * 0.40);
+        // Graveyard gives no XP
+        if(currentMode === 'graveyard') totalXp = 0;
         document.getElementById('end-xp-amount').innerText = totalXp; globalProgression.totalExpEarned += totalXp;
 
         // Gold per kill (not in quest, training, or dungeon mode)
@@ -2573,7 +2588,7 @@ function endBattle(playerWon) {
         const autoBtn = document.getElementById('btn-auto'); if(autoBtn) autoBtn.classList.remove('auto-on');
         // Save living enemies for persistence on defeat (exclude special modes)
         if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
-            const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+            const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
             savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
         }
         enemies = [];
@@ -2602,10 +2617,10 @@ function endBattle(playerWon) {
 
 function handleEndNext() { 
     if (currentMode === 'dungeon') {
-        if (activeDungeonRoom < 5) { 
-            activeDungeonRoom++; 
+        if (activeDungeonFloor < 5) { 
+            activeDungeonFloor++; 
             // Restore some HP before next room (full restore before boss room 5)
-            if (activeDungeonRoom === 5) {
+            if (activeDungeonFloor === 5) {
                 player.currentHp = player.maxHp;
                 player.regenBuffs = []; player.activeBuffs = [];
                 player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;

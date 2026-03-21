@@ -296,7 +296,7 @@ function showWeaponSmith() {
         const enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0; // cumulative: 30 at lv1, 70 at lv2, 120 at lv3...
         const enhLabel = enhLvl > 0 ? `+${enhBonus} dmg` : 'Not Enhanced';
         const maxBonus = isMaxed ? ' (+5% dmg bonus!)' : '';
-        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 50;
+        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= (30 + enhLvl * 10) && p.gold >= 100;
 
         const div = document.createElement('div');
         div.className = `bg-gray-800 border-2 rarity-${item.rarity} p-3 rounded-lg shadow-md`;
@@ -313,7 +313,7 @@ function showWeaponSmith() {
                 <button onclick="enhanceWeapon('${item.id}')" 
                     class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     ${canEnhance ? '' : 'disabled'}>
-                    🔨 Enhance<br><span class="text-yellow-300">50💰 + 1🔱</span>
+                    🔨 Enhance<br><span class="text-yellow-300">100💰 + ${30 + enhLvl * 10}🔱</span>
                 </button>
             </div>
             <div class="text-[10px] text-gray-400">Next level: +${30 + enhLvl * 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
@@ -340,12 +340,12 @@ function enhanceWeapon(itemId) {
     if(!item) { log.innerText = 'Weapon not found!'; return; }
     const enhLvl = item.weaponEnhance || 0;
     if(enhLvl >= 100) { log.innerText = 'Already at max enhancement level!'; return; }
-    if((p.inventory.titan_shard || 0) < 1) { log.innerText = 'Not enough Titan Shards!'; playSound('lose'); return; }
-    if(p.gold < 50) { log.innerText = 'Not enough Gold! (50 needed)'; playSound('lose'); return; }
+    if((p.inventory.titan_shard || 0) < (30 + enhLvl * 10)) { log.innerText = `Not enough Titan Shards! (${30 + enhLvl * 10} needed)`; playSound('lose'); return; }
+    if(p.gold < 100) { log.innerText = 'Not enough Gold! (100 needed)'; playSound('lose'); return; }
 
     // Consume resources
-    p.gold -= 50;
-    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - 1;
+    p.gold -= 100;
+    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - (30 + enhLvl * 10);
 
     // 40% failure rate
     if(Math.random() < 0.40) {
@@ -374,6 +374,15 @@ function enhanceWeapon(itemId) {
     showWeaponSmith();
 }
 
+function convertTitanShardToGold() {
+    const p = globalProgression;
+    if ((p.inventory.titan_shard || 0) < 1) { addLog('Not enough titan shards!', 'text-red-400'); return; }
+    p.inventory.titan_shard--;
+    globalProgression.gold += 10;
+    queueSave();
+    showWeaponSmith();
+}
+
 
 function showInvasion() {
     document.getElementById('invasion-gold-display').innerText = globalProgression.gold;
@@ -398,7 +407,7 @@ function showInvasion() {
         let html = '';
         if((zs.pendingPotionRewards || 0) > 0) {
             html += `<button onclick="claimZombieRewards()" class="bg-yellow-800 hover:bg-yellow-700 border border-yellow-500 p-2 rounded-lg text-yellow-200 font-bold text-sm transition active:scale-95">
-                🧪 Claim ${zs.pendingPotionRewards * 5} Minor Potions (from ${zs.pendingPotionRewards} reward batches)
+                🔮 Claim ${zs.pendingPotionRewards * 5} Soul Pebbles (from ${zs.pendingPotionRewards} reward batches)
             </button>`;
         }
         if(zs.cooldownBuffEarned && !zs.cooldownBuffClaimed) {
@@ -456,8 +465,8 @@ function showInvasion() {
 function claimZombieRewards() {
     const zs = globalProgression.zombieStats;
     if(!zs || (zs.pendingPotionRewards || 0) <= 0) return;
-    const potions = zs.pendingPotionRewards * 5;
-    globalProgression.inventory.pot_i1 = (globalProgression.inventory.pot_i1 || 0) + potions;
+    const pebbles = zs.pendingPotionRewards * 5;
+    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + pebbles;
     zs.pendingPotionRewards = 0;
     queueSave();
     showInvasion();
@@ -1310,7 +1319,7 @@ function showDungeons() {
         const btn = document.createElement('button');
         btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-red-900 hover:border-red-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
         btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} XP Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
-        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonRoom = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
+        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonFloor = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
     }
     switchScreen('screen-dungeons');
 }
