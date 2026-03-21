@@ -380,7 +380,7 @@ let globalProgression = {
     wellLastHealDate: '', wellXpBattles: 0, wellDropBattles: 0, wellLastXpDate: '', wellLastDropDate: '', wellLastEnergyDate: '', wellLastEnergy50Date: '', wellLastEnergy100Date: '',
     lastHpRegenTime: Date.now(), enemyKillCounts: {}, claimedCodexMilestones: {},
     totalExpEarned: 0, cooldowns: { herbs: 0, mine: 0, fish: 0, enchants: 0 },
-    inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 },
+    inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, ethereal_dust: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 },
     usableItems: {},
     equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null },
     newItems: {}, shopGear: [], shopLastRefresh: 0,
@@ -700,6 +700,7 @@ function makeInitialGlobalProgression() {
             herb_red: 0, herb_blue: 0,
             fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0,
             soul_pebbles: 0,
+            ethereal_dust: 0,
             pot_i1: 0, pot_i2: 0, pot_i3: 0,
             pot_r1: 0, pot_r2: 0, pot_r3: 0,
             food_d1: 0, food_d2: 0, food_d3: 0,
@@ -1133,7 +1134,7 @@ function showPortal() {
 }
 
 
-function showMenu() { try { stopMusic(); } catch(e) { console.error('Failed to stop music:', e); } switchScreen('screen-menu'); }
+function showMenu() { try { stopMusic(); } catch(e) { console.error('Failed to stop music:', e); } const continueBtn = document.getElementById('btn-continue-save'); if (continueBtn) { const hasSave = LEGACY_SAVE_KEYS.some(k => localStorage.getItem(k)); continueBtn.classList.toggle('hidden', !hasSave); } switchScreen('screen-menu'); }
 function showClassSelect() { switchScreen('screen-class-select'); }
 
 function confirmNewGame() {

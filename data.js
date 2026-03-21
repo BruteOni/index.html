@@ -2,7 +2,7 @@
 const AUTOSAVE_INTERVAL_MS = 30000;        // Auto-save interval (30 seconds)
 const HP_REGEN_INTERVAL_MS = 60000;        // HP regen tick interval (1 minute)
 const HP_REGEN_AMOUNT = 10;                // HP regained per regen tick
-const ENERGY_REGEN_INTERVAL_MS = 300000;   // Energy regen interval (5 minutes)
+const ENERGY_REGEN_INTERVAL_MS = 600000;   // Energy regen interval (10 minutes)
 const MAX_LEVEL = 500;                     // Maximum player level
 const MYTHIC_BOSS_SPAWN_CHANCE = 0.005;    // 0.5% chance to spawn the secret mythic boss
 const ENEMY_COUNT_4_CHANCE = 0.05;         // Cumulative 5%: chance of 4 enemies
@@ -39,9 +39,9 @@ const CONSUMABLES = {
 const RECIPES_ALCHEMIST = [{ id: 'pot_i1', herb: 'herb_red', herbAmt: 1, gold: 5 }, { id: 'pot_i2', herb: 'herb_red', herbAmt: 3, gold: 15 }, { id: 'pot_i3', herb: 'herb_red', herbAmt: 10, gold: 40 }, { id: 'pot_r1', herb: 'herb_blue', herbAmt: 1, gold: 5 }, { id: 'pot_r2', herb: 'herb_blue', herbAmt: 3, gold: 15 }, { id: 'pot_r3', herb: 'herb_blue', herbAmt: 10, gold: 40 }];
 const RECIPES_CHEF = [{ id: 'food_d1', fish: 'fish_1', fishAmt: 2, gold: 5 }, { id: 'food_d2', fish: 'fish_3', fishAmt: 2, gold: 15 }, { id: 'food_d3', fish: 'fish_5', fishAmt: 2, gold: 40 }, { id: 'food_df1', fish: 'fish_2', fishAmt: 2, gold: 5 }, { id: 'food_df2', fish: 'fish_4', fishAmt: 2, gold: 15 }, { id: 'food_df3', fish: 'fish_6', fishAmt: 2, gold: 40 }];
 
-const MAT_PRICES = { ench_common: 5, ench_rare: 15, ench_epic: 40, ench_legendary: 100, herb_red: 5, herb_blue: 5, fish_1: 3, fish_2: 3, fish_3: 6, fish_4: 6, fish_5: 10, fish_6: 15, soul_pebbles: 40, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 };
-const MAT_ICONS = { ench_common: '⚪', ench_rare: '🔵', ench_epic: '🟣', ench_legendary: '🟡', herb_red: '🌺', herb_blue: '💠', fish_1: '🐟', fish_2: '🐠', fish_3: '🐡', fish_4: '🦈', fish_5: '🦑', fish_6: '🦀', soul_pebbles: '🔮', titan_shard: '🔱', magic_stone: '💎' };
-const MAT_NAMES = { ench_common: 'Normal Core', ench_rare: 'Rare Core', ench_epic: 'Epic Core', ench_legendary: 'Legendary Core', herb_red: 'Crimson Herb', herb_blue: 'Azure Herb', fish_1: 'Salmon', fish_2: 'Trout', fish_3: 'Bass', fish_4: 'Tuna', fish_5: 'Pike', fish_6: 'Carp', soul_pebbles: 'Soul Pebble', titan_shard: 'Titan Shard', magic_stone: 'Magic Stone' };
+const MAT_PRICES = { ench_common: 5, ench_rare: 15, ench_epic: 40, ench_legendary: 100, herb_red: 5, herb_blue: 5, fish_1: 3, fish_2: 3, fish_3: 6, fish_4: 6, fish_5: 10, fish_6: 15, soul_pebbles: 40, pot_i1: 0, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0, ethereal_dust: 0 };
+const MAT_ICONS = { ench_common: '⚪', ench_rare: '🔵', ench_epic: '🟣', ench_legendary: '🟡', herb_red: '🌺', herb_blue: '💠', fish_1: '🐟', fish_2: '🐠', fish_3: '🐡', fish_4: '🦈', fish_5: '🦑', fish_6: '🦀', soul_pebbles: '🔮', titan_shard: '🔱', magic_stone: '💎', ethereal_dust: '🌫️' };
+const MAT_NAMES = { ench_common: 'Normal Core', ench_rare: 'Rare Core', ench_epic: 'Epic Core', ench_legendary: 'Legendary Core', herb_red: 'Crimson Herb', herb_blue: 'Azure Herb', fish_1: 'Salmon', fish_2: 'Trout', fish_3: 'Bass', fish_4: 'Tuna', fish_5: 'Pike', fish_6: 'Carp', soul_pebbles: 'Soul Pebble', titan_shard: 'Titan Shard', magic_stone: 'Magic Stone', ethereal_dust: 'Ethereal Dust' };
 // Populate MAT_ICONS & NAMES with consumables
 Object.values(CONSUMABLES).forEach(c => {
     if(!MAT_ICONS[c.id]) MAT_ICONS[c.id] = c.icon;
@@ -251,8 +251,8 @@ const CLASSES = {
             { name: 'Backhand Slap', type: 'attack', mult: 3.5, effect: { burnStacks: 1, burnTurns: 3 }, self_effect: { dmgBuff: 0.20, dmgBuffTurns: 3 }, cd: 8, color: 'bg-purple-700', desc: 'Base damage +250% + Burn (3t) + Ruthless: +20% damage (3t)' },
             // Index 3: Kunai Swarm - base+60% AOE + 1 burn all enemies, 8 CD
             { name: 'Kunai Swarm', type: 'attack', mult: 1.60, target: 'all', effect: { burnStacks: 1, burnTurns: 3 }, cd: 8, color: 'bg-orange-700', desc: 'Base damage +60% AOE + Burn all enemies (3t)' },
-            // Index 4: Giant Shuriken - base+350% + 2 bleed stacks + ninja-turn dodge 2t, 9 CD
-            { name: 'Giant Shuriken', type: 'attack', mult: 4.50, effect: { bleedStacks: 2, bleedTurns: 5 }, self_effect: { ninjaDodgeTurns: 2 }, cd: 9, color: 'bg-lime-700', desc: 'Base damage +350% + 2 Bleed stacks + Dodge all attacks (2 ninja turns)' },
+            // Index 4: Giant Shuriken - base+350% + 2 bleed stacks + dodge 2t, 9 CD
+            { name: 'Giant Shuriken', type: 'attack', mult: 4.50, effect: { bleedStacks: 2, bleedTurns: 5 }, self_effect: { ninjaDodgeTurns: 2 }, cd: 9, color: 'bg-lime-700', desc: 'Base damage +350% + 2 Bleed stacks + Dodge all attacks (2 turns)' },
             // Index 5: Shuriken Rain - base+70% AOE + 10% vamp 4t + Rain free hit 4t, 8 CD
             { name: 'Shuriken Rain', type: 'attack', mult: 1.70, target: 'all', special: 'shurikenRain', shurikenRainTurns: 4, self_effect: { vampPct: 0.10, vampTurns: 4 }, cd: 8, color: 'bg-emerald-600', desc: 'Base damage +70% AOE + 10% Vamp (4t) + Rain: free base attack per turn (4t)' },
             // Index 6: Throw - base+80% + stun 1t, 5 CD

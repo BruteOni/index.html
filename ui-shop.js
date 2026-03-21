@@ -2,6 +2,8 @@ function showEnchanter() {
     const p = globalProgression;
     const list = document.getElementById('enchant-modal-list'); list.innerHTML = '';
     document.getElementById('ench-list').innerHTML = '';
+    const dustEl = document.getElementById('ench-dust-display');
+    if(dustEl) dustEl.innerText = p.inventory.ethereal_dust || 0;
     
     let hasGear = false;
     EQUIP_SLOTS.forEach(slot => {
@@ -12,8 +14,9 @@ function showEnchanter() {
             btn.className = `bg-gray-800 border-2 rarity-${eq.rarity} p-3 rounded-lg flex justify-between items-center shadow-md`;
             const enchStatus = eq.enchanted ? `<span class="text-xs text-yellow-300 bg-gray-900 px-2 py-1 rounded">(${sanitizeHTML(eq.enchanted)})</span>` : 
                 `<button onclick="openEnchantModal('${slot}')" class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md">Enchant</button>`;
+            const restatBtn = `<button onclick="reStatItem('${slot}')" class="bg-teal-700 hover:bg-teal-600 text-white px-4 py-2 rounded text-xs font-bold transition active:scale-95 shadow-md ml-1" title="Re-roll stats (10 Ethereal Dust, set bonuses not affected)">Re-Stat</button>`;
             
-            btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-3xl">${sanitizeHTML(eq.icon)}</span><div><div class="font-bold text-white">${sanitizeHTML(eq.name)}</div>${eq.type === 'weapon' && eq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(eq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}</div></div> ${enchStatus}`;
+            btn.innerHTML = `<div class="flex items-center gap-2"><span class="text-3xl">${sanitizeHTML(eq.icon)}</span><div><div class="font-bold text-white">${sanitizeHTML(eq.name)}</div>${eq.type === 'weapon' && eq.weaponBaseDmgPct ? `<div class="text-xs text-green-400">Weapon Dmg: +${(eq.weaponBaseDmgPct*100).toFixed(1)}%</div>` : ''}</div></div> <div class="flex gap-1">${enchStatus}${restatBtn}</div>`;
             document.getElementById('ench-list').appendChild(btn);
         }
     });
@@ -49,16 +52,16 @@ function showEnchanter() {
             mergeContainer.appendChild(div);
         });
 
-        // Legendary Core → Soul Pebble Exchange
+        // Legendary Core → Soul Pebble Exchange (100 Legendary Cores → 10 Soul Pebbles)
         const legCores = globalProgression.inventory.ench_legendary || 0;
         const pebbles = globalProgression.inventory.soul_pebbles || 0;
-        const canPebbleExchange = legCores >= 200;
+        const canPebbleExchange = legCores >= 100;
         const pebbleDiv = document.createElement('div');
         pebbleDiv.className = 'mt-2 bg-gray-800 border border-purple-700 rounded-lg p-3 flex justify-between items-center';
         pebbleDiv.innerHTML = `
             <div>
                 <div class="text-sm font-bold text-purple-300">🔮 Legendary Core → Soul Pebble Exchange</div>
-                <div class="text-xs text-gray-400">200 Legendary Cores → 1 Soul Pebble</div>
+                <div class="text-xs text-gray-400">100 Legendary Cores → 10 Soul Pebbles</div>
                 <div class="text-xs text-gray-400 mt-1">Cores: <span class="text-yellow-300">${legCores}</span> &nbsp; Pebbles: <span class="text-purple-300">${pebbles}</span></div>
             </div>
             <button onclick="exchangeLegendaryCoresForPebble(showEnchanter)" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-3 py-2 rounded text-xs transition active:scale-95 shadow-md ${canPebbleExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canPebbleExchange ? '' : 'disabled'}>EXCHANGE</button>
@@ -227,6 +230,36 @@ function applyEnchant(coreId, mult, coreName) {
     }
 }
 
+function reStatItem(slot) {
+    const RESTAT_COST = 10;
+    if ((globalProgression.inventory.ethereal_dust || 0) < RESTAT_COST) {
+        alert(`Re-Stat requires ${RESTAT_COST} Ethereal Dust. You have ${globalProgression.inventory.ethereal_dust || 0}.`);
+        playSound('lose');
+        return;
+    }
+    const eq = globalProgression.equipped[slot];
+    if (!eq) return;
+    // Re-roll gear stats (set bonuses and enchant are NOT affected)
+    const newItem = rollEquipment(eq.rarity, eq.type);
+    // Preserve identity fields and set bonuses
+    newItem.id = eq.id;
+    newItem.type = eq.type;
+    newItem.rarity = eq.rarity;
+    newItem.icon = eq.icon;
+    newItem.name = eq.name;
+    if (eq.enchanted) newItem.enchanted = eq.enchanted;
+    // Preserve set bonus fields
+    if (eq.setId) newItem.setId = eq.setId;
+    if (eq.setBonusDesc) newItem.setBonusDesc = eq.setBonusDesc;
+    if (eq.setBonus) newItem.setBonus = eq.setBonus;
+    globalProgression.equipped[slot] = newItem;
+    globalProgression.inventory.ethereal_dust -= RESTAT_COST;
+    player.maxHp = calculateMaxHp();
+    playSound('win');
+    queueSave();
+    showEnchanter();
+}
+
 
 function showShop() {
     const p = globalProgression; document.getElementById('shop-gold-display').innerText = p.gold; document.getElementById('shop-owned-tickets').innerText = p.tickets || 0;
@@ -253,9 +286,11 @@ function showShop() {
 
     const sellList = document.getElementById('shop-sell-list'); sellList.innerHTML = '';
     
-    // Gear Selling only (grouped by Name+Rarity) — no consumables
+    // Gear Selling only (grouped by Name+Rarity) — no consumables, locked mythic excluded
     const gearGroups = {};
     p.equipInventory.forEach(eq => {
+        // Skip locked mythic items
+        if(eq.rarity === 'mythic' && eq.locked) return;
         const key = `${eq.name}_${eq.rarity}`;
         if(!gearGroups[key]) gearGroups[key] = { count: 0, rarity: eq.rarity, name: eq.name, icon: eq.icon, ids: [] };
         gearGroups[key].count++;
@@ -301,12 +336,35 @@ function generateShopGear() {
     queueSave();
 }
 
+let _shopMythicCooldownEnd = 0;
+
 function refreshShopGear() {
     if(globalProgression.gold >= 100) {
+        // Check if refresh is temporarily disabled due to mythic roll
+        if(Date.now() < _shopMythicCooldownEnd) { playSound('lose'); return; }
         globalProgression.gold -= 100;
         playSound('click');
         globalProgression.shopLastRefresh = Date.now();
         generateShopGear();
+        // If a mythic was rolled, disable refresh for 5 seconds
+        const hasMythic = globalProgression.shopGear.some(g => g.item && g.item.rarity === 'mythic');
+        if(hasMythic) {
+            _shopMythicCooldownEnd = Date.now() + 5000;
+            const refreshBtn = document.getElementById('btn-shop-refresh');
+            if(refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.classList.add('opacity-50');
+                refreshBtn.innerText = '⭐ Mythic! Wait 5s...';
+                setTimeout(() => {
+                    _shopMythicCooldownEnd = 0;
+                    if(refreshBtn) {
+                        refreshBtn.disabled = false;
+                        refreshBtn.classList.remove('opacity-50');
+                        refreshBtn.innerText = '🔄 Refresh (100G)';
+                    }
+                }, 5000);
+            }
+        }
         showShop();
     } else {
         playSound('lose');
@@ -340,6 +398,8 @@ function sellGear(groupKey, amount) {
     
     p.equipInventory.forEach(eq => {
         if(`${eq.name}_${eq.rarity}` === groupKey) {
+            // Skip locked mythic items
+            if(eq.rarity === 'mythic' && eq.locked) return;
             matchingIds.push(eq.id);
             pricePer = getGearSellPrice(eq.rarity);
         }
@@ -360,9 +420,10 @@ function getGearSellPrice(rarity) {
 
 function sellAllGear() {
     const p = globalProgression;
-    const totalGold = p.equipInventory.reduce((sum, eq) => sum + getGearSellPrice(eq.rarity), 0);
+    const sellable = p.equipInventory.filter(eq => !(eq.rarity === 'mythic' && eq.locked));
+    const totalGold = sellable.reduce((sum, eq) => sum + getGearSellPrice(eq.rarity), 0);
     if(totalGold > 0) {
-        p.equipInventory = [];
+        p.equipInventory = p.equipInventory.filter(eq => eq.rarity === 'mythic' && eq.locked);
         p.gold += totalGold;
         playSound('click'); queueSave(); showShop();
     }
@@ -520,9 +581,9 @@ function exchangeSoulPebbles() {
 }
 
 function exchangeLegendaryCoresForPebble(refreshFn) {
-    if ((globalProgression.inventory.ench_legendary || 0) < 200) { playSound('lose'); return; }
-    globalProgression.inventory.ench_legendary -= 200;
-    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 1;
+    if ((globalProgression.inventory.ench_legendary || 0) < 100) { playSound('lose'); return; }
+    globalProgression.inventory.ench_legendary -= 100;
+    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 10;
     playSound('win');
     queueSave();
     if (refreshFn) refreshFn();

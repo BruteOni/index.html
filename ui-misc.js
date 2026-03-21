@@ -171,7 +171,7 @@ function showProgressMenu() {
             ps.mythicBossKilled = tracked;
             return tracked;
         })() },
-        { label: 'MAX Dungeon Cleared', value: ps.maxDungeonCleared ? `Tier ${ps.maxDungeonCleared}` : 'None' },
+        { label: 'MAX Tower of Babel Cleared', value: ps.maxDungeonCleared ? `Tier ${ps.maxDungeonCleared}` : 'None' },
         { label: 'Bosses Defeated', value: ps.bossesDefeated || 0 },
         { label: 'Gold Spent', value: ps.goldSpent || 0 },
         { label: 'Highest Gold Held', value: ps.highestGold || 0 },

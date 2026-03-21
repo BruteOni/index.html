@@ -119,7 +119,7 @@ function showWorkshop() {
     // Legendary Core → Soul Pebble Exchange
     const legCores = globalProgression.inventory.ench_legendary || 0;
     const pebbles = globalProgression.inventory.soul_pebbles || 0;
-    const canExchange = legCores >= 200;
+    const canExchange = legCores >= 100;
     const exchangeDiv = document.createElement('div');
     exchangeDiv.className = 'mt-6 bg-gray-900 border border-purple-700 rounded-xl p-4 flex flex-col gap-2 shadow-lg';
     exchangeDiv.innerHTML = `
@@ -129,7 +129,7 @@ function showWorkshop() {
             <span>Soul Pebbles: <span class="text-purple-300 font-bold">${pebbles}</span></span>
         </div>
         <button onclick="exchangeLegendaryCoresForPebble(showWorkshop)" class="w-full bg-purple-800 hover:bg-purple-700 border border-purple-500 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canExchange ? '' : 'disabled'}>
-            Exchange 200 Legendary Cores → 1 Soul Pebble
+            Exchange 100 Legendary Cores → 10 Soul Pebbles
         </button>
     `;
     list.appendChild(exchangeDiv);
@@ -296,7 +296,7 @@ function showWeaponSmith() {
         const enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0; // cumulative: 30 at lv1, 70 at lv2, 120 at lv3...
         const enhLabel = enhLvl > 0 ? `+${enhBonus} dmg` : 'Not Enhanced';
         const maxBonus = isMaxed ? ' (+5% dmg bonus!)' : '';
-        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 50;
+        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 100;
 
         const div = document.createElement('div');
         div.className = `bg-gray-800 border-2 rarity-${item.rarity} p-3 rounded-lg shadow-md`;
@@ -313,7 +313,7 @@ function showWeaponSmith() {
                 <button onclick="enhanceWeapon('${item.id}')" 
                     class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     ${canEnhance ? '' : 'disabled'}>
-                    🔨 Enhance<br><span class="text-yellow-300">50💰 + 1🔱</span>
+                    🔨 Enhance<br><span class="text-yellow-300">100💰 + 1🔱</span>
                 </button>
             </div>
             <div class="text-[10px] text-gray-400">Next level: +${30 + enhLvl * 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
@@ -321,7 +321,37 @@ function showWeaponSmith() {
         list.appendChild(div);
     });
 
+    // Add Titan Shard to Gold conversion section
+    const shards = p.inventory.titan_shard || 0;
+    const convertDiv = document.createElement('div');
+    convertDiv.className = 'mt-4 bg-gray-900 border border-yellow-700 rounded-xl p-4 flex justify-between items-center shadow-lg';
+    convertDiv.innerHTML = `
+        <div>
+            <div class="font-bold text-yellow-400 text-sm">🔱 Titan Shard → Gold</div>
+            <div class="text-xs text-gray-400">Convert 1 Titan Shard into 10 Gold</div>
+            <div class="text-xs text-gray-400 mt-1">Shards: <span class="text-cyan-300 font-bold">${shards}</span></div>
+        </div>
+        <button onclick="convertTitanShardToGold()" class="bg-yellow-700 hover:bg-yellow-600 text-white font-bold px-4 py-2 rounded-lg text-sm transition active:scale-95 ${shards > 0 ? '' : 'opacity-50 cursor-not-allowed'}" ${shards > 0 ? '' : 'disabled'}>
+            Convert<br><span class="text-xs text-yellow-200">1🔱 → 10💰</span>
+        </button>
+    `;
+    list.appendChild(convertDiv);
+
     switchScreen('screen-weaponsmith');
+}
+
+function convertTitanShardToGold() {
+    const p = globalProgression;
+    const log = document.getElementById('ws-log');
+    if((p.inventory.titan_shard || 0) < 1) { log.innerText = 'Not enough Titan Shards!'; playSound('lose'); return; }
+    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - 1;
+    p.gold += 10;
+    log.className = 'anim-enhance-success';
+    void log.offsetWidth;
+    log.innerText = '✅ Converted 1 Titan Shard → 10 Gold!';
+    playSound('win');
+    queueSave();
+    showWeaponSmith();
 }
 
 function enhanceWeapon(itemId) {
@@ -341,10 +371,10 @@ function enhanceWeapon(itemId) {
     const enhLvl = item.weaponEnhance || 0;
     if(enhLvl >= 100) { log.innerText = 'Already at max enhancement level!'; return; }
     if((p.inventory.titan_shard || 0) < 1) { log.innerText = 'Not enough Titan Shards!'; playSound('lose'); return; }
-    if(p.gold < 50) { log.innerText = 'Not enough Gold! (50 needed)'; playSound('lose'); return; }
+    if(p.gold < 100) { log.innerText = 'Not enough Gold! (100 needed)'; playSound('lose'); return; }
 
     // Consume resources
-    p.gold -= 50;
+    p.gold -= 100;
     p.inventory.titan_shard = (p.inventory.titan_shard || 0) - 1;
 
     // 40% failure rate
@@ -507,23 +537,24 @@ function startInvasion() {
 // --- PET BATTLE ---
 function regenPetBattleEnergy() {
     const MAX_PET_ENERGY = 10;
-    const REGEN_MS = 300000; // 5 minutes
+    // Energy refreshes daily (once per day)
+    const today = new Date().toDateString();
     if(globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
-    if(globalProgression.petBattleLastEnergyTime === undefined) globalProgression.petBattleLastEnergyTime = Date.now();
-    if(globalProgression.petBattleEnergy < MAX_PET_ENERGY) {
-        const now = Date.now();
-        const msPassed = now - globalProgression.petBattleLastEnergyTime;
-        const ticksPassed = Math.floor(msPassed / REGEN_MS);
-        if(ticksPassed > 0) {
-            globalProgression.petBattleEnergy = Math.min(MAX_PET_ENERGY, globalProgression.petBattleEnergy + ticksPassed);
-            // Set lastEnergyTime to the timestamp of the most recent complete regen tick,
-            // preserving partial progress toward the next tick.
-            globalProgression.petBattleLastEnergyTime = now - (msPassed % REGEN_MS);
-            queueSave();
-        }
-    } else {
+    if(globalProgression.petBattleLastEnergyDate !== today) {
+        globalProgression.petBattleEnergy = MAX_PET_ENERGY;
+        globalProgression.petBattleLastEnergyDate = today;
         globalProgression.petBattleLastEnergyTime = Date.now();
+        queueSave();
     }
+}
+
+function getPetEnergyCountdown() {
+    // Returns ms until next daily refresh
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    return tomorrow - now;
 }
 
 const MAX_PET_FAVORITES = 3;
@@ -549,6 +580,21 @@ function showPetBattle() {
     regenPetBattleEnergy();
     document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
     document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
+    // Show countdown timer until next daily refresh
+    const countdownEl = document.getElementById('pet-energy-countdown');
+    if(countdownEl) {
+        const msLeft = getPetEnergyCountdown();
+        const h = Math.floor(msLeft / 3600000);
+        const m = Math.floor((msLeft % 3600000) / 60000);
+        const s = Math.floor((msLeft % 60000) / 1000);
+        if(globalProgression.petBattleEnergy < 10) {
+            countdownEl.innerText = `⏳ Refreshes in: ${h}h ${m}m ${s}s`;
+            countdownEl.classList.remove('hidden');
+        } else {
+            countdownEl.innerText = '';
+            countdownEl.classList.add('hidden');
+        }
+    }
     petBattleActive = false;
     petBattlePlayerPet = null;
 
@@ -602,7 +648,13 @@ function startPetBattle(playerPetId) {
     regenPetBattleEnergy();
     if((globalProgression.petBattleEnergy || 0) <= 0) {
         const energyMsg = document.getElementById('pet-energy-msg');
-        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy recharges in 5 min.'; energyMsg.classList.remove('hidden'); }
+        if(energyMsg) { 
+            const msLeft = getPetEnergyCountdown();
+            const h = Math.floor(msLeft / 3600000);
+            const m = Math.floor((msLeft % 3600000) / 60000);
+            energyMsg.innerText = `😴 Your pet is tired! Energy refreshes daily. (${h}h ${m}m remaining)`; 
+            energyMsg.classList.remove('hidden'); 
+        }
         return;
     }
     const energyMsg = document.getElementById('pet-energy-msg');
@@ -776,6 +828,7 @@ function petBattleRoundEnd(playerWon) {
     if(playerWon) {
         globalProgression.gold += 15;
         globalProgression.petBattleEnergy = Math.max(0, (globalProgression.petBattleEnergy || 0) - 1);
+        globalProgression.petBattleLastEnergyDate = new Date().toDateString();
         globalProgression.petBattleLastEnergyTime = Date.now();
         // Drop a Titan Shard for winning
         globalProgression.inventory.titan_shard = (globalProgression.inventory.titan_shard || 0) + 1;
@@ -1239,7 +1292,7 @@ function showQuests() {
             if (type === 'hunting') { qt.innerText = 'Wilderness Hunter'; qd.innerText = `Slay ${goal} beasts in the Wilderness.`; }
             if (type === 'pillage') { qt.innerText = 'Village Pillager'; qd.innerText = `Defeat ${goal} foes in Pillage Village.`; }
             if (type === 'workshop') { qt.innerText = 'Workshop Raider'; qd.innerText = `Destroy ${goal} constructs in the Workshop.`; }
-            if (type === 'dungeon') { qt.innerText = 'Dungeon Delver'; qd.innerText = `Destroy ${goal} aliens in the Dungeon Portal.`; }
+            if (type === 'dungeon') { qt.innerText = 'Tower Climber'; qd.innerText = `Destroy ${goal} enemies in the Tower of Babel.`; }
         }
         // Update progress bar via the new IDs
         const prog = globalProgression[`questProg${i}`];
@@ -1309,8 +1362,8 @@ function showDungeons() {
         const isLocked = i > globalProgression.dungeonTier;
         const btn = document.createElement('button');
         btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-red-900 hover:border-red-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
-        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} XP Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
-        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonRoom = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
+        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">🗼 Tier ${i} Tower of Babel</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Floors · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🗼'}</div>`;
+        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonRoom = 1; startBattle(true); } else { alert("You need a Tower Ticket from the Shop!"); } }; } list.appendChild(btn);
     }
     switchScreen('screen-dungeons');
 }
@@ -1320,7 +1373,7 @@ function showGraveyard() {
     document.getElementById('graveyard-gold-display').innerText = globalProgression.gold;
     const list = document.getElementById('graveyard-list'); list.innerHTML = '';
     
-    const bosses = Object.values(globalProgression.killedBosses || {});
+    const bosses = Object.values(globalProgression.killedBosses || {}).slice(0, 20);
     const today = new Date().toDateString();
     
     if(bosses.length === 0) {
