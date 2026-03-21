@@ -1496,9 +1496,11 @@ function showDungeons() {
     for(let i = minShow; i <= maxShow; i++) {
         const isLocked = i > globalProgression.dungeonTier;
         const btn = document.createElement('button');
-        btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-red-900 hover:border-red-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
-        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} XP Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
-        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonFloor = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
+        btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-yellow-900 hover:border-yellow-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
+        const floorStart = (i - 1) * 5 + 1;
+        const floorEnd = i * 5;
+        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-yellow-400'}">🗼 Floors ${floorStart}–${floorEnd}</div><div class="text-xs text-gray-400">${isLocked ? 'Clear previous floors to unlock' : `2x XP · +10 ✨ per floor · +20 🔮 per 100 floors`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🗼'}</div>`;
+        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonFloor = 1; startBattle(true); } else { alert("You need a Tower Ticket from the Shop!"); } }; } list.appendChild(btn);
     }
     switchScreen('screen-dungeons');
 }

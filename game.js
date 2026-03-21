@@ -918,6 +918,15 @@ function loadGameAndContinue() {
                 globalProgression.patchV1Applied = true;
             }
 
+            // --- Tower of Babel migration: reset dungeon tier to start fresh ---
+            if (!globalProgression.towerBabelMigrated) {
+                globalProgression.dungeonTier = 1;
+                if (player.progressStats) {
+                    player.progressStats.maxDungeonCleared = 0;
+                }
+                globalProgression.towerBabelMigrated = true;
+            }
+
             // Ensure clean state — prevent stale combat flags from a previous session
             combatActive = false;
             battleEnding = false;
