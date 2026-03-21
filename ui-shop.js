@@ -562,7 +562,7 @@ function exchangeSoulPebbles() {
 function exchangeLegendaryCoresForPebble(refreshFn) {
     if ((globalProgression.inventory.ench_legendary || 0) < 100) { playSound('lose'); return; }
     globalProgression.inventory.ench_legendary -= 100;
-    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 10;
+    addToInventory('soul_pebbles', 10);
     playSound('win');
     queueSave();
     if (refreshFn) refreshFn();
