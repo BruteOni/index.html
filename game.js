@@ -54,8 +54,8 @@ function setAvatarDisplay(elementId, avatar) {
         img.src = avatar;
         img.alt = 'Avatar';
         const isHubAvatar = elementId === 'hub-avatar';
-        img.style.width = isHubAvatar ? '100%' : '96px';
-        img.style.height = isHubAvatar ? '100%' : '96px';
+        img.style.width = isHubAvatar ? '100%' : '120px';
+        img.style.height = isHubAvatar ? '100%' : '120px';
         img.className = isHubAvatar ? 'object-contain' : 'object-contain inline-block';
         el.innerHTML = '';
         el.style.display = 'flex';
@@ -1458,16 +1458,13 @@ function showHub() {
             }
         }
         const titleBadgeEl = document.getElementById('hub-title-badge');
-        const titleMobileEl = document.getElementById('hub-title-mobile');
         if(highestTitle) {
             const badgeSpan = document.createElement('span');
             badgeSpan.className = 'title-badge';
             badgeSpan.textContent = `🏆 ${highestTitle.name}`;
             if(titleBadgeEl) { titleBadgeEl.innerHTML = ''; titleBadgeEl.appendChild(badgeSpan.cloneNode(true)); titleBadgeEl.classList.remove('hidden'); }
-            if(titleMobileEl) { titleMobileEl.innerHTML = ''; titleMobileEl.appendChild(badgeSpan.cloneNode(true)); titleMobileEl.classList.remove('hidden'); }
         } else {
             if(titleBadgeEl) titleBadgeEl.classList.add('hidden');
-            if(titleMobileEl) titleMobileEl.classList.add('hidden');
         }
     } catch(e) { console.error('showHub: basic stats update failed', e); }
 
@@ -1699,7 +1696,6 @@ function renderAutoBattleSettingsModal() {
 
 // --- CODEX ---
 function showCodex() {
-    document.getElementById('codex-gold-display').innerText = globalProgression.gold;
     const list = document.getElementById('codex-list'); list.innerHTML = '';
     const allM = [...ENEMIES_HUNT, ...ENEMIES_PILLAGE, ...ENEMIES_WORKSHOP, ...ENEMIES_DUNGEON, ...ENEMIES_ISLAND_DEFENSE];
     const htmlParts = [];
@@ -1820,7 +1816,6 @@ function isPetDiscovered(pet) {
 }
 
 function showPetCodex() {
-    document.getElementById('pet-gold-display').innerText = globalProgression.gold;
     const petNoti = document.getElementById('hub-pet-noti');
     if(petNoti) petNoti.classList.add('hidden');
     const list = document.getElementById('pet-codex-list');

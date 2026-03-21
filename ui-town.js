@@ -702,9 +702,10 @@ function petBattleAction(playerAction) {
     showPetParticle(playerAction);
 
     // Enemy picks random action excluding its last action
+    // In auto-battle mode the enemy always picks 'counter' so the player's 'attack' always wins
     const actions = ['attack', 'block', 'counter'];
     const enemyChoices = actions.filter(a => a !== petBattleEnemyLastAction);
-    const enemyAction = enemyChoices[Math.floor(Math.random() * enemyChoices.length)];
+    const enemyAction = petBattleAutoMode ? 'counter' : enemyChoices[Math.floor(Math.random() * enemyChoices.length)];
 
     const actionIcons = { attack: '⚔️', block: '🛡️', counter: '🔄' };
     document.getElementById('pb-result-text').innerText = `You: ${actionIcons[playerAction]} | Enemy: ${actionIcons[enemyAction]}\nResolving...`;
@@ -861,11 +862,6 @@ function petBattleRoundEnd(playerWon) {
 }
 
 function petBattleLose() {
-    petBattleActive = false;
-    petBattleAutoMode = false;
-    if(petBattleAutoTimer) { clearTimeout(petBattleAutoTimer); petBattleAutoTimer = null; }
-    const autoBtn = document.getElementById('pb-btn-auto');
-    if(autoBtn) { autoBtn.classList.remove('auto-on'); autoBtn.innerText = '🤖 Auto'; }
     globalProgression.petBattleWinStreak = 0;
     // Record loss for player pet, win for enemy pet
     if(!globalProgression.petWinLoss) globalProgression.petWinLoss = {};
@@ -883,13 +879,28 @@ function petBattleLose() {
     playSound('lose');
     showPetBattleDefeat();
     queueSave();
-    document.getElementById('pb-result-text').innerText = '💀 You lost! Your pet was defeated.';
-    // Disable action buttons until a new pet battle is started
-    ['attack', 'block', 'counter'].forEach(action => {
-        const btn = document.getElementById(`pb-btn-${action}`);
-        if(btn) btn.disabled = true;
-    });
-    document.getElementById('pb-cooldown-info').innerText = 'Game over. Leave and try again.';
+
+    if(petBattleAutoMode && petBattlePlayerPet) {
+        // Auto mode: restart with same pet instead of ending
+        petBattleActive = false;
+        document.getElementById('pb-result-text').innerText = '⚡ Auto: Restarting fight...';
+        setTimeout(() => {
+            if(petBattleAutoMode && petBattlePlayerPet) startPetBattle(petBattlePlayerPet.id);
+        }, 2000);
+    } else {
+        petBattleActive = false;
+        petBattleAutoMode = false;
+        if(petBattleAutoTimer) { clearTimeout(petBattleAutoTimer); petBattleAutoTimer = null; }
+        const autoBtn = document.getElementById('pb-btn-auto');
+        if(autoBtn) { autoBtn.classList.remove('auto-on'); autoBtn.innerText = '🤖 Auto'; }
+        document.getElementById('pb-result-text').innerText = '💀 You lost! Your pet was defeated.';
+        // Disable action buttons until a new pet battle is started
+        ['attack', 'block', 'counter'].forEach(action => {
+            const btn = document.getElementById(`pb-btn-${action}`);
+            if(btn) btn.disabled = true;
+        });
+        document.getElementById('pb-cooldown-info').innerText = 'Game over. Leave and try again.';
+    }
 }
 
 function showPetBattleVictory() {
@@ -952,10 +963,8 @@ function schedulePetAutoAction() {
         // Check if buttons are usable
         const attackBtn = document.getElementById('pb-btn-attack');
         if(attackBtn && attackBtn.disabled) { schedulePetAutoAction(); return; }
-        const actions = ['attack', 'block', 'counter'];
-        const available = actions.filter(a => !(a !== 'attack' && a === petBattleLastAction));
-        const action = available[Math.floor(Math.random() * available.length)];
-        petBattleAction(action);
+        // Always use 'attack' in auto mode (enemy will pick 'counter', so attack always wins)
+        petBattleAction('attack');
     }, 1200);
 }
 

@@ -201,40 +201,53 @@ function showSkillGuide() {
     if (!list) return;
     list.innerHTML = '';
     const skills = player.data.skills;
-    // Path labels: indices 0-2 base, 3-5 first path, 6-8 second path
-    const pathLabels = ['Base Skills', 'Path 1 Skills', 'Path 2 Skills'];
-    const sections = [[0, 1, 2], [3, 4, 5], [6, 7, 8]];
-    sections.forEach((indices, sIdx) => {
+    const isNinja = (player.classId || '') === 'ninja';
+
+    function renderSkillCard(idx) {
+        if (idx >= skills.length) return;
+        const skill = skills[idx];
+        const isUnlocked = player.unlockedSkills.includes(idx);
+        const lockIcon = isUnlocked ? '✅' : '🔒';
+        const lockColor = isUnlocked ? 'text-green-400' : 'text-gray-500';
+        const card = document.createElement('div');
+        card.className = `rounded-xl p-3 border ${isUnlocked ? 'border-green-700 bg-gray-800' : 'border-gray-700 bg-gray-900 opacity-70'}`;
+        const dmgParts = [];
+        if (skill.mult !== undefined && skill.mult > 0) dmgParts.push(`<span class="bg-orange-900 text-orange-300 px-1 rounded">⚔️ ${Math.round(skill.mult * 100)}% Dmg</span>`);
+        if (skill.hits && skill.hits > 1) dmgParts.push(`<span class="bg-gray-700 text-gray-300 px-1 rounded">x${skill.hits} hits</span>`);
+        if (skill.target === 'all') dmgParts.push(`<span class="bg-blue-900 text-blue-300 px-1 rounded">ALL enemies</span>`);
+        const dmgInfo = dmgParts.join(' ');
+        const cdInfo = skill.cd > 0 ? `<span class="bg-gray-700 text-yellow-300 px-1 rounded">⏱ CD: ${skill.cd}t</span>` : `<span class="bg-green-900 text-green-300 px-1 rounded">No CD</span>`;
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-white text-sm">${sanitizeHTML(skill.name)}</span>
+                    <span class="text-xs font-bold ${lockColor}">${lockIcon}</span>
+                </div>
+                <div class="flex gap-1 flex-wrap justify-end text-[10px]">${cdInfo}${dmgInfo ? ' ' + dmgInfo : ''}</div>
+            </div>
+            <div class="text-[11px] text-gray-300">${sanitizeHTML(skill.desc)}</div>
+        `;
+        list.appendChild(card);
+    }
+
+    if (isNinja) {
+        // Ninja has no paths — show all skills in a single flat list
         const header = document.createElement('div');
         header.className = 'text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-700 pb-1 mt-1';
-        header.textContent = pathLabels[sIdx];
+        header.textContent = 'All Skills';
         list.appendChild(header);
-        indices.forEach(idx => {
-            if (idx >= skills.length) return;
-            const skill = skills[idx];
-            const isUnlocked = player.unlockedSkills.includes(idx);
-            const lockIcon = isUnlocked ? '✅' : '🔒';
-            const lockColor = isUnlocked ? 'text-green-400' : 'text-gray-500';
-            const card = document.createElement('div');
-            card.className = `rounded-xl p-3 border ${isUnlocked ? 'border-green-700 bg-gray-800' : 'border-gray-700 bg-gray-900 opacity-70'}`;
-            const dmgParts = [];
-            if (skill.mult !== undefined && skill.mult > 0) dmgParts.push(`<span class="bg-orange-900 text-orange-300 px-1 rounded">⚔️ ${Math.round(skill.mult * 100)}% Dmg</span>`);
-            if (skill.hits && skill.hits > 1) dmgParts.push(`<span class="bg-gray-700 text-gray-300 px-1 rounded">x${skill.hits} hits</span>`);
-            if (skill.target === 'all') dmgParts.push(`<span class="bg-blue-900 text-blue-300 px-1 rounded">ALL enemies</span>`);
-            const dmgInfo = dmgParts.join(' ');
-            const cdInfo = skill.cd > 0 ? `<span class="bg-gray-700 text-yellow-300 px-1 rounded">⏱ CD: ${skill.cd}t</span>` : `<span class="bg-green-900 text-green-300 px-1 rounded">No CD</span>`;
-            card.innerHTML = `
-                <div class="flex items-center justify-between mb-1">
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-white text-sm">${sanitizeHTML(skill.name)}</span>
-                        <span class="text-xs font-bold ${lockColor}">${lockIcon}</span>
-                    </div>
-                    <div class="flex gap-1 flex-wrap justify-end text-[10px]">${cdInfo}${dmgInfo ? ' ' + dmgInfo : ''}</div>
-                </div>
-                <div class="text-[11px] text-gray-300">${sanitizeHTML(skill.desc)}</div>
-            `;
-            list.appendChild(card);
+        for (let idx = 0; idx < skills.length; idx++) renderSkillCard(idx);
+    } else {
+        // Other classes: Base Skills + Path 1 + Path 2
+        const pathLabels = ['Base Skills', 'Path 1 Skills', 'Path 2 Skills'];
+        const sections = [[0, 1, 2], [3, 4, 5], [6, 7, 8]];
+        sections.forEach((indices, sIdx) => {
+            const header = document.createElement('div');
+            header.className = 'text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-700 pb-1 mt-1';
+            header.textContent = pathLabels[sIdx];
+            list.appendChild(header);
+            indices.forEach(idx => renderSkillCard(idx));
         });
-    });
+    }
     switchScreen('screen-skill-guide');
 }
