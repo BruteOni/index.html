@@ -1550,10 +1550,12 @@ function showGraveyard() {
                         <div class="text-xs text-gray-500">Defeated Boss${statusText}</div>
                     </div>
                 </div>
-                <button onclick="fightGraveyardBoss('${sanitizeHTML(b.name)}')" class="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-4 py-2 rounded font-bold transition active:scale-95 border border-indigo-700 shadow flex items-center gap-1 ${canRevive ? '' : 'opacity-50 cursor-not-allowed'}" ${canRevive ? '' : 'disabled'}>
+                <button class="bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-4 py-2 rounded font-bold transition active:scale-95 border border-indigo-700 shadow flex items-center gap-1 ${canRevive ? '' : 'opacity-50 cursor-not-allowed'}" ${canRevive ? '' : 'disabled'}>
                     <span>Resurrect</span><span class="text-yellow-400 text-xs">💰500</span>
                 </button>
             `;
+            const bossName = b.name;
+            btn.querySelector('button').onclick = () => fightGraveyardBoss(bossName);
             list.appendChild(btn);
         });
     }
