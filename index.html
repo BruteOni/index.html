@@ -185,15 +185,15 @@
                     <!-- Right: Merged name/level+stats button, then gold/tickets below -->
                     <div class="w-1/2 flex flex-col gap-2">
                         <button id="hub-info-btn" onclick="showProgressMenu()" class="flex-1 text-left bg-gray-700 hover:bg-gray-600 active:scale-95 transition border border-indigo-500 rounded-xl px-2 py-1.5 shadow-md w-full" aria-label="View character progress and stats">
-                            <div class="font-bold text-base text-blue-400">
+                            <div class="font-bold text-base text-blue-400 flex items-center justify-between">
                                 <span id="hub-class">Warrior</span>
+                                <span class="text-yellow-400 text-sm font-bold">Lvl <span id="hub-lvl">1</span></span>
                             </div>
-                            <div class="text-xs text-yellow-400 font-bold mt-0.5">Lvl <span id="hub-lvl">1</span> <span class="text-gray-400 font-normal text-xs">· tap to view</span></div>
-                            <div class="text-xs font-bold text-indigo-300 tracking-wide mt-1">📊 STATS</div>
+                            <div class="text-xs text-gray-400 italic mt-0.5">/tap to view stats/</div>
                         </button>
                         <div class="flex flex-col gap-1.5">
                             <div class="flex items-center gap-1 text-sm font-bold text-yellow-500 bg-gray-900 px-3 py-1.5 rounded-full border border-gray-700 whitespace-nowrap" title="Your current wealth">💰 <span id="hub-gold">0</span></div>
-                            <div class="flex items-center gap-1 text-xs font-bold text-blue-300 bg-gray-900 px-3 py-1.5 rounded-full border border-gray-700 whitespace-nowrap" title="Required to enter Dungeon Portals">🎫 <span id="hub-tickets">0</span></div>
+                            <div class="flex items-center gap-1 text-xs font-bold text-blue-300 bg-gray-900 px-3 py-1.5 rounded-full border border-gray-700 whitespace-nowrap" title="Required to enter the Tower of Babel">🎫 <span id="hub-tickets">0</span></div>
                             <div id="hub-title-badge" class="hidden"></div>
                         </div>
                     </div>
@@ -202,7 +202,7 @@
                 <div class="w-full mb-1">
                     <div class="flex justify-between items-center mb-1">
                         <div class="text-blue-400 font-bold text-xs">⚡ Energy: <span id="hub-energy" class="text-white">10</span>/<span id="hub-energy-max" class="text-white">10</span></div>
-                        <div class="text-xs text-gray-500">Regens 1/5min</div>
+                        <div class="text-xs text-gray-500">Regens 1/10min</div>
                     </div>
                     <div class="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
                         <div id="hub-energy-bar" class="h-full bg-blue-500 rounded-full transition-all duration-500" style="width: 100%"></div>
@@ -328,8 +328,8 @@
                 </button>
                 <button onclick="showWeaponSmith()" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 p-5 rounded-xl flex flex-col items-center transition active:scale-95 shadow-lg">
                     <span class="text-4xl mb-2">🔨</span>
-                    <span class="font-bold text-yellow-400 text-sm">Weapon Smith</span>
-                    <span class="text-[10px] text-gray-400 mt-1 text-center">Enhance weapons with Titan Shards</span>
+                    <span class="font-bold text-yellow-400 text-sm">Weapon/Armor Smith</span>
+                    <span class="text-[10px] text-gray-400 mt-1 text-center">Enhance weapons & armor with Titan Shards</span>
                 </button>
                 <button onclick="showMagicalEnhancer()" class="bg-gray-800 hover:bg-gray-700 border border-blue-600 p-5 rounded-xl flex flex-col items-center transition active:scale-95 shadow-lg">
                     <span class="text-4xl mb-2">💎</span>
@@ -351,6 +351,7 @@
                 <div class="flex gap-2">
                     <div class="text-sm font-bold text-yellow-500 bg-gray-800 px-3 py-1 rounded-full border border-yellow-700 shadow-md">💰 <span id="me-gold-display">0</span></div>
                     <div class="text-sm font-bold text-blue-300 bg-gray-800 px-3 py-1 rounded-full border border-blue-700 shadow-md">💎 <span id="me-stones-display">0</span></div>
+                    <div class="text-sm font-bold text-teal-300 bg-gray-800 px-3 py-1 rounded-full border border-teal-700 shadow-md">✨ <span id="me-dust-display">0</span></div>
                 </div>
             </div>
             <h2 class="text-3xl font-bold mb-1 text-blue-400 text-center tracking-widest drop-shadow-md">💎 MAGICAL ENHANCER</h2>
@@ -824,7 +825,7 @@
             
             <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
                 <h3 class="font-bold text-blue-400 flex-1 text-center">Daily Equipment Sold</h3>
-                <button onclick="refreshShopGear()" class="text-xs bg-blue-800 hover:bg-blue-700 text-white px-2 py-1 rounded shadow-md border border-blue-600 transition active:scale-95">Refresh (100G)</button>
+                <button id="btn-refresh-shop" onclick="refreshShopGear()" class="text-xs bg-blue-800 hover:bg-blue-700 text-white px-2 py-1 rounded shadow-md border border-blue-600 transition active:scale-95">Refresh (100G)</button>
             </div>
             <div class="grid grid-cols-1 gap-2 mb-6" id="shop-gear-list"></div>
 
@@ -896,11 +897,11 @@
                     <div class="text-sm font-bold text-blue-300 bg-gray-800 px-3 py-1 rounded-full border border-blue-800 shadow-md">🎫 <span id="dungeon-tickets-display">0</span> Tickets</div>
                 </div>
             </div>
-            <h2 class="text-3xl font-bold mb-2 text-red-500 text-center tracking-widest drop-shadow-md">XP DUNGEONS</h2>
-            <p class="text-gray-400 mb-4 text-sm text-center bg-gray-900 py-2 rounded-lg border border-red-900">Survive 5 waves for massive XP. Costs 1 🎫. <br><span class="text-red-400 font-bold">Warning: High difficulty!</span></p>
+            <h2 class="text-3xl font-bold mb-2 text-red-500 text-center tracking-widest drop-shadow-md">🗼 TOWER OF BABEL</h2>
+            <p class="text-gray-400 mb-4 text-sm text-center bg-gray-900 py-2 rounded-lg border border-red-900">Climb as many floors as you can for 2x XP. Costs 1 🎫. <br><span class="text-yellow-400 font-bold">Every floor: +10 Ethereal Dust | Every 100 floors: +20 Soul Pebbles</span></p>
             <div class="bg-gray-800 border border-purple-800 rounded-xl p-4 mb-6 shadow-inner flex justify-between items-center">
                 <div>
-                    <h3 class="font-bold text-purple-300 flex items-center gap-2"><span class="text-2xl">🎫</span> Dungeon Ticket</h3>
+                    <h3 class="font-bold text-purple-300 flex items-center gap-2"><span class="text-2xl">🎫</span> Tower Ticket</h3>
                     <p class="text-xs text-gray-400">Required for entry.</p>
                 </div>
                 <button id="btn-buy-ticket-dungeon" onclick="buyTicket('dungeon')" class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded font-bold disabled:bg-gray-600 text-sm flex flex-col items-center transition active:scale-95 shadow-md"><span>BUY</span><span class="text-yellow-400 text-xs">💰 100</span></button>
@@ -1030,8 +1031,8 @@
                 <button onclick="showDungeons()" class="bg-gray-800 hover:bg-gray-700 border border-red-800 hover:border-red-500 p-5 rounded-xl flex items-center gap-4 transition active:scale-95 shadow-lg">
                     <span class="text-4xl">🌌</span>
                     <div class="text-left">
-                        <div class="font-bold text-red-400 text-lg">XP Dungeons</div>
-                        <div class="text-xs text-gray-400">Survive 5 waves for massive XP. Costs 1 Ticket.</div>
+                        <div class="font-bold text-red-400 text-lg">🗼 Tower of Babel</div>
+                        <div class="text-xs text-gray-400">Climb as many floors as you can for 2x XP. Costs 1 Ticket.</div>
                     </div>
                 </button>
                 <button onclick="showInvasion()" id="portal-zombie-btn" class="bg-gray-800 hover:bg-gray-700 border border-green-800 hover:border-green-500 p-5 rounded-xl flex items-center gap-4 transition active:scale-95 shadow-lg">
@@ -1046,6 +1047,13 @@
                     <div class="text-left">
                         <div class="font-bold text-pink-400 text-lg">Pet Battles</div>
                         <div class="text-xs text-gray-400">Rock-Paper-Scissors with pets! Win gold & XP.</div>
+                    </div>
+                </button>
+                <button onclick="showApocalypse()" id="portal-apocalypse-btn" class="bg-gray-800 hover:bg-gray-700 border border-red-600 hover:border-red-400 p-5 rounded-xl flex items-center gap-4 transition active:scale-95 shadow-lg" style="display:none;">
+                    <span class="text-4xl">💀</span>
+                    <div class="text-left">
+                        <div class="font-bold text-red-300 text-lg">Apocalypse</div>
+                        <div class="text-xs text-gray-400">Fight a clone of yourself. Min. level 500. No items or auto-battle.</div>
                     </div>
                 </button>
             </div>
@@ -1099,14 +1107,15 @@
                 <div class="flex gap-2 items-center">
                     <div class="text-sm font-bold text-yellow-400 bg-gray-800 px-3 py-1 rounded-full border border-yellow-700">💰 <span id="ws-gold-display">0</span></div>
                     <div class="text-sm font-bold text-cyan-300 bg-gray-800 px-3 py-1 rounded-full border border-cyan-700">🔱 <span id="ws-shards-display">0</span></div>
+                    <div class="text-sm font-bold text-emerald-300 bg-gray-800 px-3 py-1 rounded-full border border-emerald-700">✨ <span id="ws-dust-display">0</span></div>
                 </div>
             </div>
-            <h2 class="text-3xl font-bold mb-1 text-yellow-400 text-center tracking-widest drop-shadow-md">🔨 WEAPON SMITH</h2>
+            <h2 class="text-3xl font-bold mb-1 text-yellow-400 text-center tracking-widest drop-shadow-md">🔨 WEAPON/ARMOR SMITH</h2>
             <p class="text-xs text-gray-400 text-center mb-4 bg-gray-900 py-2 rounded-lg border border-gray-700">
-                Use 🔱 Titan Shards to enhance your weapons.<br>
-                <span class="text-yellow-400">Cost: 50 💰 per attempt.</span>
-                <span class="text-red-400 ml-2">40% chance of failure.</span><br>
-                <span class="text-green-400">Base: +30 dmg | Each level: +10 more | Max: Lv.100 (+5% dmg bonus)</span>
+                Enhance your <span class="text-yellow-300">weapons</span> and <span class="text-blue-300">armor</span>.<br>
+                <span class="text-yellow-400">Weapon cost: 100 💰 + Titan Shards.</span> <span class="text-red-400">40% fail rate.</span><br>
+                <span class="text-blue-400">Armor: +100 HP per upgrade (Head/Shoulder/Arm/Chest/Waist/Legs/Boots)</span><br>
+                <span class="text-purple-400">Acc: +5 DEF per upgrade (Necklace/Ring/Cape)</span>
             </p>
             <div id="ws-weapon-list" class="flex flex-col gap-3"></div>
             <div id="ws-log" class="text-center text-yellow-400 font-bold mt-4 h-6"></div>
@@ -1187,7 +1196,10 @@
             <div class="flex justify-between items-center mb-4">
                 <button onclick="showPortal()" class="btn-back text-pink-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Portal</button>
                 <div class="text-sm font-bold text-yellow-400 bg-gray-800 px-3 py-1 rounded-full border border-yellow-700">💰 <span id="pet-battle-gold-display">0</span></div>
-                <div class="text-sm font-bold text-blue-400 bg-gray-800 px-3 py-1 rounded-full border border-blue-700">⚡ <span id="pet-battle-energy-display">10</span>/10</div>
+                <div class="text-sm font-bold text-blue-400 bg-gray-800 px-3 py-1 rounded-full border border-blue-700 flex flex-col items-center">
+                    <span>⚡ <span id="pet-battle-energy-display">10</span>/10</span>
+                    <span id="pet-battle-energy-timer" class="text-[10px] text-gray-400 font-normal"></span>
+                </div>
             </div>
             <h2 class="text-3xl font-bold mb-1 text-pink-400 text-center tracking-widest drop-shadow-md">🐾 PET BATTLES</h2>
             <p class="text-xs text-gray-400 text-center mb-4">Rock-Paper-Scissors style! Win 15 Gold + 1% XP per win. (⚡ Costs 1 Pet Energy per win)</p>
@@ -1242,13 +1254,13 @@
                     <div class="text-xs text-center text-gray-400 mb-2 uppercase tracking-widest">Choose your action:</div>
                     <div class="grid grid-cols-3 gap-2">
                         <button id="pb-btn-attack" onclick="petBattleAction('attack')" class="bg-red-900 hover:bg-red-800 border border-red-600 py-3 rounded-xl font-bold text-white transition active:scale-95 flex flex-col items-center">
-                            <span class="text-2xl">⚔️</span><span class="text-xs mt-1">Attack</span>
+                            <span class="text-2xl">⚔️</span><span class="text-xs mt-1">Weapon Attack</span>
                         </button>
                         <button id="pb-btn-block" onclick="petBattleAction('block')" class="bg-blue-900 hover:bg-blue-800 border border-blue-600 py-3 rounded-xl font-bold text-white transition active:scale-95 flex flex-col items-center">
                             <span class="text-2xl">🛡️</span><span class="text-xs mt-1">Block</span>
                         </button>
                         <button id="pb-btn-counter" onclick="petBattleAction('counter')" class="bg-yellow-900 hover:bg-yellow-800 border border-yellow-600 py-3 rounded-xl font-bold text-white transition active:scale-95 flex flex-col items-center">
-                            <span class="text-2xl">🔄</span><span class="text-xs mt-1">Counter</span>
+                            <span class="text-2xl">🔄</span><span class="text-xs mt-1">Counter Punch</span>
                         </button>
                     </div>
                     <button id="pb-btn-auto" onclick="togglePetBattleAuto()" class="w-full mt-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 py-2 rounded-xl font-bold text-gray-300 transition active:scale-95">🤖 Auto</button>
@@ -1273,6 +1285,26 @@
             </div>
             <button onclick="startTraining()" class="w-full bg-green-800 hover:bg-green-700 border border-green-600 py-4 rounded-xl font-bold text-xl text-white shadow-lg transition active:scale-95 flex justify-center items-center gap-2">
                 🎯 Enter Training Ground
+            </button>
+        </div>
+    </div>
+
+    <!-- APOCALYPSE SCREEN -->
+    <div id="screen-apocalypse" class="screen py-8" style="overflow-y:auto;">
+        <div class="w-full max-w-xl px-4 flex flex-col pb-8">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="showPortal()" class="btn-back text-red-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Portal</button>
+            </div>
+            <h2 class="text-3xl font-black mb-2 text-center tracking-widest drop-shadow-md" style="color:#ff4444;text-shadow:0 0 20px rgba(255,0,0,0.8);">💀 APOCALYPSE</h2>
+            <p class="text-gray-400 mb-4 text-sm text-center bg-gray-900 py-2 rounded-lg border border-red-900">
+                Face a clone of yourself — exact stats, skills, and equipment.<br>
+                <span class="text-red-400 font-bold">Minimum Level 500 required.</span><br>
+                <span class="text-yellow-300">No usable items. No auto-battle.</span><br>
+                <span class="text-purple-300 font-bold">Win to earn the Crown of Infinity title!</span>
+            </p>
+            <div id="apocalypse-status" class="text-center text-gray-400 mb-4"></div>
+            <button onclick="startApocalypse()" id="apocalypse-start-btn" class="w-full bg-red-900 hover:bg-red-800 border-2 border-red-500 py-4 rounded-xl font-black text-xl text-white shadow-lg transition active:scale-95 flex justify-center items-center gap-2" style="text-shadow:0 0 10px rgba(255,0,0,0.8);">
+                💀 FACE YOURSELF
             </button>
         </div>
     </div>

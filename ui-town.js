@@ -116,10 +116,36 @@ function showWorkshop() {
         });
     }
 
+    // Disenchant section: unequipped mythic items only
+    const unequippedMythic = (globalProgression.equipInventory || []).filter(item => item && item.rarity === 'mythic');
+    if (unequippedMythic.length > 0) {
+        const disenchantHeader = document.createElement('div');
+        disenchantHeader.innerHTML = `<h3 class="font-bold text-red-400 text-center mt-6 mb-2 uppercase tracking-wider text-sm">⚗️ Disenchant Mythic Items</h3>
+            <p class="text-xs text-gray-400 text-center mb-3">Unequipped mythic items only. Gives 10 Soul Pebbles each.</p>`;
+        list.appendChild(disenchantHeader);
+
+        unequippedMythic.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'bg-gray-800 border border-red-700 rounded-xl p-3 flex items-center justify-between';
+            card.innerHTML = `<div class="flex items-center gap-2">
+                <span class="text-2xl">${item.icon || '⚔️'}</span>
+                <div>
+                    <div class="font-bold text-white text-sm">${sanitizeHTML(item.name)}</div>
+                    <div class="text-xs text-red-300">Mythic</div>
+                </div>
+            </div>
+            <button onclick="disenchantMythicItem('${sanitizeHTML(item.id)}')" 
+                class="bg-red-800 hover:bg-red-700 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95">
+                ⚗️ Disenchant<br><span class="text-purple-300">+10 🔮</span>
+            </button>`;
+            list.appendChild(card);
+        });
+    }
+
     // Legendary Core → Soul Pebble Exchange
     const legCores = globalProgression.inventory.ench_legendary || 0;
     const pebbles = globalProgression.inventory.soul_pebbles || 0;
-    const canExchange = legCores >= 200;
+    const canExchange = legCores >= 100;
     const exchangeDiv = document.createElement('div');
     exchangeDiv.className = 'mt-6 bg-gray-900 border border-purple-700 rounded-xl p-4 flex flex-col gap-2 shadow-lg';
     exchangeDiv.innerHTML = `
@@ -129,7 +155,7 @@ function showWorkshop() {
             <span>Soul Pebbles: <span class="text-purple-300 font-bold">${pebbles}</span></span>
         </div>
         <button onclick="exchangeLegendaryCoresForPebble(showWorkshop)" class="w-full bg-purple-800 hover:bg-purple-700 border border-purple-500 text-white font-bold py-2 rounded-xl transition active:scale-95 text-sm shadow-md ${canExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canExchange ? '' : 'disabled'}>
-            Exchange 200 Legendary Cores → 1 Soul Pebble
+            Exchange 100 Legendary Cores → 10 Soul Pebbles
         </button>
     `;
     list.appendChild(exchangeDiv);
@@ -192,6 +218,17 @@ function workshopEnhance(btn) {
         queueSave();
         setTimeout(() => showWorkshop(), 1000);
     }
+}
+
+function disenchantMythicItem(itemId) {
+    const p = globalProgression;
+    const idx = (p.equipInventory || []).findIndex(i => i && i.id === itemId && i.rarity === 'mythic');
+    if (idx === -1) { addLog('Item not found or not a mythic item!', 'text-red-400'); return; }
+    p.equipInventory.splice(idx, 1);
+    p.inventory.soul_pebbles = (p.inventory.soul_pebbles || 0) + 10;
+    playSound('win');
+    queueSave();
+    showWorkshop();
 }
 
 // --- BURGLAR MERCHANT ---
@@ -264,88 +301,185 @@ function burglarBuy(itemId) {
     showBurglar();
 }
 
-// --- WEAPON SMITH ---
+// --- WEAPON/ARMOR SMITH ---
 function showWeaponSmith() {
     const p = globalProgression;
     document.getElementById('ws-gold-display').innerText = p.gold;
     document.getElementById('ws-shards-display').innerText = p.inventory.titan_shard || 0;
     document.getElementById('ws-log').innerText = '';
+    const wsDustEl = document.getElementById('ws-dust-display');
+    if (wsDustEl) wsDustEl.innerText = p.inventory.ethereal_dust || 0;
 
     const list = document.getElementById('ws-weapon-list');
     list.innerHTML = '';
 
-    // Get all equipped and inventory weapons
-    const weapons = [];
-    if(p.equipped) {
-        const w = p.equipped['weapon'];
-        if(w) weapons.push({ item: w, source: 'equipped', label: '(Equipped)' });
-    }
-    (p.equipInventory || []).filter(e => e.type === 'weapon').forEach(e => {
-        weapons.push({ item: e, source: 'inventory', label: '(Inventory)' });
-    });
+    const HP_ARMOR_SLOTS = ['head', 'shoulders', 'arms', 'chest', 'waist', 'legs', 'boots'];
+    const DEF_ACCESSORY_SLOTS = ['necklace', 'ring', 'cape'];
 
-    if(weapons.length === 0) {
-        list.innerHTML = '<p class="text-gray-500 text-sm text-center">No weapons found. Equip or obtain a weapon first.</p>';
-        switchScreen('screen-weaponsmith');
-        return;
-    }
-
-    weapons.forEach(({ item, source, label }) => {
-        const enhLvl = item.weaponEnhance || 0;
+    // Equipped weapon
+    const equippedWeapon = p.equipped ? p.equipped['weapon'] : null;
+    if (equippedWeapon) {
+        const enhLvl = equippedWeapon.weaponEnhance || 0;
         const isMaxed = enhLvl >= 100;
-        const enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0; // cumulative: 30 at lv1, 70 at lv2, 120 at lv3...
+        const enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0;
         const enhLabel = enhLvl > 0 ? `+${enhBonus} dmg` : 'Not Enhanced';
         const maxBonus = isMaxed ? ' (+5% dmg bonus!)' : '';
-        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 50;
+        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= (30 + enhLvl * 10) && p.gold >= 100;
 
         const div = document.createElement('div');
-        div.className = `bg-gray-800 border-2 rarity-${item.rarity} p-3 rounded-lg shadow-md`;
+        div.className = `bg-gray-800 border-2 rarity-${equippedWeapon.rarity} p-3 rounded-lg shadow-md`;
         div.innerHTML = `
             <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-2xl">${sanitizeHTML(item.icon)}</span>
+                    <span class="text-2xl">${sanitizeHTML(equippedWeapon.icon)}</span>
                     <div>
-                        <div class="font-bold text-white text-sm">${sanitizeHTML(item.name)} ${label}</div>
+                        <div class="font-bold text-white text-sm">${sanitizeHTML(equippedWeapon.name)} (Equipped)</div>
                         <div class="text-xs text-yellow-300">Enhance Lv. ${enhLvl}/100${isMaxed ? ' (MAX)' : ''}</div>
                         <div class="text-xs text-green-400">${enhLabel}${maxBonus}</div>
                     </div>
                 </div>
-                <button onclick="enhanceWeapon('${item.id}')" 
+                <button onclick="enhanceWeapon('${sanitizeHTML(equippedWeapon.id)}')" 
                     class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     ${canEnhance ? '' : 'disabled'}>
-                    🔨 Enhance<br><span class="text-yellow-300">50💰 + 1🔱</span>
+                    🔨 Enhance<br><span class="text-yellow-300">100💰 + ${30 + enhLvl * 10}🔱</span>
                 </button>
             </div>
             <div class="text-[10px] text-gray-400">Next level: +${30 + enhLvl * 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
         `;
         list.appendChild(div);
-    });
+    }
 
-    switchScreen('screen-weaponsmith');
+    // Equipped HP armor slots
+    const armorHeader = document.createElement('div');
+    armorHeader.innerHTML = `<h3 class="font-bold text-blue-300 text-center mt-4 mb-2 uppercase tracking-wider text-sm">🛡️ Armor Upgrades (+100 HP each)</h3>`;
+    list.appendChild(armorHeader);
+
+    let anyArmorShown = false;
+    HP_ARMOR_SLOTS.forEach(slot => {
+        const item = p.equipped ? p.equipped[slot] : null;
+        if (!item) return;
+        anyArmorShown = true;
+        const armorLvl = item.armorEnhance || 0;
+        const isMaxed = armorLvl >= 100;
+        const hpBonus = armorLvl * 100;
+        const shardCost = 30 + armorLvl * 10;
+        const canUpgrade = !isMaxed && (p.inventory.titan_shard || 0) >= shardCost && p.gold >= 100;
+
+        const div = document.createElement('div');
+        div.className = `bg-gray-800 border-2 rarity-${item.rarity} p-3 rounded-lg shadow-md`;
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">${sanitizeHTML(item.icon)}</span>
+                    <div>
+                        <div class="font-bold text-white text-sm">${sanitizeHTML(item.name)} <span class="text-gray-400 text-xs">(${slot})</span></div>
+                        <div class="text-xs text-blue-300">Armor Lv. ${armorLvl}/100${isMaxed ? ' (MAX +10% HP)' : ''}</div>
+                        <div class="text-xs text-green-400">${hpBonus > 0 ? '+' + hpBonus + ' HP' : 'Not Enhanced'}${isMaxed ? ' +10% Max HP' : ''}</div>
+                    </div>
+                </div>
+                <button onclick="upgradeArmor('${slot}')" 
+                    class="bg-blue-700 hover:bg-blue-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    ${canUpgrade ? '' : 'disabled'}>
+                    ⬆️ Upgrade<br><span class="text-blue-300">100💰 + ${shardCost}🔱</span>
+                </button>
+            </div>
+            <div class="text-[10px] text-gray-400">Next: +100 HP (${isMaxed ? 'MAX' : '40% fail rate'})</div>
+        `;
+        list.appendChild(div);
+    });
+    if (!anyArmorShown) {
+        const noArmor = document.createElement('div');
+        noArmor.className = 'text-gray-500 text-xs text-center py-2';
+        noArmor.innerText = 'No armor equipped in head/shoulder/arm/chest/waist/legs/boots slots.';
+        list.appendChild(noArmor);
+    }
+
+    // Equipped DEF accessory slots
+    const accHeader = document.createElement('div');
+    accHeader.innerHTML = `<h3 class="font-bold text-purple-300 text-center mt-4 mb-2 uppercase tracking-wider text-sm">💍 Accessory Upgrades (+5 DEF each)</h3>`;
+    list.appendChild(accHeader);
+
+    let anyAccShown = false;
+    DEF_ACCESSORY_SLOTS.forEach(slot => {
+        const item = p.equipped ? p.equipped[slot] : null;
+        if (!item) return;
+        anyAccShown = true;
+        const armorLvl = item.armorEnhance || 0;
+        const isMaxed = armorLvl >= 100;
+        const defBonus = armorLvl * 5;
+        const shardCost = 30 + armorLvl * 10;
+        const canUpgrade = !isMaxed && (p.inventory.titan_shard || 0) >= shardCost && p.gold >= 100;
+
+        const div = document.createElement('div');
+        div.className = `bg-gray-800 border-2 rarity-${item.rarity} p-3 rounded-lg shadow-md`;
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">${sanitizeHTML(item.icon)}</span>
+                    <div>
+                        <div class="font-bold text-white text-sm">${sanitizeHTML(item.name)} <span class="text-gray-400 text-xs">(${slot})</span></div>
+                        <div class="text-xs text-purple-300">Acc Lv. ${armorLvl}/100${isMaxed ? ' (MAX +10% Mitigation)' : ''}</div>
+                        <div class="text-xs text-green-400">${defBonus > 0 ? '+' + defBonus + ' DEF' : 'Not Enhanced'}${isMaxed ? ' +10% Reduced Dmg' : ''}</div>
+                    </div>
+                </div>
+                <button onclick="upgradeArmor('${slot}')" 
+                    class="bg-purple-700 hover:bg-purple-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    ${canUpgrade ? '' : 'disabled'}>
+                    ⬆️ Upgrade<br><span class="text-purple-300">100💰 + ${shardCost}🔱</span>
+                </button>
+            </div>
+            <div class="text-[10px] text-gray-400">Next: +5 DEF (${isMaxed ? 'MAX' : '40% fail rate'})</div>
+        `;
+        list.appendChild(div);
+    });
+    if (!anyAccShown) {
+        const noAcc = document.createElement('div');
+        noAcc.className = 'text-gray-500 text-xs text-center py-2';
+        noAcc.innerText = 'No accessories equipped in necklace/ring/cape slots.';
+        list.appendChild(noAcc);
+    }
+
+    if (!equippedWeapon && !anyArmorShown && !anyAccShown) {
+        list.innerHTML = '<p class="text-gray-500 text-sm text-center">No equipped items found. Equip items first.</p>';
+    }
+
+    // Titan Shard → Gold conversion section
+    const convHeader = document.createElement('div');
+    const shards = p.inventory.titan_shard || 0;
+    convHeader.innerHTML = `<div class="bg-gray-800 border border-yellow-700 rounded-xl p-3 mt-4 flex items-center justify-between">
+        <div>
+            <div class="font-bold text-yellow-300 text-sm">🔱 Titan Shard → Gold</div>
+            <div class="text-xs text-gray-400">Convert Titan Shards to Gold (1 shard = 10 gold)</div>
+            <div class="text-xs text-gray-400 mt-1">Shards: <span class="text-cyan-300 font-bold">${shards}</span></div>
+        </div>
+        <button onclick="convertTitanShardToGold()"
+            class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 ${shards < 1 ? 'opacity-50 cursor-not-allowed' : ''}"
+            ${shards < 1 ? 'disabled' : ''}>
+            Convert 1🔱<br><span class="text-yellow-300">→ 10💰</span>
+        </button>
+    </div>`;
+    list.appendChild(convHeader);
 }
 
 function enhanceWeapon(itemId) {
     const p = globalProgression;
     const log = document.getElementById('ws-log');
 
-    // Find weapon by id
+    // Only enhance equipped weapon
     let item = null;
     if(p.equipped && p.equipped['weapon'] && p.equipped['weapon'].id === itemId) {
         item = p.equipped['weapon'];
     }
-    if(!item) {
-        item = (p.equipInventory || []).find(e => e.id === itemId && e.type === 'weapon');
-    }
 
-    if(!item) { log.innerText = 'Weapon not found!'; return; }
+    if(!item) { log.innerText = 'Weapon not found or not equipped!'; return; }
     const enhLvl = item.weaponEnhance || 0;
     if(enhLvl >= 100) { log.innerText = 'Already at max enhancement level!'; return; }
-    if((p.inventory.titan_shard || 0) < 1) { log.innerText = 'Not enough Titan Shards!'; playSound('lose'); return; }
-    if(p.gold < 50) { log.innerText = 'Not enough Gold! (50 needed)'; playSound('lose'); return; }
+    if((p.inventory.titan_shard || 0) < (30 + enhLvl * 10)) { log.innerText = `Not enough Titan Shards! (${30 + enhLvl * 10} needed)`; playSound('lose'); return; }
+    if(p.gold < 100) { log.innerText = 'Not enough Gold! (100 needed)'; playSound('lose'); return; }
 
     // Consume resources
-    p.gold -= 50;
-    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - 1;
+    p.gold -= 100;
+    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - (30 + enhLvl * 10);
 
     // 40% failure rate
     if(Math.random() < 0.40) {
@@ -374,6 +508,58 @@ function enhanceWeapon(itemId) {
     showWeaponSmith();
 }
 
+function convertTitanShardToGold() {
+    const p = globalProgression;
+    const log = document.getElementById('ws-log');
+    if ((p.inventory.titan_shard || 0) < 1) { if(log) log.innerText = '❌ Not enough Titan Shards!'; return; }
+    p.inventory.titan_shard--;
+    globalProgression.gold += 10;
+    queueSave();
+    if(log) log.innerText = '✅ 1 🔱 Titan Shard → 10 💰 Gold';
+    showWeaponSmith();
+}
+
+function upgradeArmor(slot) {
+    const p = globalProgression;
+    const log = document.getElementById('ws-log');
+    const item = (p.equipped || {})[slot];
+    if (!item) {
+        log.innerText = 'No item equipped in that slot!';
+        return;
+    }
+    const armorLvl = item.armorEnhance || 0;
+    if (armorLvl >= 100) {
+        log.innerText = 'Already at maximum level!';
+        return;
+    }
+    const shardCost = 30 + armorLvl * 10;
+    const goldCost = 100;
+    if ((p.inventory.titan_shard || 0) < shardCost) {
+        log.innerText = `Need ${shardCost} 🔱 Titan Shards!`;
+        return;
+    }
+    if (p.gold < goldCost) {
+        log.innerText = `Need ${goldCost} 💰 Gold!`;
+        return;
+    }
+    // 40% fail chance
+    if (Math.random() < 0.4) {
+        p.inventory.titan_shard -= shardCost;
+        p.gold -= goldCost;
+        queueSave();
+        log.innerText = '❌ Enhancement failed!';
+        showWeaponSmith();
+        return;
+    }
+    p.inventory.titan_shard -= shardCost;
+    p.gold -= goldCost;
+    item.armorEnhance = armorLvl + 1;
+    queueSave();
+    player.maxHp = calculateMaxHp();
+    log.innerText = `✅ Armor enhanced to Lv.${item.armorEnhance}!`;
+    showWeaponSmith();
+}
+
 
 function showInvasion() {
     document.getElementById('invasion-gold-display').innerText = globalProgression.gold;
@@ -398,7 +584,7 @@ function showInvasion() {
         let html = '';
         if((zs.pendingPotionRewards || 0) > 0) {
             html += `<button onclick="claimZombieRewards()" class="bg-yellow-800 hover:bg-yellow-700 border border-yellow-500 p-2 rounded-lg text-yellow-200 font-bold text-sm transition active:scale-95">
-                🧪 Claim ${zs.pendingPotionRewards * 5} Minor Potions (from ${zs.pendingPotionRewards} reward batches)
+                🔮 Claim ${zs.pendingPotionRewards * 5} Soul Pebbles (from ${zs.pendingPotionRewards} reward batches)
             </button>`;
         }
         if(zs.cooldownBuffEarned && !zs.cooldownBuffClaimed) {
@@ -456,8 +642,8 @@ function showInvasion() {
 function claimZombieRewards() {
     const zs = globalProgression.zombieStats;
     if(!zs || (zs.pendingPotionRewards || 0) <= 0) return;
-    const potions = zs.pendingPotionRewards * 5;
-    globalProgression.inventory.pot_i1 = (globalProgression.inventory.pot_i1 || 0) + potions;
+    const pebbles = zs.pendingPotionRewards * 5;
+    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + pebbles;
     zs.pendingPotionRewards = 0;
     queueSave();
     showInvasion();
@@ -507,22 +693,13 @@ function startInvasion() {
 // --- PET BATTLE ---
 function regenPetBattleEnergy() {
     const MAX_PET_ENERGY = 10;
-    const REGEN_MS = 300000; // 5 minutes
-    if(globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
-    if(globalProgression.petBattleLastEnergyTime === undefined) globalProgression.petBattleLastEnergyTime = Date.now();
-    if(globalProgression.petBattleEnergy < MAX_PET_ENERGY) {
-        const now = Date.now();
-        const msPassed = now - globalProgression.petBattleLastEnergyTime;
-        const ticksPassed = Math.floor(msPassed / REGEN_MS);
-        if(ticksPassed > 0) {
-            globalProgression.petBattleEnergy = Math.min(MAX_PET_ENERGY, globalProgression.petBattleEnergy + ticksPassed);
-            // Set lastEnergyTime to the timestamp of the most recent complete regen tick,
-            // preserving partial progress toward the next tick.
-            globalProgression.petBattleLastEnergyTime = now - (msPassed % REGEN_MS);
-            queueSave();
-        }
-    } else {
-        globalProgression.petBattleLastEnergyTime = Date.now();
+    if (globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
+    // Daily reset: if the stored date differs from today, refill energy
+    const todayStr = new Date().toDateString();
+    if (globalProgression.petBattleEnergyDate !== todayStr) {
+        globalProgression.petBattleEnergyDate = todayStr;
+        globalProgression.petBattleEnergy = MAX_PET_ENERGY;
+        queueSave();
     }
 }
 
@@ -549,6 +726,17 @@ function showPetBattle() {
     regenPetBattleEnergy();
     document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
     document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
+    // Show countdown to next daily energy reset (midnight)
+    const resetTimerEl = document.getElementById('pet-battle-energy-timer');
+    if (resetTimerEl) {
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        const msLeft = midnight - now;
+        const hLeft = Math.floor(msLeft / 3600000);
+        const mLeft = Math.floor((msLeft % 3600000) / 60000);
+        resetTimerEl.innerText = `Resets in ${hLeft}h ${mLeft}m`;
+    }
     petBattleActive = false;
     petBattlePlayerPet = null;
 
@@ -602,7 +790,7 @@ function startPetBattle(playerPetId) {
     regenPetBattleEnergy();
     if((globalProgression.petBattleEnergy || 0) <= 0) {
         const energyMsg = document.getElementById('pet-energy-msg');
-        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy recharges in 5 min.'; energyMsg.classList.remove('hidden'); }
+        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy resets daily at midnight.'; energyMsg.classList.remove('hidden'); }
         return;
     }
     const energyMsg = document.getElementById('pet-energy-msg');
@@ -1308,9 +1496,11 @@ function showDungeons() {
     for(let i = minShow; i <= maxShow; i++) {
         const isLocked = i > globalProgression.dungeonTier;
         const btn = document.createElement('button');
-        btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-red-900 hover:border-red-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
-        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-red-400'}">Tier ${i} XP Portal</div><div class="text-xs text-gray-400">${isLocked ? 'Defeat previous boss to unlock' : `Lvl ${1+(i-1)*5} - ${5+(i-1)*5} · 5 Rooms · 1.5x Harder`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🌌'}</div>`;
-        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonRoom = 1; startBattle(true); } else { alert("You need a Dungeon Ticket from the Shop!"); } }; } list.appendChild(btn);
+        btn.className = `p-4 rounded-xl border flex justify-between items-center transition ${isLocked ? 'bg-gray-900 border-gray-800 opacity-70 cursor-not-allowed' : 'bg-gray-800 border-yellow-900 hover:border-yellow-500 active:scale-95 shadow-lg'}`; btn.disabled = isLocked;
+        const floorStart = (i - 1) * 5 + 1;
+        const floorEnd = i * 5;
+        btn.innerHTML = `<div class="text-left"><div class="font-bold text-lg ${isLocked ? 'text-gray-500' : 'text-yellow-400'}">🗼 Floors ${floorStart}–${floorEnd}</div><div class="text-xs text-gray-400">${isLocked ? 'Clear previous floors to unlock' : `2x XP · +10 ✨ per floor · +20 🔮 per 100 floors`}</div></div><div class="text-2xl">${isLocked ? '🔒' : '🗼'}</div>`;
+        if(!isLocked) { btn.onclick = () => { if(globalProgression.tickets > 0) { globalProgression.tickets--; currentMode = 'dungeon'; activeDungeonTier = i; activeDungeonFloor = 1; startBattle(true); } else { alert("You need a Tower Ticket from the Shop!"); } }; } list.appendChild(btn);
     }
     switchScreen('screen-dungeons');
 }
@@ -1320,7 +1510,9 @@ function showGraveyard() {
     document.getElementById('graveyard-gold-display').innerText = globalProgression.gold;
     const list = document.getElementById('graveyard-list'); list.innerHTML = '';
     
-    const bosses = Object.values(globalProgression.killedBosses || {});
+    const allBosses = Object.values(globalProgression.killedBosses || {});
+    // Show only the most recent 20
+    const bosses = allBosses.slice(-20);
     const today = new Date().toDateString();
     
     if(bosses.length === 0) {

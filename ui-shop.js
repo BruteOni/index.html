@@ -52,13 +52,13 @@ function showEnchanter() {
         // Legendary Core → Soul Pebble Exchange
         const legCores = globalProgression.inventory.ench_legendary || 0;
         const pebbles = globalProgression.inventory.soul_pebbles || 0;
-        const canPebbleExchange = legCores >= 200;
+        const canPebbleExchange = legCores >= 100;
         const pebbleDiv = document.createElement('div');
         pebbleDiv.className = 'mt-2 bg-gray-800 border border-purple-700 rounded-lg p-3 flex justify-between items-center';
         pebbleDiv.innerHTML = `
             <div>
                 <div class="text-sm font-bold text-purple-300">🔮 Legendary Core → Soul Pebble Exchange</div>
-                <div class="text-xs text-gray-400">200 Legendary Cores → 1 Soul Pebble</div>
+                <div class="text-xs text-gray-400">100 Legendary Cores → 10 Soul Pebbles</div>
                 <div class="text-xs text-gray-400 mt-1">Cores: <span class="text-yellow-300">${legCores}</span> &nbsp; Pebbles: <span class="text-purple-300">${pebbles}</span></div>
             </div>
             <button onclick="exchangeLegendaryCoresForPebble(showEnchanter)" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-3 py-2 rounded text-xs transition active:scale-95 shadow-md ${canPebbleExchange ? '' : 'opacity-50 cursor-not-allowed'}" ${canPebbleExchange ? '' : 'disabled'}>EXCHANGE</button>
@@ -253,9 +253,10 @@ function showShop() {
 
     const sellList = document.getElementById('shop-sell-list'); sellList.innerHTML = '';
     
-    // Gear Selling only (grouped by Name+Rarity) — no consumables
+    // Gear Selling only (grouped by Name+Rarity) — no consumables, no mythic
     const gearGroups = {};
     p.equipInventory.forEach(eq => {
+        if (eq.rarity === 'mythic') return; // Mythic items cannot be sold
         const key = `${eq.name}_${eq.rarity}`;
         if(!gearGroups[key]) gearGroups[key] = { count: 0, rarity: eq.rarity, name: eq.name, icon: eq.icon, ids: [] };
         gearGroups[key].count++;
@@ -308,6 +309,14 @@ function refreshShopGear() {
         globalProgression.shopLastRefresh = Date.now();
         generateShopGear();
         showShop();
+        const hasMyth = (globalProgression.shopGear || []).some(i => i.item && i.item.rarity === 'mythic');
+        if (hasMyth) {
+            const refreshBtn = document.getElementById('btn-refresh-shop');
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                setTimeout(() => { refreshBtn.disabled = false; }, 5000);
+            }
+        }
     } else {
         playSound('lose');
     }
@@ -334,6 +343,7 @@ function sellItem(type, amount) {
 }
 
 function sellGear(groupKey, amount) {
+    if (groupKey.endsWith('_mythic')) return; // Mythic items cannot be sold
     const p = globalProgression;
     const matchingIds = [];
     let pricePer = 0;
@@ -360,9 +370,9 @@ function getGearSellPrice(rarity) {
 
 function sellAllGear() {
     const p = globalProgression;
-    const totalGold = p.equipInventory.reduce((sum, eq) => sum + getGearSellPrice(eq.rarity), 0);
+    const totalGold = p.equipInventory.reduce((sum, eq) => eq.rarity !== 'mythic' ? sum + getGearSellPrice(eq.rarity) : sum, 0);
     if(totalGold > 0) {
-        p.equipInventory = [];
+        p.equipInventory = p.equipInventory.filter(eq => eq.rarity === 'mythic');
         p.gold += totalGold;
         playSound('click'); queueSave(); showShop();
     }
@@ -485,7 +495,7 @@ function showBlackMarket() {
         pebbleStatsEl.innerHTML = `
             <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg">
                 <h3 class="font-bold text-gray-300 text-center uppercase tracking-widest text-xs mb-3">Pebble Exchange Bonuses</h3>
-                <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="grid grid-cols-2 gap-3 text-sm">
                     <div class="bg-gray-800 rounded-lg p-2 text-center"><span class="text-red-400">🗡️ Bonus Damage</span><br><span class="font-bold text-white">${dmg}%</span></div>
                     <div class="bg-gray-800 rounded-lg p-2 text-center"><span class="text-yellow-300">🏹 Armor Pierce</span><br><span class="font-bold text-white">${pierce}%</span></div>
                     <div class="bg-gray-800 rounded-lg p-2 text-center"><span class="text-green-400">❤️ Bonus HP</span><br><span class="font-bold text-white">${hp}%</span></div>
@@ -520,9 +530,9 @@ function exchangeSoulPebbles() {
 }
 
 function exchangeLegendaryCoresForPebble(refreshFn) {
-    if ((globalProgression.inventory.ench_legendary || 0) < 200) { playSound('lose'); return; }
-    globalProgression.inventory.ench_legendary -= 200;
-    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 1;
+    if ((globalProgression.inventory.ench_legendary || 0) < 100) { playSound('lose'); return; }
+    globalProgression.inventory.ench_legendary -= 100;
+    globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 10;
     playSound('win');
     queueSave();
     if (refreshFn) refreshFn();

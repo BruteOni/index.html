@@ -8,6 +8,9 @@ if (typeof structuredClone === 'undefined') {
     };
 }
 
+// Temporary storage for the apocalypse clone enemy, set by startApocalypse() before startBattle().
+let pendingApocalypseClone = null;
+
 // Tracks the last rendered enemy state to prevent full DOM rebuilds on every turn.
 let _lastEnemyStateString = "";
 
@@ -117,7 +120,7 @@ function returnToTown() {
     isAutoBattle = false;
     // Save living enemies for persistence (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
-        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
         savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
     }
     enemies = []; // Clear enemies so fresh ones spawn next battle
@@ -183,7 +186,7 @@ function getHealingMultipliers() {
 function generateEnemies() {
     // Check for persisted enemies in this mode (exclude special modes)
     if (!NON_PERSIST_MODES.includes(currentMode)) {
-        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
         if (savedEnemies[persistKey]) {
             const saved = savedEnemies[persistKey];
             const alive = saved.filter(e => e.currentHp > 0);
@@ -211,6 +214,16 @@ function generateEnemies() {
 
     enemies = [];
     _lastEnemyStateString = ""; // Force a full enemy card rebuild for the new wave
+
+    if (currentMode === 'apocalypse') {
+        if (pendingApocalypseClone) {
+            enemies.push(pendingApocalypseClone);
+            pendingApocalypseClone = null;
+        }
+        activeTargetIndex = 0;
+        playBossMusic();
+        return;
+    }
 
     if (currentMode === 'training') {
         const e = Object.assign(createBaseEnemy(), { lvl: 1, name: 'Training Dummy', avatar: '🎯', maxHp: 9999999, baseDmg: 0 });
@@ -287,7 +300,7 @@ function generateEnemies() {
     let isBossFight = false;
     let count = 1;
 
-    if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
+    if (currentMode === 'dungeon' && activeDungeonFloor === 5) {
         isBossFight = true; count = 1;
     } else if ((currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop' || currentMode === 'island_defense') && globalProgression.storyModeProgress[currentMode] >= 9) {
         isBossFight = true; count = 1;
@@ -335,7 +348,7 @@ function generateEnemies() {
     for(let i=0; i<count; i++) {
         const e = createBaseEnemy();
         
-        if (currentMode === 'dungeon' && activeDungeonRoom === 5) {
+        if (currentMode === 'dungeon' && activeDungeonFloor === 5) {
             e.lvl = activeDungeonTier * 5; 
             const dBoss = BOSS_TEMPLATES['dungeon'][Math.floor(Math.random() * BOSS_TEMPLATES['dungeon'].length)];
             e.name = dBoss.name; e.avatar = dBoss.avatar;
@@ -353,7 +366,7 @@ function generateEnemies() {
             e.rarity = 'boss'; e.isBoss = true;
             e.templateMults = { hpMult: bTemplate.hpMult, dmgMult: bTemplate.dmgMult };
         } else {
-            const lvlBase = currentMode === 'dungeon' ? (activeDungeonTier - 1) * 5 + activeDungeonRoom : Math.min(player.lvl, 100); 
+            const lvlBase = currentMode === 'dungeon' ? (activeDungeonTier - 1) * 5 + activeDungeonFloor : Math.min(player.lvl, 100); 
             e.lvl = Math.max(1, lvlBase + Math.floor(Math.random() * 3) - 1);
             const t = pool[Math.floor(Math.random() * pool.length)];
             e.name = t.name; e.avatar = t.avatar;
@@ -440,14 +453,21 @@ function startBattle(isNewEncounter = false) {
     combatLog = []; var logDiv = document.getElementById('combat-log'); if (logDiv) logDiv.innerHTML = '';
     addLog(`Encountered ${enemies.length} enemies!`); addLog("Fight!"); isPlayerTurn = true;
     updateCombatUI(); renderSkills(); renderUsableSlots(); switchScreen('screen-combat');
-    // Handle training mode: disable AUTO button
+    // Handle training and apocalypse modes: disable AUTO button
     const autoBtn = document.getElementById('btn-auto');
-    if(currentMode === 'training') {
+    if(currentMode === 'training' || currentMode === 'apocalypse') {
         isAutoBattle = false;
         if(autoBtn) { autoBtn.disabled = true; autoBtn.classList.add('opacity-50'); autoBtn.classList.remove('auto-on'); }
     } else {
         if(autoBtn) { autoBtn.disabled = false; autoBtn.classList.remove('opacity-50'); }
         if(isAutoBattle) setTimeout(processAutoTurn, 500);
+    }
+    // Disable all usable item slots in apocalypse mode
+    if(currentMode === 'apocalypse') {
+        const usableSlots = document.getElementById('combat-usable-slots');
+        if(usableSlots) {
+            usableSlots.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '0.3'; });
+        }
     }
 }
 
@@ -757,8 +777,8 @@ function getCombatUIElements() {
 function updateCombatUI() {
     if (!player || !player.data) return;
     var ui = getCombatUIElements();
-    if (ui.uiLevel) ui.uiLevel.innerText = `Level ${player.lvl}`;
-    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `XP Dungeon T${activeDungeonTier} (Rm ${activeDungeonRoom})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : currentMode === 'invasion' ? `🧟 Zombie Apocalypse — Wave ${zombieWaveCount + 1}` : 'Quest Marathon';
+    if (ui.uiLevel) ui.uiLevel.innerText = `Level ${player.lvl} ⚡${globalProgression.energy}`;
+    let modeText = currentMode === 'training' ? '🎯 Training Ground' : currentMode === 'dungeon' ? `🗼 Tower of Babel (Floor ${activeDungeonFloor})` : currentMode === 'hunting' ? 'Wilderness' : currentMode === 'pillage' ? 'Pillage Village' : currentMode === 'workshop' ? 'Workshop Raid' : currentMode === 'graveyard' ? 'Graveyard' : currentMode === 'invasion' ? `🧟 Zombie Apocalypse — Wave ${zombieWaveCount + 1}` : 'Quest Marathon';
     
     if(currentMode === 'hunting' || currentMode === 'pillage' || currentMode === 'workshop') {
         modeText += ` (${globalProgression.storyModeProgress[currentMode] + 1}/10)`;
@@ -790,19 +810,23 @@ function updateCombatUI() {
     if (ui.stunInd) ui.stunInd.style.display = player.stunned > 0 ? 'block' : 'none';
 
     let activeBuffsHtml = '';
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'dmg')) activeBuffsHtml += `<span class="bg-orange-900 text-xs px-1 rounded border border-orange-500 shadow-md">⚔️UP</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'def')) activeBuffsHtml += `<span class="bg-blue-900 text-xs px-1 rounded border border-blue-500 shadow-md">🛡️UP</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'def_down')) activeBuffsHtml += `<span class="bg-purple-900 text-xs px-1 rounded border border-purple-500 shadow-md">📉DEF</span>`;
+    if (player.activeBuffs) {
+        const maxTurns = (type) => Math.max(...player.activeBuffs.filter(b => b.type === type).map(b => b.turns || 0));
+        const tStr = (type) => { const t = maxTurns(type); return t > 0 ? `(${t}t)` : ''; };
+        if(player.activeBuffs.some(b => b.type === 'dmg')) activeBuffsHtml += `<span class="bg-orange-900 text-xs px-1 rounded border border-orange-500 shadow-md">⚔️UP${tStr('dmg')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'def')) activeBuffsHtml += `<span class="bg-blue-900 text-xs px-1 rounded border border-blue-500 shadow-md">🛡️UP${tStr('def')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'def_down')) activeBuffsHtml += `<span class="bg-purple-900 text-xs px-1 rounded border border-purple-500 shadow-md">📉DEF${tStr('def_down')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'poison')) activeBuffsHtml += `<span class="bg-green-900 text-xs px-1 rounded border border-green-500 shadow-md">🧪Poison${tStr('poison')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'burn')) activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">🔥Burn${tStr('burn')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'fire_shield')) activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔥Shield${tStr('fire_shield')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'ice_shield')) activeBuffsHtml += `<span class="bg-cyan-800 text-xs px-1 rounded border border-cyan-400 shadow-md">❄️Shield${tStr('ice_shield')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'skill_reflect')) activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔄Reflect${tStr('skill_reflect')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'double_damage_taken')) activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">⚠️2xDmg${tStr('double_damage_taken')}</span>`;
+        if(player.activeBuffs.some(b => b.type === 'vamp_buff')) { const vbPct = Math.round(player.activeBuffs.filter(b => b.type === 'vamp_buff').reduce((s,b) => s+(b.val||0),0)*100); activeBuffsHtml += `<span class="bg-violet-900 text-xs px-1 rounded border border-violet-500 shadow-md">🧛${vbPct}%Vamp${tStr('vamp_buff')}</span>`; }
+    }
     if(player.bleedStacks > 0) activeBuffsHtml += `<span class="bg-red-900 text-xs px-1 rounded border border-red-500 shadow-md">🩸${player.bleedStacks}</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'poison')) activeBuffsHtml += `<span class="bg-green-900 text-xs px-1 rounded border border-green-500 shadow-md">🧪Poison</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'burn')) activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">🔥Burn</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'fire_shield')) activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔥Shield</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'ice_shield')) activeBuffsHtml += `<span class="bg-cyan-800 text-xs px-1 rounded border border-cyan-400 shadow-md">❄️Shield</span>`;
-    if(player.dodgeTurns > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨Dodge</span>`;
-    if((player.ninjaDodgeTurns || 0) > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨NinjaDodge(${player.ninjaDodgeTurns}t)</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'skill_reflect')) activeBuffsHtml += `<span class="bg-orange-800 text-xs px-1 rounded border border-orange-400 shadow-md">🔄Reflect</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'double_damage_taken')) activeBuffsHtml += `<span class="bg-red-800 text-xs px-1 rounded border border-red-400 shadow-md">⚠️2xDmg</span>`;
-    if(player.activeBuffs && player.activeBuffs.some(b => b.type === 'vamp_buff')) { const vbPct = Math.round(player.activeBuffs.filter(b => b.type === 'vamp_buff').reduce((s,b) => s+(b.val||0),0)*100); activeBuffsHtml += `<span class="bg-violet-900 text-xs px-1 rounded border border-violet-500 shadow-md">🧛${vbPct}%Vamp</span>`; }
+    if(player.dodgeTurns > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨Dodge(${player.dodgeTurns}t)</span>`;
+    if((player.ninjaDodgeTurns || 0) > 0) activeBuffsHtml += `<span class="bg-gray-400 text-black text-xs px-1 rounded shadow-md">💨Dodge(${player.ninjaDodgeTurns}t)</span>`;
     
     if (ui.buffsEl) ui.buffsEl.innerHTML = activeBuffsHtml;
 
@@ -950,15 +974,15 @@ function renderSkills() {
                 if (cd > 0) {
                     const cdSpan = document.createElement('span');
                     cdSpan.className = 'text-[10px] md:text-xs opacity-75 absolute right-2 top-1/2 -translate-y-1/2';
-                    cdSpan.textContent = `(CD:${cd})`;
+                    cdSpan.textContent = `${cd}cd`;
                     btn.appendChild(cdSpan);
                 }
             } else if (showDesc) {
                 btn.className = `${slotClass} skill-btn flex-1 p-2 rounded-lg font-bold text-white shadow-lg active:scale-95 flex flex-col items-center justify-center ${slotColor}`;
-                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${sanitizeHTML(skill.name)}</div><div class="text-[9px] md:text-[10px] opacity-60 w-full px-1 mt-0.5 font-normal">${sanitizeHTML(skill.desc || '')}</div><div class="text-[10px] md:text-xs opacity-75 mt-0.5">${cd > 0 ? `(CD:${cd})` : ''}</div>`;
+                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${sanitizeHTML(skill.name)}</div><div class="text-[9px] md:text-[10px] opacity-60 w-full px-1 mt-0.5 font-normal">${sanitizeHTML(skill.desc || '')}</div><div class="text-[10px] md:text-xs opacity-75 mt-0.5">${cd > 0 ? `${cd}cd` : ''}</div>`;
             } else {
                 btn.className = `${slotClass} skill-btn flex-1 p-2 rounded-lg font-bold text-white shadow-lg active:scale-95 flex flex-col items-center justify-center ${slotColor}`;
-                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${sanitizeHTML(skill.name)}</div><div class="text-[10px] md:text-xs opacity-75">${cd > 0 ? `(CD:${cd})` : ''}</div>`;
+                btn.innerHTML = `<div class="text-xs md:text-sm truncate w-full px-1">${sanitizeHTML(skill.name)}</div><div class="text-[10px] md:text-xs opacity-75">${cd > 0 ? `${cd}cd` : ''}</div>`;
             }
             btn.disabled = cd > 0 || !isPlayerTurn || isAutoBattle || !combatActive || player.stunned > 0 || (player.silencedSlots && player.silencedSlots[slotIndex] > 0);
             btn.onmouseenter = () => { if (descDisplay && skill.desc) descDisplay.innerText = skill.desc; };
@@ -2079,7 +2103,14 @@ function startPlayerTurn() {
 
     processRegenAndBuffs();
     if(!player.skillCooldowns) player.skillCooldowns = {};
-    Object.keys(player.skillCooldowns).forEach(k => { if(player.skillCooldowns[k] > 0) player.skillCooldowns[k]--; });
+    // Compute total cooldown reduction (gear + enhancements + BM Tier 5 + zombie buff)
+    let cdReducPerTurn = Math.floor(getEquipBonusStat('bonusCdReduc'));
+    (globalProgression.skillTreeEnhancements || []).forEach(enh => {
+        if(enh.type === 'skillCDReduc') cdReducPerTurn += ENHANCEMENT_DEFS.skillCDReduc.vals[enh.rarity] || 0;
+    });
+    if ((globalProgression.blackMarketTier || 0) >= 5) cdReducPerTurn += 2;
+    if (globalProgression.zombieStats && globalProgression.zombieStats.cooldownBuffEarned) cdReducPerTurn += 1;
+    Object.keys(player.skillCooldowns).forEach(k => { if(player.skillCooldowns[k] > 0) player.skillCooldowns[k] = Math.max(0, player.skillCooldowns[k] - (1 + cdReducPerTurn)); });
     // Decrement usable item cooldowns each player turn
     if(!player.usableCooldowns) player.usableCooldowns = {};
     Object.keys(player.usableCooldowns).forEach(k => { if(player.usableCooldowns[k] > 0) player.usableCooldowns[k]--; });
@@ -2106,7 +2137,7 @@ function startPlayerTurn() {
     if((player.ninjaDodgeTurns || 0) > 0) {
         player.ninjaDodgeTurns--;
         if(player.ninjaDodgeTurns > 0) {
-            addLog(`💨 Ninja Dodge: ${player.ninjaDodgeTurns} turn(s) remaining.`, 'text-gray-400');
+            addLog(`💨 Dodge: ${player.ninjaDodgeTurns} turn(s) remaining.`, 'text-gray-400');
         }
     }
 
@@ -2167,7 +2198,7 @@ function endBattle(playerWon) {
         const killCount = enemies.length;
 
         // Clear persisted enemies for this mode since all were defeated
-        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+        const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
         if (savedEnemies[persistKey]) delete savedEnemies[persistKey];
 
         // Progress tracking: win
@@ -2177,7 +2208,7 @@ function endBattle(playerWon) {
         if (ps.currentWinStreak > ps.longestWinStreak) ps.longestWinStreak = ps.currentWinStreak;
         ps.totalKills += killCount;
         enemies.forEach(e => { if (e.isBoss) ps.bossesDefeated++; if (e.isMythicBoss) { ps.mythicBossKilled = (ps.mythicBossKilled || 0) + 1; } });
-        if (currentMode === 'dungeon' && activeDungeonRoom === 5 && activeDungeonTier > (ps.maxDungeonCleared || 0)) ps.maxDungeonCleared = activeDungeonTier;
+        if (currentMode === 'dungeon' && activeDungeonFloor === 5 && activeDungeonTier > (ps.maxDungeonCleared || 0)) ps.maxDungeonCleared = activeDungeonTier;
         if (player.lvl > (ps.levelReached || 0)) ps.levelReached = player.lvl;
         if (globalProgression.gold > (ps.highestGold || 0)) ps.highestGold = globalProgression.gold;
         
@@ -2286,10 +2317,9 @@ function endBattle(playerWon) {
             zombieWaveCount++;
             zombieConsecutiveWaves++;
             zs.maxWavesSurvived = Math.max(zs.maxWavesSurvived || 0, zombieConsecutiveWaves);
-            // Check every-10-wave potion reward
-            if(zombieConsecutiveWaves > 0 && zombieConsecutiveWaves % 10 === 0) {
-                zs.pendingPotionRewards = (zs.pendingPotionRewards || 0) + 1;
-            }
+            // Give 1 soul pebble per wave completed
+            globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 1;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-purple-700 text-purple-400 font-bold shadow-md">+1 🔮 Soul Pebble</div>`;
             // Check 100-wave cooldown buff
             if(zombieConsecutiveWaves >= 100 && !zs.cooldownBuffEarned) {
                 zs.cooldownBuffEarned = true;
@@ -2328,6 +2358,11 @@ function endBattle(playerWon) {
             const isBoss = e.isBoss;
             if(isBoss && currentMode !== 'graveyard') {
                 if(!globalProgression.killedBosses) globalProgression.killedBosses = {};
+                const killedKeys = Object.keys(globalProgression.killedBosses);
+                if(killedKeys.length >= 20) {
+                    // Remove the oldest entry to make room
+                    delete globalProgression.killedBosses[killedKeys[0]];
+                }
                 globalProgression.killedBosses[e.name] = { name: e.name, avatar: e.avatar, hpMult: e.templateMults?.hpMult || 3, dmgMult: e.templateMults?.dmgMult || 2 };
             }
 
@@ -2471,16 +2506,41 @@ function endBattle(playerWon) {
 
         if (currentMode === 'invasion') {
             // Already handled above
+        } else if (currentMode === 'apocalypse') {
+            // Grant Crown of Infinity title
+            if (!globalProgression.crownOfInfinity) {
+                globalProgression.crownOfInfinity = true;
+                title.innerText = '👑 APOCALYPSE CONQUERED!';
+                title.className = 'text-4xl font-black mb-2 drop-shadow-lg' ;
+                title.style.background = 'linear-gradient(90deg,#ffd700,#ff4500,#ffd700)';
+                title.style.webkitBackgroundClip = 'text';
+                title.style.webkitTextFillColor = 'transparent';
+                rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 border-yellow-400 text-yellow-300 font-black shadow-md animate-pulse">👑 Title Unlocked: Crown of Infinity!</div>`;
+            } else {
+                desc.innerText = 'You have already claimed the Crown of Infinity.';
+            }
+            btnNext.classList.add('hidden');
+            const btnHub = document.getElementById('btn-end-hub');
+            if(btnHub) { btnHub.innerText = '🌀 Return to Portal'; btnHub.onclick = showPortal; }
         } else if (currentMode === 'dungeon') {
-            if (activeDungeonRoom === 5) { 
+            // Floor rewards: +10 ethereal dust per floor, +20 soul pebbles every 100 floors
+            const currentFloor = (activeDungeonTier - 1) * 5 + activeDungeonFloor;
+            globalProgression.inventory.ethereal_dust = (globalProgression.inventory.ethereal_dust || 0) + 10;
+            rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-yellow-600 text-yellow-300 font-bold shadow-md">✨ +10 Ethereal Dust</div>`;
+            if (currentFloor % 100 === 0) {
+                globalProgression.inventory.soul_pebbles = (globalProgression.inventory.soul_pebbles || 0) + 20;
+                rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-purple-700 text-purple-400 font-bold shadow-md">🔮 +20 Soul Pebbles (Floor ${currentFloor} Milestone!)</div>`;
+            }
+            if (activeDungeonFloor === 5) { 
                 desc.innerText = `You conquered Tier ${activeDungeonTier}!`; btnNext.classList.add('hidden'); 
                 
                 if(activeDungeonTier === globalProgression.dungeonTier) globalProgression.dungeonTier++; 
-            } else { desc.innerText = "Room cleared. Proceed deeper."; btnNext.innerText = "Next Room"; btnNext.classList.remove('hidden'); }
+            } else { desc.innerText = "Floor cleared. Continue climbing!"; btnNext.innerText = "Next Floor"; btnNext.classList.remove('hidden'); }
         } else if (currentMode === 'graveyard') {
             desc.innerText = "Boss Soul Harvested.";
-            btnNext.innerText = "Return to Town"; btnNext.classList.remove('hidden');
-            btnNext.onclick = returnToTown;
+            btnNext.innerText = 'Return to Graveyard';
+            btnNext.classList.remove('hidden');
+            btnNext.onclick = showGraveyard;
         } else {
             if(globalProgression.storyModeProgress[currentMode] >= 10) {
                 desc.innerText = "Boss defeated! Progress Reset."; 
@@ -2493,7 +2553,10 @@ function endBattle(playerWon) {
 
         xpCont.classList.remove('hidden');
         let totalXp = 0; 
-        const nextLvlXp = getXpForNextLevel(player.lvl);
+        // Cap XP level at 100 for non-dungeon adventure modes
+        const xpCapModes = ['hunting', 'pillage', 'workshop', 'island_defense'];
+        const xpLvl = (player.lvl >= 100 && xpCapModes.includes(currentMode)) ? 100 : player.lvl;
+        const nextLvlXp = getXpForNextLevel(xpLvl);
         
         enemies.forEach(e => { 
             if(currentMode === 'invasion') {
@@ -2523,6 +2586,8 @@ function endBattle(playerWon) {
         });
         totalXp = Math.floor(totalXp * xpMult);
         if(currentMode === 'invasion') totalXp = Math.floor(totalXp * 0.40);
+        // Graveyard gives no XP
+        if(currentMode === 'graveyard') totalXp = 0;
         document.getElementById('end-xp-amount').innerText = totalXp; globalProgression.totalExpEarned += totalXp;
 
         // Gold per kill (not in quest, training, or dungeon mode)
@@ -2557,7 +2622,7 @@ function endBattle(playerWon) {
         }, 100);
 
         queueSave(); 
-        if(isAutoBattle && !btnNext.classList.contains('hidden')) {
+        if(isAutoBattle && currentMode !== 'graveyard' && !btnNext.classList.contains('hidden')) {
             btnNext.innerText = "Auto-Continuing in 4s...";
             setTimeout(() => { if(isAutoBattle) handleEndNext(); }, 4000);
         }
@@ -2573,7 +2638,7 @@ function endBattle(playerWon) {
         const autoBtn = document.getElementById('btn-auto'); if(autoBtn) autoBtn.classList.remove('auto-on');
         // Save living enemies for persistence on defeat (exclude special modes)
         if (!NON_PERSIST_MODES.includes(currentMode) && enemies.length > 0 && enemies.some(e => e.currentHp > 0)) {
-            const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonRoom}` : currentMode;
+            const persistKey = currentMode === 'dungeon' ? `dungeon_${activeDungeonTier}_${activeDungeonFloor}` : currentMode;
             savedEnemies[persistKey] = enemies.map(e => structuredClone(e));
         }
         enemies = [];
@@ -2586,12 +2651,6 @@ function endBattle(playerWon) {
         rwdCont.classList.add('hidden');
     }
     switchScreen('screen-end');
-    // After a graveyard battle, return to town
-    if(currentMode === 'graveyard') {
-        const gravBtn = document.getElementById('btn-end-hub');
-        if(gravBtn) { gravBtn.innerText = '🏠 Return to Town'; gravBtn.onclick = returnToTown; }
-        setTimeout(() => returnToTown(), 3500);
-    }
     // After a zombie apocalypse defeat, return to ZA menu
     if(currentMode === 'invasion' && !playerWon) {
         const zaBtn = document.getElementById('btn-end-hub');
@@ -2602,10 +2661,10 @@ function endBattle(playerWon) {
 
 function handleEndNext() { 
     if (currentMode === 'dungeon') {
-        if (activeDungeonRoom < 5) { 
-            activeDungeonRoom++; 
+        if (activeDungeonFloor < 5) { 
+            activeDungeonFloor++; 
             // Restore some HP before next room (full restore before boss room 5)
-            if (activeDungeonRoom === 5) {
+            if (activeDungeonFloor === 5) {
                 player.currentHp = player.maxHp;
                 player.regenBuffs = []; player.activeBuffs = [];
                 player.stunned = 0; player.bleedStacks = 0; player.bleedTurns = 0; player.dodgeTurns = 0;

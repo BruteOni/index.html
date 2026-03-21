@@ -380,7 +380,7 @@ let globalProgression = {
     wellLastHealDate: '', wellXpBattles: 0, wellDropBattles: 0, wellLastXpDate: '', wellLastDropDate: '', wellLastEnergyDate: '', wellLastEnergy50Date: '', wellLastEnergy100Date: '',
     lastHpRegenTime: Date.now(), enemyKillCounts: {}, claimedCodexMilestones: {},
     totalExpEarned: 0, cooldowns: { herbs: 0, mine: 0, fish: 0, enchants: 0 },
-    inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 },
+    inventory: { ench_common: 0, ench_rare: 0, ench_epic: 0, ench_legendary: 0, herb_red: 0, herb_blue: 0, fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0, soul_pebbles: 0, ethereal_dust: 0, pot_i1: 30, pot_i2: 0, pot_i3: 0, pot_r1: 0, pot_r2: 0, pot_r3: 0, food_d1: 0, food_d2: 0, food_d3: 0, food_df1: 0, food_df2: 0, food_df3: 0, magic_stone: 0 },
     usableItems: {},
     equipInventory: [], equipped: { head: null, shoulders: null, chest: null, arms: null, waist: null, legs: null, boots: null, necklace: null, ring1: null, ring2: null, ring3: null, ring4: null, weapon: null, cape: null },
     newItems: {}, shopGear: [], shopLastRefresh: 0,
@@ -393,12 +393,13 @@ let globalProgression = {
     petsOwned: [], petBattlesWon: 0, petBattleWinStreak: 0, petBattleBestStreak: 0,
     discoveredPets: {}, claimedPetRewards: {}, ultimatePetRewardClaimed: false,
     petWinLoss: {},
-    petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
+    petBattleEnergy: 3, petBattleEnergyDate: '', petBattleLastEnergyTime: Date.now(),
     petFavorites: [],
     blackMarketTier: 0,
     zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
     pebbleBonusDmg: 0, pebbleBonusArmorPierce: 0, pebbleBonusHp: 0, pebbleBonusDef: 0,
     patchV1Applied: true,
+    crownOfInfinity: false,
     saveVersion: 2
 };
 const TREE_NODES = [];
@@ -430,8 +431,8 @@ let player = {
 };
 
 let enemies = []; let savedEnemies = {}; let activeTargetIndex = 0; let currentMode = 'none'; 
-const NON_PERSIST_MODES = ['quest', 'training', 'graveyard', 'invasion', 'dungeon'];
-let activeDungeonTier = 1; let activeDungeonRoom = 1; 
+const NON_PERSIST_MODES = ['quest', 'training', 'graveyard', 'invasion', 'dungeon', 'apocalypse'];
+let activeDungeonTier = 1; let activeDungeonFloor = 1; 
 let isPlayerTurn = true; let combatLog = []; let isAutoBattle = false; let combatActive = false; let battleEnding = false;
 let activeGraveyardBoss = null;
 // Invasion state
@@ -700,6 +701,7 @@ function makeInitialGlobalProgression() {
             herb_red: 0, herb_blue: 0,
             fish_1: 0, fish_2: 0, fish_3: 0, fish_4: 0, fish_5: 0, fish_6: 0,
             soul_pebbles: 0,
+            ethereal_dust: 0,
             pot_i1: 0, pot_i2: 0, pot_i3: 0,
             pot_r1: 0, pot_r2: 0, pot_r3: 0,
             food_d1: 0, food_d2: 0, food_d3: 0,
@@ -730,15 +732,13 @@ function makeInitialGlobalProgression() {
         petsOwned: [], petBattlesWon: 0, petBattleWinStreak: 0, petBattleBestStreak: 0,
         discoveredPets: {}, claimedPetRewards: {}, ultimatePetRewardClaimed: false,
         petWinLoss: {},
-        petBattleEnergy: 10, petBattleLastEnergyTime: Date.now(),
+        petBattleEnergy: 3, petBattleEnergyDate: '', petBattleLastEnergyTime: Date.now(),
         petFavorites: [],
         blackMarketTier: 0,
         zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
-        pebbleBonusDmg: 0,
-        pebbleBonusArmorPierce: 0,
-        pebbleBonusHp: 0,
-        pebbleBonusDef: 0,
+        pebbleBonusDmg: 0, pebbleBonusArmorPierce: 0, pebbleBonusHp: 0, pebbleBonusDef: 0,
         patchV1Applied: true,
+        crownOfInfinity: false,
         saveVersion: 2
     };
 }
@@ -918,6 +918,15 @@ function loadGameAndContinue() {
                 globalProgression.patchV1Applied = true;
             }
 
+            // --- Tower of Babel migration: reset dungeon tier to start fresh ---
+            if (!globalProgression.towerBabelMigrated) {
+                globalProgression.dungeonTier = 1;
+                if (player.progressStats) {
+                    player.progressStats.maxDungeonCleared = 0;
+                }
+                globalProgression.towerBabelMigrated = true;
+            }
+
             // Ensure clean state — prevent stale combat flags from a previous session
             combatActive = false;
             battleEnding = false;
@@ -1034,7 +1043,18 @@ function calculateMaxHp() {
     if (typeof getEquipBonusStat === 'function') {
         hpBoostMult *= (1 + getEquipBonusStat('bonusHpPct'));
     }
-    return Math.floor(base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01) * (1 + getTitleStatBonus()));
+    // Apply armor upgrade flat HP bonuses (+100 HP per level for HP armor slots)
+    const HP_ARMOR_SLOTS = ['head', 'shoulders', 'arms', 'chest', 'waist', 'legs', 'boots'];
+    let armorUpgradeHp = 0;
+    let armorUpgradeHpPct = 0;
+    HP_ARMOR_SLOTS.forEach(slot => {
+        const item = (globalProgression.equipped || {})[slot];
+        if (item && item.armorEnhance) {
+            armorUpgradeHp += item.armorEnhance * 100;
+            if (item.armorEnhance >= 100) armorUpgradeHpPct += 0.10;
+        }
+    });
+    return Math.floor((base * hpBoostMult * (1 + (player.skillMenuBonusHpPct || 0) / 100) * (1 + (globalProgression.pebbleBonusHp || 0) * 0.01) * (1 + getTitleStatBonus()) + armorUpgradeHp) * (1 + armorUpgradeHpPct));
 }
 
 /**
@@ -1080,7 +1100,18 @@ function getBaseDamage() {
  */
 function getPlayerDef() {
     const a = globalProgression.attributes;
-    return Math.floor((50 + (a.defense || 0) + player.treeBonusDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01) * (1 + getTitleStatBonus()));
+    // Accessory upgrade DEF bonuses (+5 DEF per level for DEF accessory slots)
+    const DEF_ACCESSORY_SLOTS = ['necklace', 'ring', 'cape'];
+    let accUpgradeDef = 0;
+    DEF_ACCESSORY_SLOTS.forEach(slot => {
+        const item = (globalProgression.equipped || {})[slot];
+        if (item && item.armorEnhance) {
+            accUpgradeDef += item.armorEnhance * 5;
+        }
+    });
+    const baseDef = Math.floor((50 + (a.defense || 0) + player.treeBonusDef + accUpgradeDef) * (1 + (player.skillMenuBonusDefPct || 0) / 100) * (1 + (globalProgression.pebbleBonusDef || 0) * 0.01) * (1 + getTitleStatBonus()));
+    // Accessory max mitigation bonus (+10% reduced damage at level 100)
+    return baseDef;
 }
 
 // Returns the permanent base attributes for each class (cannot go below these).
@@ -1129,11 +1160,55 @@ function showPortal() {
             if(label) label.innerHTML = 'Zombie Apocalypse';
         }
     }
+    const apocBtn = document.getElementById('portal-apocalypse-btn');
+    if (apocBtn) apocBtn.style.display = player.lvl >= 500 ? 'flex' : 'none';
     switchScreen('screen-portal');
 }
 
+function showApocalypse() {
+    const el = document.getElementById('apocalypse-status');
+    if (el) el.innerText = player.lvl < 500 ? `⚠️ Requires Level 500. You are Level ${player.lvl}.` : 'Ready to face yourself!';
+    const startBtn = document.getElementById('apocalypse-start-btn');
+    if (startBtn) startBtn.disabled = player.lvl < 500;
+    switchScreen('screen-apocalypse');
+}
 
-function showMenu() { try { stopMusic(); } catch(e) { console.error('Failed to stop music:', e); } switchScreen('screen-menu'); }
+function startApocalypse() {
+    if (player.lvl < 500) { return; }
+
+    const clone = {
+        name: '💀 Your Shadow',
+        avatar: player.data ? player.data.avatar || '💀' : '💀',
+        hp: player.maxHp,
+        maxHp: player.maxHp,
+        dmg: getBaseDamage(),
+        def: getPlayerDef(),
+        currentHp: player.maxHp,
+        bleedStacks: 0, bleedTurns: 0, stunned: 0, healBlock: 0,
+        defReduction: 0, defReductionTurns: 0,
+        shield: 0, dodgeTurns: 0,
+        dmgBoostMult: 1, dmgBoostTurns: 0,
+        poisonStacks: 0, burnStacks: 0, burnTurns: 0,
+        enemyReflectTurns: 0, darknessTurns: 0, missStacks: 0, skipTurns: 0,
+        dmgTakenMult: 1, dmgTakenTurns: 0, defZeroTurns: 0,
+        skills: (globalProgression.equipped ? Object.values(globalProgression.equipped)
+            .filter(i => i && i.skill)
+            .map(i => i.skill).slice(0, 4) : []),
+        cooldowns: {},
+        isBoss: true,
+        isApocalypseClone: true,
+        hpMult: 1,
+        dmgMult: 1
+    };
+    clone.skills.forEach(s => { clone.cooldowns[s] = 0; });
+
+    currentMode = 'apocalypse';
+    pendingApocalypseClone = clone;
+    startBattle(true);
+}
+
+
+function showMenu() { try { stopMusic(); } catch(e) { console.error('Failed to stop music:', e); } switchScreen('screen-menu'); const hasSave = LEGACY_SAVE_KEYS.some(k => localStorage.getItem(k)); const continueBtn = document.getElementById('btn-continue-save'); if (continueBtn) continueBtn.classList.toggle('hidden', !hasSave); }
 function showClassSelect() { switchScreen('screen-class-select'); }
 
 function confirmNewGame() {
@@ -1448,7 +1523,14 @@ function showHub() {
         const elLvlUpNoti = getEl('hub-level-up-noti');
         if (elLvlUpNoti) elLvlUpNoti.classList.toggle('hidden', player.statPoints <= 0);
 
-        // Show highest earned zombie title badge
+        // Show Crown of Infinity title if earned, otherwise show highest zombie title
+        const titleBadgeEl = document.getElementById('hub-title-badge');
+        if (globalProgression.crownOfInfinity) {
+            if (titleBadgeEl) {
+                titleBadgeEl.innerHTML = '<span class="crown-of-infinity-title">👑 Crown of Infinity</span>';
+                titleBadgeEl.classList.remove('hidden');
+            }
+        } else {
         const zs = globalProgression.zombieStats;
         const titlesEarned = (zs && zs.titlesEarned) ? zs.titlesEarned : [];
         let highestTitle = null;
@@ -1457,7 +1539,6 @@ function showHub() {
                 if(titlesEarned.includes(ZOMBIE_TITLES[i].id)) { highestTitle = ZOMBIE_TITLES[i]; break; }
             }
         }
-        const titleBadgeEl = document.getElementById('hub-title-badge');
         if(highestTitle) {
             const badgeSpan = document.createElement('span');
             badgeSpan.className = 'title-badge';
@@ -1465,6 +1546,7 @@ function showHub() {
             if(titleBadgeEl) { titleBadgeEl.innerHTML = ''; titleBadgeEl.appendChild(badgeSpan.cloneNode(true)); titleBadgeEl.classList.remove('hidden'); }
         } else {
             if(titleBadgeEl) titleBadgeEl.classList.add('hidden');
+        }
         }
     } catch(e) { console.error('showHub: basic stats update failed', e); }
 
@@ -2083,4 +2165,6 @@ window.loadGameAndContinue = loadGameAndContinue;
 window.selectGenderAndStart = selectGenderAndStart;
 window.showGenderSelect = showGenderSelect;
 window.onClassVideoEnd = onClassVideoEnd;
+window.showApocalypse = showApocalypse;
+window.startApocalypse = startApocalypse;
 
