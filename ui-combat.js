@@ -1333,7 +1333,8 @@ function usePlayerSkill(slotIndex) {
                 
                 // Hit chance: 80% base + reflexes 0.1% per point + gear bonusHit
                 const hitChance = 0.80 + ((a.reflexes || 0) * 0.001) + getEquipBonusStat('bonusHit');
-                if(target.dodgeTurns > 0 || Math.random() > hitChance) {
+                const passiveDodge = (target.dodgeChance || 0) > 0 && Math.random() < target.dodgeChance;
+                if(target.dodgeTurns > 0 || passiveDodge || Math.random() > hitChance) {
                     addLog(`Missed ${target.name}!`, "text-gray-500");
                     showFloatText(`enemy-card-${tIdx}`, `MISS`, 'text-gray-400');
                     if(target.dodgeTurns > 0) target.dodgeTurns--;
@@ -1371,6 +1372,9 @@ function usePlayerSkill(slotIndex) {
 
                 if (target.shield > 0) { hitDmg = Math.floor(hitDmg * (1 - target.shield)); target.shield = 0; }
 
+                // Apply enemy damage reduction (e.g. Colossus dmgReduction stat)
+                if((target.dmgReduction || 0) > 0) hitDmg = Math.max(1, Math.floor(hitDmg * (1 - Math.min(0.95, target.dmgReduction))));
+
                 // Apply enemy flat defense (subtract from damage)
                 const enemyDef = (target.defZeroTurns && target.defZeroTurns > 0) ? 0 : (target.def || 0);
                 if(enemyDef > 0) hitDmg = Math.max(1, hitDmg - enemyDef);
@@ -1406,6 +1410,21 @@ function usePlayerSkill(slotIndex) {
                     player.currentHp = Math.max(0, player.currentHp - reflectedDmg);
                     showFloatText('player-avatar-container', `-${reflectedDmg} 🔄`, 'text-cyan-400');
                     addLog(`${target.name}'s Reflect dealt ${reflectedDmg} damage back!`, 'text-cyan-400');
+                }
+
+                // Return chance: enemy returns a % of damage taken back to the player
+                if((target.returnChance || 0) > 0 && target.currentHp > 0) {
+                    const returnDmg = Math.max(1, Math.floor(hitDmg * target.returnChance));
+                    player.currentHp = Math.max(0, player.currentHp - returnDmg);
+                    showFloatText('player-avatar-container', `-${returnDmg} 🔁`, 'text-amber-400');
+                    addLog(`${target.name} returned ${returnDmg} dmg!`, 'text-amber-400');
+                }
+
+                // Counter chance: enemy counters with a basic attack
+                if((target.counterChance || 0) > 0 && target.currentHp > 0 && Math.random() < target.counterChance) {
+                    const counterDmg = Math.max(1, Math.floor(target.baseDmg * 0.5));
+                    dealDamageToPlayer(counterDmg, target);
+                    addLog(`${target.name} countered for ${counterDmg} dmg!`, 'text-orange-400 font-bold');
                 }
 
                 // Eruption buff: each hit inflicts 1 bleed stack
@@ -1739,6 +1758,12 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     if(extraTurns === 0 && (e.defReductionTurns || 0) > 0) { e.defReductionTurns--; if(e.defReductionTurns <= 0) e.defReduction = 0; }
     // Tick down def-to-zero turns
     if(extraTurns === 0 && (e.defZeroTurns || 0) > 0) e.defZeroTurns--;
+    // Enemy HP regen per turn
+    if(extraTurns === 0 && (e.hpRegenPerTurn || 0) > 0 && e.currentHp < e.maxHp && (e.healBlock || 0) <= 0) {
+        const regenAmt = Math.min(e.hpRegenPerTurn, e.maxHp - e.currentHp);
+        e.currentHp += regenAmt;
+        showFloatText(`enemy-card-${enemyIdx}`, `+${regenAmt}`, 'text-green-400');
+    }
 
     // Decrement CD
     if(e.cooldowns) {
@@ -1762,15 +1787,39 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
     if (e.isApocalypseClone && e.cloneSkills && e.cloneSkills.length > 0) {
         const skill = e.cloneSkills[Math.floor(Math.random() * e.cloneSkills.length)];
         playSound('hit'); triggerAnim(`enemy-card-${enemyIdx}`, 'anim-strike'); setTimeout(() => triggerAnim('combat-player-avatar', 'anim-shake'), 150);
+        // Hit chance check for Apocalypse clone
+        if(e.hitChance !== undefined && Math.random() > e.hitChance) {
+            addLog(`${e.name} missed!`, 'text-gray-500');
+            showFloatText(`enemy-card-${enemyIdx}`, 'MISS', 'text-gray-400');
+            if (e.dmgBoostTurns > 0) { e.dmgBoostTurns--; if (e.dmgBoostTurns === 0) e.dmgBoostMult = 1; }
+            updateCombatUI();
+            if (extraTurns > 0) {
+                setTimeout(() => executeEnemyTurns(enemyIdx, extraTurns - 1), 700);
+            } else {
+                setTimeout(() => executeEnemyTurns(enemyIdx + 1), 700);
+            }
+            return;
+        }
         const hits = skill.hits || 1;
         let totalDmg = 0;
+        let cloneSkillCrit = false;
+        const cloneCritChance = e.critChance !== undefined ? e.critChance : (0.05 + (e.isBoss ? 0.05 : 0));
+        const cloneCritMult = e.critDmgMult !== undefined ? e.critDmgMult : 1.5;
+        const cloneSkillDmgMult = 1 + (e.skillDmgBonus || 0);
         for (let h = 0; h < hits; h++) {
-            let dmg = Math.floor(e.baseDmg * (skill.mult || 1) * (0.8 + Math.random() * 0.4));
+            let dmg = Math.floor(e.baseDmg * (skill.mult || 1) * cloneSkillDmgMult * (0.8 + Math.random() * 0.4));
             if (e.dmgBoostMult && e.dmgBoostMult > 1) dmg = Math.floor(dmg * e.dmgBoostMult);
+            if(Math.random() < cloneCritChance) { dmg = Math.floor(dmg * cloneCritMult); cloneSkillCrit = true; playSound('crit'); }
             dealDamageToPlayer(dmg, e);
             totalDmg += dmg;
         }
-        addLog(`${e.name} used <b>${skill.name}</b>${hits > 1 ? ` (${hits}x)` : ''} for ${totalDmg} dmg!`, 'text-red-400 font-bold');
+        // Life steal for Apocalypse clone
+        if((e.lifeSteal || 0) > 0 && totalDmg > 0) {
+            const lsHeal = Math.max(1, Math.floor(totalDmg * e.lifeSteal));
+            e.currentHp = Math.min(e.maxHp, e.currentHp + lsHeal);
+            showFloatText(`enemy-card-${enemyIdx}`, `+${lsHeal}`, 'text-violet-400');
+        }
+        addLog(`${e.name} used <b>${skill.name}</b>${hits > 1 ? ` (${hits}x)` : ''} for ${totalDmg} dmg${cloneSkillCrit ? ' (CRIT!)' : ''}!`, cloneSkillCrit ? 'text-red-300 font-black' : 'text-red-400 font-bold');
         if (e.dmgBoostTurns > 0) { e.dmgBoostTurns--; if (e.dmgBoostTurns === 0) e.dmgBoostMult = 1; }
         updateCombatUI();
         if (extraTurns > 0) {
@@ -1896,13 +1945,27 @@ function executeEnemyTurns(enemyIdx, extraTurns = 0) {
         let dmg = Math.floor(e.baseDmg * (0.8 + Math.random() * 0.4));
         // Apply mend damage boost
         if(e.dmgBoostMult && e.dmgBoostMult > 1) dmg = Math.floor(dmg * e.dmgBoostMult);
-        // Enemy crit chance: 5% base
-        const eCritChance = 0.05 + (e.isBoss ? 0.05 : 0) + (e.isMythicBoss ? 0.10 : 0);
-        const eCrit = Math.random() < eCritChance;
-        if (eCrit) { dmg = Math.floor(dmg * 1.5); playSound('crit'); }
-        dealDamageToPlayer(dmg, e, eCrit);
-        addLog(`${e.name} hits for ${dmg} dmg${eCrit ? ' (CRIT!)' : ''}!`, eCrit ? "text-red-300 font-black" : "text-red-400 font-bold"); 
-        e.cooldowns['hit'] = 0;
+        // Hit chance check (uses e.hitChance if set, otherwise always hits)
+        if(e.hitChance !== undefined && Math.random() > e.hitChance) {
+            addLog(`${e.name} missed!`, 'text-gray-500');
+            showFloatText(`enemy-card-${enemyIdx}`, 'MISS', 'text-gray-400');
+            e.cooldowns['hit'] = 0;
+        } else {
+            // Enemy crit chance: use e.critChance if set, else 5% base
+            const eCritChance = e.critChance !== undefined ? e.critChance : (0.05 + (e.isBoss ? 0.05 : 0) + (e.isMythicBoss ? 0.10 : 0));
+            const eCritMult = e.critDmgMult !== undefined ? e.critDmgMult : 1.5;
+            const eCrit = Math.random() < eCritChance;
+            if (eCrit) { dmg = Math.floor(dmg * eCritMult); playSound('crit'); }
+            dealDamageToPlayer(dmg, e, eCrit);
+            // Life steal for enemy
+            if((e.lifeSteal || 0) > 0 && dmg > 0) {
+                const lsHeal = Math.max(1, Math.floor(dmg * e.lifeSteal));
+                e.currentHp = Math.min(e.maxHp, e.currentHp + lsHeal);
+                showFloatText(`enemy-card-${enemyIdx}`, `+${lsHeal}`, 'text-violet-400');
+            }
+            addLog(`${e.name} hits for ${dmg} dmg${eCrit ? ' (CRIT!)' : ''}!`, eCrit ? "text-red-300 font-black" : "text-red-400 font-bold"); 
+            e.cooldowns['hit'] = 0;
+        }
     }
 
     // Tick down mend damage boost
@@ -2007,8 +2070,11 @@ function dealDamageToPlayer(baseDmg, attackerEnemy, isCritHit = false) {
     
     if (player.shield > 0) { dmg = Math.floor(dmg * (1 - player.shield)); player.shield = 0; }
     
+    // Apply attacker's armor pierce (increases pre-defense damage, bypassing player defense)
     const pDef = getPlayerDef();
-    dmg = Math.max(1, dmg - pDef); 
+    const enemyArmorPierce = (attackerEnemy && attackerEnemy.armorPierce) ? Math.min(0.95, attackerEnemy.armorPierce) : 0;
+    const dmgBeforeDefense = enemyArmorPierce > 0 ? Math.floor(dmg * (1 + enemyArmorPierce)) : dmg;
+    dmg = Math.max(1, dmgBeforeDefense - pDef); 
     dmg = Math.max(1, Math.floor(dmg / buffDefMult));
     
     if(player.activeBuffs.some(b => b.type === 'ice_shield')) {

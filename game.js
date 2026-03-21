@@ -1186,22 +1186,51 @@ function startApocalypse() {
         .filter(idx => idx !== null && idx !== undefined && idx !== 'woh')
         .map(idx => classData && classData.skills ? classData.skills[idx] : null)
         .filter(Boolean);
+    const a = globalProgression.attributes;
+    const playerMaxHp = calculateMaxHp();
+    const playerBaseDmg = getBaseDamage();
+    const playerDef = getPlayerDef();
+    const hpRegenAmt = Math.floor(playerMaxHp * ((a.revival || 0) * 0.002 + getEquipBonusStat('bonusHpRegen'))) + (player.treeBonusRegen || 0);
+    const dodgeChance = (a.resistance || 0) * 0.0025 + getEquipBonusStat('bonusDodge');
+    const hitChance = Math.min(1, 0.80 + ((a.reflexes || 0) * 0.001) + getEquipBonusStat('bonusHit'));
+    const critChance = (a.fury || 0) * 0.003 + getEquipBonusStat('bonusCritChance');
+    const critDmgMult = 1 + (a.force || 0) * 0.01 + getEquipBonusStat('bonusCritDmg');
+    const dmgReduction = (a.tenacity || 0) * 0.003 + getEquipBonusStat('bonusDmgReduction');
+    const dmgReflect = getEquipBonusStat('bonusDmgReflect');
+    const returnChance = (a['return'] || 0) * 0.0025;
+    const skillDmgBonus = getEquipBonusStat('bonusSkillDmg');
+    const armorPierce = (a.reflexes || 0) * 0.003 + getEquipBonusStat('bonusArmorPierce');
+    const lifeSteal = (a.vampire || 0) * 0.0025 + getEquipBonusStat('bonusVamp');
+    const counterChance = ((a.agility || 0) * 0.0025) + getEquipBonusStat('bonusCounterChance');
     const clone = {
         name: '🗿 Obsidian Colossus',
         avatar: '🗿',
         lvl: player.lvl,
-        hp: player.maxHp * 10,
-        maxHp: player.maxHp * 10,
-        dmg: getBaseDamage() * 3,
-        baseDmg: getBaseDamage() * 3,
-        def: getPlayerDef(),
-        currentHp: player.maxHp * 10,
+        hp: playerMaxHp * 3,
+        maxHp: playerMaxHp * 3,
+        dmg: playerBaseDmg * 3,
+        baseDmg: playerBaseDmg * 3,
+        def: playerDef,
+        currentHp: playerMaxHp * 3,
+        hpRegenPerTurn: hpRegenAmt,
+        dodgeChance: dodgeChance,
+        hitChance: hitChance,
+        critChance: critChance,
+        critDmgMult: critDmgMult,
+        dmgReduction: dmgReduction,
+        enemyReflect: dmgReflect,
+        enemyReflectTurns: 9999,
+        returnChance: returnChance,
+        skillDmgBonus: skillDmgBonus,
+        armorPierce: armorPierce,
+        lifeSteal: lifeSteal,
+        counterChance: counterChance,
         bleedStacks: 0, bleedTurns: 0, stunned: 0, healBlock: 0,
         defReduction: 0, defReductionTurns: 0,
         shield: 0, dodgeTurns: 0,
         dmgBoostMult: 1, dmgBoostTurns: 0,
         poisonStacks: 0, burnStacks: 0, burnTurns: 0,
-        enemyReflectTurns: 0, darknessTurns: 0, missStacks: 0, skipTurns: 0,
+        darknessTurns: 0, missStacks: 0, skipTurns: 0,
         dmgTakenMult: 1, dmgTakenTurns: 0, defZeroTurns: 0,
         skills: ['hit'],
         cloneSkills: cloneSkills,
