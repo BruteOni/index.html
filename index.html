@@ -1196,7 +1196,10 @@
             <div class="flex justify-between items-center mb-4">
                 <button onclick="showPortal()" class="btn-back text-pink-400 px-4 py-2 rounded-lg font-bold flex items-center gap-2"><span>⬅️</span> Portal</button>
                 <div class="text-sm font-bold text-yellow-400 bg-gray-800 px-3 py-1 rounded-full border border-yellow-700">💰 <span id="pet-battle-gold-display">0</span></div>
-                <div class="text-sm font-bold text-blue-400 bg-gray-800 px-3 py-1 rounded-full border border-blue-700">⚡ <span id="pet-battle-energy-display">10</span>/10</div>
+                <div class="text-sm font-bold text-blue-400 bg-gray-800 px-3 py-1 rounded-full border border-blue-700 flex flex-col items-center">
+                    <span>⚡ <span id="pet-battle-energy-display">10</span>/10</span>
+                    <span id="pet-battle-energy-timer" class="text-[10px] text-gray-400 font-normal"></span>
+                </div>
             </div>
             <h2 class="text-3xl font-bold mb-1 text-pink-400 text-center tracking-widest drop-shadow-md">🐾 PET BATTLES</h2>
             <p class="text-xs text-gray-400 text-center mb-4">Rock-Paper-Scissors style! Win 15 Gold + 1% XP per win. (⚡ Costs 1 Pet Energy per win)</p>

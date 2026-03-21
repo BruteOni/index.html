@@ -674,22 +674,13 @@ function startInvasion() {
 // --- PET BATTLE ---
 function regenPetBattleEnergy() {
     const MAX_PET_ENERGY = 10;
-    const REGEN_MS = 300000; // 5 minutes
-    if(globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
-    if(globalProgression.petBattleLastEnergyTime === undefined) globalProgression.petBattleLastEnergyTime = Date.now();
-    if(globalProgression.petBattleEnergy < MAX_PET_ENERGY) {
-        const now = Date.now();
-        const msPassed = now - globalProgression.petBattleLastEnergyTime;
-        const ticksPassed = Math.floor(msPassed / REGEN_MS);
-        if(ticksPassed > 0) {
-            globalProgression.petBattleEnergy = Math.min(MAX_PET_ENERGY, globalProgression.petBattleEnergy + ticksPassed);
-            // Set lastEnergyTime to the timestamp of the most recent complete regen tick,
-            // preserving partial progress toward the next tick.
-            globalProgression.petBattleLastEnergyTime = now - (msPassed % REGEN_MS);
-            queueSave();
-        }
-    } else {
-        globalProgression.petBattleLastEnergyTime = Date.now();
+    if (globalProgression.petBattleEnergy === undefined) globalProgression.petBattleEnergy = MAX_PET_ENERGY;
+    // Daily reset: if the stored date differs from today, refill energy
+    const todayStr = new Date().toDateString();
+    if (globalProgression.petBattleEnergyDate !== todayStr) {
+        globalProgression.petBattleEnergyDate = todayStr;
+        globalProgression.petBattleEnergy = MAX_PET_ENERGY;
+        queueSave();
     }
 }
 
@@ -716,6 +707,17 @@ function showPetBattle() {
     regenPetBattleEnergy();
     document.getElementById('pet-battle-gold-display').innerText = globalProgression.gold;
     document.getElementById('pet-battle-energy-display').innerText = globalProgression.petBattleEnergy;
+    // Show countdown to next daily energy reset (midnight)
+    const resetTimerEl = document.getElementById('pet-battle-energy-timer');
+    if (resetTimerEl) {
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        const msLeft = midnight - now;
+        const hLeft = Math.floor(msLeft / 3600000);
+        const mLeft = Math.floor((msLeft % 3600000) / 60000);
+        resetTimerEl.innerText = `Resets in ${hLeft}h ${mLeft}m`;
+    }
     petBattleActive = false;
     petBattlePlayerPet = null;
 
@@ -769,7 +771,7 @@ function startPetBattle(playerPetId) {
     regenPetBattleEnergy();
     if((globalProgression.petBattleEnergy || 0) <= 0) {
         const energyMsg = document.getElementById('pet-energy-msg');
-        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy recharges in 5 min.'; energyMsg.classList.remove('hidden'); }
+        if(energyMsg) { energyMsg.innerText = '😴 Your pet is tired! Energy resets daily at midnight.'; energyMsg.classList.remove('hidden'); }
         return;
     }
     const energyMsg = document.getElementById('pet-energy-msg');

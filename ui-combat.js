@@ -8,6 +8,9 @@ if (typeof structuredClone === 'undefined') {
     };
 }
 
+// Temporary storage for the apocalypse clone enemy, set by startApocalypse() before startBattle().
+let pendingApocalypseClone = null;
+
 // Tracks the last rendered enemy state to prevent full DOM rebuilds on every turn.
 let _lastEnemyStateString = "";
 
@@ -211,6 +214,16 @@ function generateEnemies() {
 
     enemies = [];
     _lastEnemyStateString = ""; // Force a full enemy card rebuild for the new wave
+
+    if (currentMode === 'apocalypse') {
+        if (pendingApocalypseClone) {
+            enemies.push(pendingApocalypseClone);
+            pendingApocalypseClone = null;
+        }
+        activeTargetIndex = 0;
+        playBossMusic();
+        return;
+    }
 
     if (currentMode === 'training') {
         const e = Object.assign(createBaseEnemy(), { lvl: 1, name: 'Training Dummy', avatar: '🎯', maxHp: 9999999, baseDmg: 0 });
@@ -440,14 +453,21 @@ function startBattle(isNewEncounter = false) {
     combatLog = []; var logDiv = document.getElementById('combat-log'); if (logDiv) logDiv.innerHTML = '';
     addLog(`Encountered ${enemies.length} enemies!`); addLog("Fight!"); isPlayerTurn = true;
     updateCombatUI(); renderSkills(); renderUsableSlots(); switchScreen('screen-combat');
-    // Handle training mode: disable AUTO button
+    // Handle training and apocalypse modes: disable AUTO button
     const autoBtn = document.getElementById('btn-auto');
-    if(currentMode === 'training') {
+    if(currentMode === 'training' || currentMode === 'apocalypse') {
         isAutoBattle = false;
         if(autoBtn) { autoBtn.disabled = true; autoBtn.classList.add('opacity-50'); autoBtn.classList.remove('auto-on'); }
     } else {
         if(autoBtn) { autoBtn.disabled = false; autoBtn.classList.remove('opacity-50'); }
         if(isAutoBattle) setTimeout(processAutoTurn, 500);
+    }
+    // Disable all usable item slots in apocalypse mode
+    if(currentMode === 'apocalypse') {
+        const usableSlots = document.getElementById('combat-usable-slots');
+        if(usableSlots) {
+            usableSlots.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '0.3'; });
+        }
     }
 }
 
@@ -2083,7 +2103,14 @@ function startPlayerTurn() {
 
     processRegenAndBuffs();
     if(!player.skillCooldowns) player.skillCooldowns = {};
-    Object.keys(player.skillCooldowns).forEach(k => { if(player.skillCooldowns[k] > 0) player.skillCooldowns[k]--; });
+    // Compute total cooldown reduction (gear + enhancements + BM Tier 5 + zombie buff)
+    let cdReducPerTurn = Math.floor(getEquipBonusStat('bonusCdReduc'));
+    (globalProgression.skillTreeEnhancements || []).forEach(enh => {
+        if(enh.type === 'skillCDReduc') cdReducPerTurn += ENHANCEMENT_DEFS.skillCDReduc.vals[enh.rarity] || 0;
+    });
+    if ((globalProgression.blackMarketTier || 0) >= 5) cdReducPerTurn += 2;
+    if (globalProgression.zombieStats && globalProgression.zombieStats.cooldownBuffEarned) cdReducPerTurn += 1;
+    Object.keys(player.skillCooldowns).forEach(k => { if(player.skillCooldowns[k] > 0) player.skillCooldowns[k] = Math.max(0, player.skillCooldowns[k] - (1 + cdReducPerTurn)); });
     // Decrement usable item cooldowns each player turn
     if(!player.usableCooldowns) player.usableCooldowns = {};
     Object.keys(player.usableCooldowns).forEach(k => { if(player.usableCooldowns[k] > 0) player.usableCooldowns[k]--; });
@@ -2480,6 +2507,22 @@ function endBattle(playerWon) {
 
         if (currentMode === 'invasion') {
             // Already handled above
+        } else if (currentMode === 'apocalypse') {
+            // Grant Crown of Infinity title
+            if (!globalProgression.crownOfInfinity) {
+                globalProgression.crownOfInfinity = true;
+                title.innerText = '👑 APOCALYPSE CONQUERED!';
+                title.className = 'text-4xl font-black mb-2 drop-shadow-lg' ;
+                title.style.background = 'linear-gradient(90deg,#ffd700,#ff4500,#ffd700)';
+                title.style.webkitBackgroundClip = 'text';
+                title.style.webkitTextFillColor = 'transparent';
+                rwdCont.innerHTML += `<div class="bg-gray-900 px-3 py-2 rounded border-2 border-yellow-400 text-yellow-300 font-black shadow-md animate-pulse">👑 Title Unlocked: Crown of Infinity!</div>`;
+            } else {
+                desc.innerText = 'You have already claimed the Crown of Infinity.';
+            }
+            btnNext.classList.add('hidden');
+            const btnHub = document.getElementById('btn-end-hub');
+            if(btnHub) { btnHub.innerText = '🌀 Return to Portal'; btnHub.onclick = showPortal; }
         } else if (currentMode === 'dungeon') {
             // Floor rewards: +10 ethereal dust per floor, +20 soul pebbles every 100 floors
             const currentFloor = (activeDungeonTier - 1) * 5 + activeDungeonFloor;

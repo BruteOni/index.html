@@ -399,6 +399,7 @@ let globalProgression = {
     zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
     pebbleBonusDmg: 0, pebbleBonusArmorPierce: 0, pebbleBonusHp: 0, pebbleBonusDef: 0,
     patchV1Applied: true,
+    crownOfInfinity: false,
     saveVersion: 2
 };
 const TREE_NODES = [];
@@ -430,7 +431,7 @@ let player = {
 };
 
 let enemies = []; let savedEnemies = {}; let activeTargetIndex = 0; let currentMode = 'none'; 
-const NON_PERSIST_MODES = ['quest', 'training', 'graveyard', 'invasion', 'dungeon'];
+const NON_PERSIST_MODES = ['quest', 'training', 'graveyard', 'invasion', 'dungeon', 'apocalypse'];
 let activeDungeonTier = 1; let activeDungeonFloor = 1; 
 let isPlayerTurn = true; let combatLog = []; let isAutoBattle = false; let combatActive = false; let battleEnding = false;
 let activeGraveyardBoss = null;
@@ -735,11 +736,9 @@ function makeInitialGlobalProgression() {
         petFavorites: [],
         blackMarketTier: 0,
         zombieStats: { totalKills: 0, maxWavesSurvived: 0, totalSessions: 0, pendingPotionRewards: 0, cooldownBuffEarned: false, titlesEarned: [] },
-        pebbleBonusDmg: 0,
-        pebbleBonusArmorPierce: 0,
-        pebbleBonusHp: 0,
-        pebbleBonusDef: 0,
+        pebbleBonusDmg: 0, pebbleBonusArmorPierce: 0, pebbleBonusHp: 0, pebbleBonusDef: 0,
         patchV1Applied: true,
+        crownOfInfinity: false,
         saveVersion: 2
     };
 }
@@ -1130,11 +1129,55 @@ function showPortal() {
             if(label) label.innerHTML = 'Zombie Apocalypse';
         }
     }
+    const apocBtn = document.getElementById('portal-apocalypse-btn');
+    if (apocBtn) apocBtn.style.display = player.lvl >= 500 ? 'flex' : 'none';
     switchScreen('screen-portal');
 }
 
+function showApocalypse() {
+    const el = document.getElementById('apocalypse-status');
+    if (el) el.innerText = player.lvl < 500 ? `⚠️ Requires Level 500. You are Level ${player.lvl}.` : 'Ready to face yourself!';
+    const startBtn = document.getElementById('apocalypse-start-btn');
+    if (startBtn) startBtn.disabled = player.lvl < 500;
+    switchScreen('screen-apocalypse');
+}
 
-function showMenu() { try { stopMusic(); } catch(e) { console.error('Failed to stop music:', e); } switchScreen('screen-menu'); }
+function startApocalypse() {
+    if (player.lvl < 500) { return; }
+
+    const clone = {
+        name: '💀 Your Shadow',
+        avatar: player.data ? player.data.avatar || '💀' : '💀',
+        hp: player.maxHp,
+        maxHp: player.maxHp,
+        dmg: getBaseDamage(),
+        def: getPlayerDef(),
+        currentHp: player.maxHp,
+        bleedStacks: 0, bleedTurns: 0, stunned: 0, healBlock: 0,
+        defReduction: 0, defReductionTurns: 0,
+        shield: 0, dodgeTurns: 0,
+        dmgBoostMult: 1, dmgBoostTurns: 0,
+        poisonStacks: 0, burnStacks: 0, burnTurns: 0,
+        enemyReflectTurns: 0, darknessTurns: 0, missStacks: 0, skipTurns: 0,
+        dmgTakenMult: 1, dmgTakenTurns: 0, defZeroTurns: 0,
+        skills: (globalProgression.equipped ? Object.values(globalProgression.equipped)
+            .filter(i => i && i.skill)
+            .map(i => i.skill).slice(0, 4) : []),
+        cooldowns: {},
+        isBoss: true,
+        isApocalypseClone: true,
+        hpMult: 1,
+        dmgMult: 1
+    };
+    clone.skills.forEach(s => { clone.cooldowns[s] = 0; });
+
+    currentMode = 'apocalypse';
+    pendingApocalypseClone = clone;
+    startBattle(true);
+}
+
+
+function showMenu() { try { stopMusic(); } catch(e) { console.error('Failed to stop music:', e); } switchScreen('screen-menu'); const hasSave = LEGACY_SAVE_KEYS.some(k => localStorage.getItem(k)); const continueBtn = document.getElementById('btn-continue-save'); if (continueBtn) continueBtn.classList.toggle('hidden', !hasSave); }
 function showClassSelect() { switchScreen('screen-class-select'); }
 
 function confirmNewGame() {
@@ -1449,7 +1492,14 @@ function showHub() {
         const elLvlUpNoti = getEl('hub-level-up-noti');
         if (elLvlUpNoti) elLvlUpNoti.classList.toggle('hidden', player.statPoints <= 0);
 
-        // Show highest earned zombie title badge
+        // Show Crown of Infinity title if earned, otherwise show highest zombie title
+        const titleBadgeEl = document.getElementById('hub-title-badge');
+        if (globalProgression.crownOfInfinity) {
+            if (titleBadgeEl) {
+                titleBadgeEl.innerHTML = '<span class="crown-of-infinity-title">👑 Crown of Infinity</span>';
+                titleBadgeEl.classList.remove('hidden');
+            }
+        } else {
         const zs = globalProgression.zombieStats;
         const titlesEarned = (zs && zs.titlesEarned) ? zs.titlesEarned : [];
         let highestTitle = null;
@@ -1458,7 +1508,6 @@ function showHub() {
                 if(titlesEarned.includes(ZOMBIE_TITLES[i].id)) { highestTitle = ZOMBIE_TITLES[i]; break; }
             }
         }
-        const titleBadgeEl = document.getElementById('hub-title-badge');
         if(highestTitle) {
             const badgeSpan = document.createElement('span');
             badgeSpan.className = 'title-badge';
@@ -1466,6 +1515,7 @@ function showHub() {
             if(titleBadgeEl) { titleBadgeEl.innerHTML = ''; titleBadgeEl.appendChild(badgeSpan.cloneNode(true)); titleBadgeEl.classList.remove('hidden'); }
         } else {
             if(titleBadgeEl) titleBadgeEl.classList.add('hidden');
+        }
         }
     } catch(e) { console.error('showHub: basic stats update failed', e); }
 
@@ -2084,4 +2134,6 @@ window.loadGameAndContinue = loadGameAndContinue;
 window.selectGenderAndStart = selectGenderAndStart;
 window.showGenderSelect = showGenderSelect;
 window.onClassVideoEnd = onClassVideoEnd;
+window.showApocalypse = showApocalypse;
+window.startApocalypse = startApocalypse;
 
