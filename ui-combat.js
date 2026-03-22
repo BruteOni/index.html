@@ -115,6 +115,7 @@ function toggleAuto() {
     setTimeout(() => { autoToggleLock = false; }, 100);
 }
 function returnToTown() {
+    if(autoContinueTimer) { clearTimeout(autoContinueTimer); autoContinueTimer = null; }
     combatActive = false;
     battleEnding = false;
     isAutoBattle = false;
@@ -2371,7 +2372,7 @@ function endBattle(playerWon) {
                     const consumableIds = Object.keys(CONSUMABLES);
                     const picked = consumableIds[Math.floor(Math.random() * consumableIds.length)];
                     if ((globalProgression.inventory[picked] || 0) < INVENTORY_STACK_CAP) {
-                        globalProgression.inventory[picked] = (globalProgression.inventory[picked] || 0) + 1;
+                        addToInventory(picked, 1);
                         const c = CONSUMABLES[picked];
                         rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-green-600 text-green-300 font-bold text-xs shadow-md">+1 ${sanitizeHTML(c.icon)} ${sanitizeHTML(c.name)}</div>`;
                     }
@@ -2379,7 +2380,7 @@ function endBattle(playerWon) {
                     // Material drop (20%)
                     const matPool = ['herb_red','herb_blue','fish_1','fish_2','fish_3','fish_4','fish_5','fish_6','soul_pebbles','ench_common','ench_rare','ench_epic','ench_legendary','titan_shard','magic_stone'];
                     const picked = matPool[Math.floor(Math.random() * matPool.length)];
-                    globalProgression.inventory[picked] = (globalProgression.inventory[picked] || 0) + 1;
+                    addToInventory(picked, 1);
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-2 py-1 rounded border border-blue-600 text-blue-300 font-bold text-xs shadow-md">+1 ${sanitizeHTML(MAT_ICONS[picked] || '📦')} ${sanitizeHTML(MAT_NAMES[picked] || picked)}</div>`;
                 } else if (poolRoll < 0.70) {
                     // Usable item drop (15%)
@@ -2479,14 +2480,14 @@ function endBattle(playerWon) {
                     return;
                 }
                 const herb = Math.random() < 0.5 ? 'herb_red' : 'herb_blue';
-                globalProgression.inventory[herb]++;
+                addToInventory(herb, 1);
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-700 text-green-400 font-bold shadow-md">+1 ${sanitizeHTML(MAT_ICONS[herb])}</div>`;
                 // 20% chance to drop a random potion
                 if (Math.random() < 0.20) {
                     const potionIds = ['pot_i1', 'pot_i2', 'pot_i3', 'pot_r1', 'pot_r2', 'pot_r3'];
                     const droppedPot = potionIds[Math.floor(Math.random() * potionIds.length)];
                     if ((globalProgression.inventory[droppedPot] || 0) < INVENTORY_STACK_CAP) {
-                        globalProgression.inventory[droppedPot] = (globalProgression.inventory[droppedPot] || 0) + 1;
+                        addToInventory(droppedPot, 1);
                         const potData = CONSUMABLES[droppedPot];
                         rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-green-500 text-green-300 font-bold shadow-md">+1 ${sanitizeHTML(potData.icon)} ${sanitizeHTML(potData.name)}</div>`;
                     }
@@ -2504,14 +2505,14 @@ function endBattle(playerWon) {
                 }
                 const fishTypes = [1,2,3,4,5,6];
                 const pick = fishTypes[Math.floor(Math.random()*fishTypes.length)];
-                globalProgression.inventory[`fish_${pick}`] = (globalProgression.inventory[`fish_${pick}`] || 0) + 1;
+                addToInventory(`fish_${pick}`, 1);
                 rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-700 text-blue-400 font-bold shadow-md">+1 ${MAT_NAMES['fish_'+pick]}</div>`;
                 // 20% chance to drop a random food buff
                 if (Math.random() < 0.20) {
                     const foodIds = ['food_d1', 'food_d2', 'food_d3', 'food_df1', 'food_df2', 'food_df3'];
                     const droppedFood = foodIds[Math.floor(Math.random() * foodIds.length)];
                     if ((globalProgression.inventory[droppedFood] || 0) < INVENTORY_STACK_CAP) {
-                        globalProgression.inventory[droppedFood] = (globalProgression.inventory[droppedFood] || 0) + 1;
+                        addToInventory(droppedFood, 1);
                         const foodData = CONSUMABLES[droppedFood];
                         rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-blue-500 text-blue-300 font-bold shadow-md">+1 ${sanitizeHTML(foodData.icon)} ${sanitizeHTML(foodData.name)}</div>`;
                     }
@@ -2565,7 +2566,7 @@ function endBattle(playerWon) {
                     else shouldDrop = false;
                 }
                 if(shouldDrop) {
-                    globalProgression.inventory[eTier] = (globalProgression.inventory[eTier] || 0) + 1;
+                    addToInventory(eTier, 1);
                     rwdCont.innerHTML += `<div class="bg-gray-800 px-3 py-1 rounded border border-purple-500 text-purple-300 font-bold shadow-md">+1 ${MAT_NAMES[eTier]}</div>`;
                 }
             }

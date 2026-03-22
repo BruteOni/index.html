@@ -585,6 +585,15 @@ function addToInventory(type, amount) {
     return newAmount - current; // actual amount added
 }
 
+function enforceInventoryCap() {
+    const inv = globalProgression.inventory;
+    for (const key in inv) {
+        if (typeof inv[key] === 'number' && inv[key] > INVENTORY_STACK_CAP) {
+            inv[key] = INVENTORY_STACK_CAP;
+        }
+    }
+}
+
 // --- PROGRESS STATS HELPERS ---
 function ensureProgressStats() {
     if (!player.progressStats) {
@@ -621,6 +630,7 @@ function saveGame() {
         player.progressStats.sessionStartTime = now;
     }
     if (typeof clampAttributes === 'function') clampAttributes();
+    enforceInventoryCap();
     const data = JSON.stringify({ global: globalProgression, pState: player });
     const checksum = simpleHash(data);
     const saveString = data + "|" + checksum;
@@ -865,8 +875,7 @@ function loadGameAndContinue() {
             if (typeof clampAttributes === 'function') {
                 clampAttributes();
             }
-
-            // --- Way of the Heavens removal migration ---
+            enforceInventoryCap();
             // Strip WoH from skillTreeEnhancements
             if (globalProgression.skillTreeEnhancements) {
                 globalProgression.skillTreeEnhancements = globalProgression.skillTreeEnhancements.filter(e => e.type !== 'wayOfHeavens');

@@ -389,7 +389,7 @@ function showWeaponSmith() {
         const enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0;
         const enhLabel = enhLvl > 0 ? `+${enhBonus} dmg` : 'Not Enhanced';
         const maxBonus = isMaxed ? ' (+5% dmg bonus!)' : '';
-        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= (30 + enhLvl * 10) && p.gold >= 100;
+        const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 100;
 
         const div = document.createElement('div');
         div.className = `bg-gray-800 border-2 rarity-${equippedWeapon.rarity} p-3 rounded-lg shadow-md`;
@@ -406,7 +406,7 @@ function showWeaponSmith() {
                 <button onclick="enhanceWeapon('${sanitizeHTML(equippedWeapon.id)}')" 
                     class="bg-yellow-700 hover:bg-yellow-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     ${canEnhance ? '' : 'disabled'}>
-                    🔨 Enhance<br><span class="text-yellow-300">100💰 + ${30 + enhLvl * 10}🔱</span>
+                    🔨 Enhance<br><span class="text-yellow-300">100💰 + 1🔱</span>
                 </button>
             </div>
             <div class="text-[10px] text-gray-400">Next level: +${30 + enhLvl * 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
@@ -427,7 +427,7 @@ function showWeaponSmith() {
         const armorLvl = item.armorEnhance || 0;
         const isMaxed = armorLvl >= 100;
         const hpBonus = armorLvl * 100;
-        const shardCost = 30 + armorLvl * 10;
+        const shardCost = 1;
         const canUpgrade = !isMaxed && (p.inventory.titan_shard || 0) >= shardCost && p.gold >= 100;
 
         const div = document.createElement('div');
@@ -445,7 +445,7 @@ function showWeaponSmith() {
                 <button onclick="upgradeArmor('${slot}')" 
                     class="bg-blue-700 hover:bg-blue-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     ${canUpgrade ? '' : 'disabled'}>
-                    ⬆️ Upgrade<br><span class="text-blue-300">100💰 + ${shardCost}🔱</span>
+                    ⬆️ Upgrade<br><span class="text-blue-300">100💰 + 1🔱</span>
                 </button>
             </div>
             <div class="text-[10px] text-gray-400">Next: +100 HP (${isMaxed ? 'MAX' : '40% fail rate'})</div>
@@ -472,7 +472,7 @@ function showWeaponSmith() {
         const armorLvl = item.armorEnhance || 0;
         const isMaxed = armorLvl >= 100;
         const defBonus = armorLvl * 5;
-        const shardCost = 30 + armorLvl * 10;
+        const shardCost = 1;
         const canUpgrade = !isMaxed && (p.inventory.titan_shard || 0) >= shardCost && p.gold >= 100;
 
         const div = document.createElement('div');
@@ -490,7 +490,7 @@ function showWeaponSmith() {
                 <button onclick="upgradeArmor('${slot}')" 
                     class="bg-purple-700 hover:bg-purple-600 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     ${canUpgrade ? '' : 'disabled'}>
-                    ⬆️ Upgrade<br><span class="text-purple-300">100💰 + ${shardCost}🔱</span>
+                    ⬆️ Upgrade<br><span class="text-purple-300">100💰 + 1🔱</span>
                 </button>
             </div>
             <div class="text-[10px] text-gray-400">Next: +5 DEF (${isMaxed ? 'MAX' : '40% fail rate'})</div>
@@ -540,12 +540,12 @@ function enhanceWeapon(itemId) {
     if(!item) { log.innerText = 'Weapon not found or not equipped!'; return; }
     const enhLvl = item.weaponEnhance || 0;
     if(enhLvl >= 100) { log.innerText = 'Already at max enhancement level!'; return; }
-    if((p.inventory.titan_shard || 0) < (30 + enhLvl * 10)) { log.innerText = `Not enough Titan Shards! (${30 + enhLvl * 10} needed)`; playSound('lose'); return; }
+    if((p.inventory.titan_shard || 0) < 1) { log.innerText = `Not enough Titan Shards! (1 needed)`; playSound('lose'); return; }
     if(p.gold < 100) { log.innerText = 'Not enough Gold! (100 needed)'; playSound('lose'); return; }
 
     // Consume resources
     p.gold -= 100;
-    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - (30 + enhLvl * 10);
+    p.inventory.titan_shard = (p.inventory.titan_shard || 0) - 1;
 
     // 40% failure rate
     if(Math.random() < 0.40) {
@@ -598,7 +598,7 @@ function upgradeArmor(slot) {
         log.innerText = 'Already at maximum level!';
         return;
     }
-    const shardCost = 30 + armorLvl * 10;
+    const shardCost = 1;
     const goldCost = 100;
     if ((p.inventory.titan_shard || 0) < shardCost) {
         log.innerText = `Need ${shardCost} 🔱 Titan Shards!`;
