@@ -200,7 +200,8 @@ function rollEquipment(forcedRarity = null) {
 }
 
 // Generate random bonus stats for equipment — slot-category specific pools
-function generateBonusStats(rarity, lvl, sType) {
+// Optional: numOverride overrides the count; excludeStats is an array of stat names to exclude from the pool
+function generateBonusStats(rarity, lvl, sType, numOverride, excludeStats) {
     // Define per-slot-category stat pools with correct base-per-level values
     // Value at itemLevel = basePerLevel * itemLevel
     const EQUIPMENT_POOL = [
@@ -247,16 +248,16 @@ function generateBonusStats(rarity, lvl, sType) {
         pool = EQUIPMENT_POOL;
     }
 
-    let numStats = rarity === 'mythic' ? 5 : rarity === 'legendary' ? 4 : rarity === 'epic' ? 3 : rarity === 'rare' ? 2 : 1;
-    // Cap numStats to pool size
-    numStats = Math.min(numStats, pool.length);
+    const numStats = numOverride !== undefined ? numOverride : (rarity === 'mythic' ? 5 : rarity === 'legendary' ? 4 : rarity === 'epic' ? 3 : rarity === 'rare' ? 2 : 1);
+
+    // Exclude specific stat types (used by reforger to avoid overwriting locked stats)
+    const drawPool = (excludeStats && excludeStats.length > 0) ? pool.filter(s => !excludeStats.includes(s.stat)) : pool;
 
     const result = [];
-    const available = pool.slice();
     for (let i = 0; i < numStats; i++) {
-        if (available.length === 0) break;
-        const idx = Math.floor(Math.random() * available.length);
-        const chosen = available.splice(idx, 1)[0];
+        if (drawPool.length === 0) break;
+        const idx = Math.floor(Math.random() * drawPool.length);
+        const chosen = drawPool[idx]; // pick with replacement — duplicates allowed
         const value = chosen.basePerLevel * lvl;
         result.push({ stat: chosen.stat, value: value, label: chosen.label, basePerLevel: chosen.basePerLevel });
     }

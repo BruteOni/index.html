@@ -167,17 +167,26 @@ function showReforger() {
         const card = document.createElement('div');
         card.className = 'bg-gray-800 border border-teal-600 rounded-xl p-3 shadow-md';
 
-        const bonusHtml = (item.bonusStats && item.bonusStats.length > 0)
-            ? item.bonusStats.map(bs => {
-                if(bs.stat === 'bonusCdReduc') return `<div class="text-xs text-cyan-300">CD -${bs.value}t</div>`;
-                const pct = (bs.value * 100).toFixed(2);
-                return `<div class="text-xs text-cyan-300">+${pct}% ${bs.label}</div>`;
-            }).join('')
-            : '<div class="text-xs text-gray-500 italic">No bonus stats</div>';
-
         const itemLevel = item.itemLevel || item.lvl || 1;
         const canAfford = (p.inventory.ethereal_dust || 0) >= 10;
         const itemRef = isEquipped ? 'equip_' + slot : 'inv_id_' + item.id;
+
+        const bonusHtml = (item.bonusStats && item.bonusStats.length > 0)
+            ? item.bonusStats.map((bs, bsIdx) => {
+                const statText = bs.stat === 'bonusCdReduc'
+                    ? `CD -${bs.value}t`
+                    : `+${(bs.value * 100).toFixed(2)}% ${bs.label}`;
+                const isLocked = bs.locked === true;
+                const rowStyle = isLocked ? 'border border-yellow-500 rounded px-1' : 'border border-transparent rounded px-1';
+                const lockIcon = isLocked ? '🔒' : '🔓';
+                const lockTitle = isLocked ? 'Unlock stat (will be re-rolled)' : 'Lock stat (will be kept on reforge)';
+                const lockBtnStyle = isLocked ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400';
+                return `<div class="flex items-center justify-between gap-1 ${rowStyle}">
+                    <span class="text-xs text-cyan-300">${statText}</span>
+                    <button onclick="toggleStatLock('${sanitizeHTML(itemRef)}', ${Number(bsIdx)})" class="text-xs ${lockBtnStyle} transition" title="${lockTitle}">${lockIcon}</button>
+                </div>`;
+            }).join('')
+            : '<div class="text-xs text-gray-500 italic">No bonus stats</div>';
 
         card.innerHTML = `
             <div class="flex items-center gap-2 mb-2">
@@ -187,11 +196,11 @@ function showReforger() {
                     <div class="text-xs text-gray-400">${sanitizeHTML(item.type)} ${isEquipped ? '(Equipped)' : '(Inventory)'} | Lv.${itemLevel}</div>
                 </div>
             </div>
-            <div class="bg-gray-900 rounded-lg p-2 mb-2 space-y-0.5">
-                <div class="text-xs text-gray-500 font-bold mb-1">Current Stats:</div>
+            <div class="bg-gray-900 rounded-lg p-2 mb-2 space-y-1">
+                <div class="text-xs text-gray-500 font-bold mb-1">Current Stats: <span class="text-gray-600 font-normal">(🔒 to lock a stat)</span></div>
                 ${bonusHtml}
             </div>
-            <button onclick="reforgeItem('${itemRef}')"
+            <button onclick="reforgeItem('${sanitizeHTML(itemRef)}')"
                 class="w-full bg-teal-800 hover:bg-teal-700 text-white px-3 py-2 rounded font-bold text-xs transition active:scale-95 ${canAfford ? '' : 'opacity-50 cursor-not-allowed'}"
                 ${canAfford ? '' : 'disabled'}>
                 🔄 Reforge Stats <span class="text-teal-300">(10 ✨ Ethereal Dust)</span>
@@ -221,17 +230,38 @@ function reforgeItem(itemRef) {
 
     if (!item) { document.getElementById('rf-status').innerText = '❌ Item not found!'; return; }
 
-    if (!confirm('Are you sure? This will randomly re-roll ALL stats on this item.')) return;
+    const lockedStats = (item.bonusStats || []).filter(bs => bs.locked === true);
+    const lockedMsg = lockedStats.length > 0 ? ` ${lockedStats.length} locked stat(s) will be kept.` : '';
+    if (!confirm(`Are you sure? This will re-roll all unlocked stats on this item.${lockedMsg}`)) return;
 
     const itemLevel = item.itemLevel || item.lvl || 1;
     const slotType = item.type;
-    // Regenerate all bonus stats from the slot-appropriate pool at the item's level
-    item.bonusStats = generateBonusStats('mythic', itemLevel, slotType);
+    const lockedStatTypes = lockedStats.map(bs => bs.stat);
+    const numNewStats = 5 - lockedStats.length; // mythic items always have 5 stats total
+    const newStats = numNewStats > 0 ? generateBonusStats('mythic', itemLevel, slotType, numNewStats, lockedStatTypes) : [];
+    item.bonusStats = [...lockedStats, ...newStats];
 
     p.inventory.ethereal_dust -= REFORGE_COST;
     playSound('win');
     queueSave();
     document.getElementById('rf-status').innerText = `🔄 ${item.name} stats have been reforged!`;
+    showReforger();
+}
+
+function toggleStatLock(itemRef, statIdx) {
+    const p = globalProgression;
+    let item = null;
+    if (typeof itemRef === 'string' && itemRef.startsWith('equip_')) {
+        const slot = itemRef.replace('equip_', '');
+        item = p.equipped[slot];
+    } else if (typeof itemRef === 'string' && itemRef.startsWith('inv_id_')) {
+        const itemId = itemRef.replace('inv_id_', '');
+        item = (p.equipInventory || []).find(i => i && i.id === itemId);
+    }
+    if (!item || !item.bonusStats || !item.bonusStats[statIdx]) return;
+    const stat = item.bonusStats[statIdx];
+    stat.locked = !stat.locked;
+    queueSave();
     showReforger();
 }
 
