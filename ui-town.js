@@ -386,7 +386,7 @@ function showWeaponSmith() {
     if (equippedWeapon) {
         const enhLvl = equippedWeapon.weaponEnhance || 0;
         const isMaxed = enhLvl >= 100;
-        const enhBonus = enhLvl > 0 ? 5 * enhLvl * (5 + enhLvl) : 0;
+        const enhBonus = enhLvl > 0 ? 20 + enhLvl * 10 : 0;
         const enhLabel = enhLvl > 0 ? `+${enhBonus} dmg` : 'Not Enhanced';
         const maxBonus = isMaxed ? ' (+5% dmg bonus!)' : '';
         const canEnhance = !isMaxed && (p.inventory.titan_shard || 0) >= 1 && p.gold >= 100;
@@ -409,7 +409,7 @@ function showWeaponSmith() {
                     🔨 Enhance<br><span class="text-yellow-300">100💰 + 1🔱</span>
                 </button>
             </div>
-            <div class="text-[10px] text-gray-400">Next level: +${30 + enhLvl * 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
+            <div class="text-[10px] text-gray-400">Next level: +${enhLvl === 0 ? 30 : 10} dmg (${isMaxed ? 'MAX' : '40% fail rate'})</div>
         `;
         list.appendChild(div);
     }
@@ -557,7 +557,7 @@ function enhanceWeapon(itemId) {
         const newLvl = enhLvl + 1;
         item.weaponEnhance = newLvl;
         // Apply bonus damage: level N adds (30 + (N-1)*10) damage
-        const dmgAdd = 30 + enhLvl * 10; // +30 at lv1, +40 at lv2, +50 at lv3, etc.
+        const dmgAdd = enhLvl === 0 ? 30 : 10; // +30 at lv1, +10 every level after
         item.stats.dmg = (item.stats.dmg || 0) + dmgAdd;
         log.className = 'anim-enhance-success';
         void log.offsetWidth; // force reflow to restart animation
@@ -790,7 +790,6 @@ function togglePetFavorite(petId) {
 
 function refreshPetBattleEnergy() {
     if (globalProgression.gold < 5000) return;
-    if ((globalProgression.petBattleEnergy || 0) >= 10) return;
     globalProgression.gold -= 5000;
     globalProgression.petBattleEnergy = 10;
     playSound('win');
@@ -819,9 +818,8 @@ function showPetBattle() {
     // Manage refresh energy button state
     const refreshBtn = document.getElementById('pet-battle-refresh-energy-btn');
     if (refreshBtn) {
-        const energyFull = (globalProgression.petBattleEnergy || 0) >= 10;
         const canAfford = globalProgression.gold >= 5000;
-        refreshBtn.disabled = energyFull || !canAfford;
+        refreshBtn.disabled = !canAfford;
     }
 
     // Show select area, hide battle area

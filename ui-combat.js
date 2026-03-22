@@ -2794,7 +2794,13 @@ function handleEndNext() {
             showInvasion();
         }
     } else {
-        startBattle(true);
+        // Adventure modes — consume 1 energy per battle
+        if(consumeEnergy(1)) {
+            startBattle(true);
+        } else {
+            showNoEnergyAnimation();
+            returnToTown();
+        }
     }
 }
 
