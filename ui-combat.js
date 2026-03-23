@@ -469,9 +469,6 @@ function startBattle(isNewEncounter = false) {
         if(usableSlots) {
             usableSlots.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '0.3'; });
         }
-        // Boss goes first in apocalypse mode
-        isPlayerTurn = false;
-        setTimeout(() => executeEnemyTurns(0), 800);
     }
 }
 

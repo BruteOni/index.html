@@ -238,7 +238,7 @@ function reforgeItem(itemRef) {
     const slotType = item.type;
     const lockedStatTypes = lockedStats.map(bs => bs.stat);
     const numNewStats = 5 - lockedStats.length; // mythic items always have 5 stats total
-    const newStats = numNewStats > 0 ? generateBonusStats('mythic', itemLevel, slotType, numNewStats, lockedStatTypes) : [];
+    const newStats = numNewStats > 0 ? generateBonusStats('mythic', itemLevel, slotType, numNewStats) : [];
     item.bonusStats = [...lockedStats, ...newStats];
 
     p.inventory.ethereal_dust -= REFORGE_COST;
